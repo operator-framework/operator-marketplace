@@ -1,0 +1,3 @@
+version: "1"
+domain: redhat.com
+repo: github.com/operator-framework/operator-marketplace
