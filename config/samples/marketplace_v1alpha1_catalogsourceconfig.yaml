@@ -1,0 +1,9 @@
+apiVersion: marketplace.redhat.com/v1alpha1
+kind: CatalogSourceConfig
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: catalogsourceconfig-sample
+spec:
+  # Add fields here
+  foo: bar
