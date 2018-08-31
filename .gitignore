@@ -22,3 +22,6 @@ zz_generated.*
 *.swp
 *.swo
 *~
+
+# Generated binaries
+bin/
