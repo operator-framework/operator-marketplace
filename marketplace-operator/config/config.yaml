@@ -1,0 +1,3 @@
+apiVersion: marketplace.redhat.com/v1alpha1
+kind: CatalogSourceConfig
+projectName: marketplace-operator
