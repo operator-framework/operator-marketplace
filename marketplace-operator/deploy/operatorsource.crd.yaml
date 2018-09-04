@@ -1,0 +1,13 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: operatorsources.marketplace.redhat.com
+spec:
+  group: marketplace.redhat.com
+  names:
+    kind: OperatorSource
+    listKind: OperatorSourceList
+    plural: operatorsources
+    singular: operatorsource
+  scope: Namespaced
+  version: v1alpha1

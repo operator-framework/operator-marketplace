@@ -26,14 +26,19 @@ func main() {
 	sdk.ExposeMetricsPort()
 
 	resource := "marketplace.redhat.com/v1alpha1"
-	kind := "CatalogSourceConfig"
+	catalogSourceConfigKind := "CatalogSourceConfig"
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		logrus.Fatalf("failed to get watch namespace: %v", err)
 	}
 	resyncPeriod := time.Duration(5) * time.Second
-	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
-	sdk.Watch(resource, kind, namespace, resyncPeriod)
+	logrus.Infof("Watching %s, %s, %s, %d", resource, catalogSourceConfigKind, namespace, resyncPeriod)
+	sdk.Watch(resource, catalogSourceConfigKind, namespace, resyncPeriod)
+
+	operatorSourceKind := "OperatorSource"
+	logrus.Infof("Watching %s, %s, %s, %d", resource, operatorSourceKind, namespace, resyncPeriod)
+	sdk.Watch(resource, operatorSourceKind, namespace, resyncPeriod)
+
 	sdk.Handle(stub.NewHandler())
 	sdk.Run(context.TODO())
 }

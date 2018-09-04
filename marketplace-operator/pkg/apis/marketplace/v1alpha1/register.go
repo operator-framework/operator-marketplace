@@ -30,6 +30,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CatalogSourceConfig{},
 		&CatalogSourceConfigList{},
 	)
+	scheme.AddKnownTypes(SchemeGroupVersion,
+		&OperatorSource{},
+		&OperatorSourceList{},
+	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
