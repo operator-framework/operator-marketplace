@@ -28,3 +28,5 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "marketplace-operator"
+      imagePullSecrets:
+        - name: marketplace-pull-secret
