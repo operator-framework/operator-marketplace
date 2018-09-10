@@ -1,0 +1,13 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: catalogsourceconfigs.marketplace.redhat.com
+spec:
+  group: marketplace.redhat.com
+  names:
+    kind: CatalogSourceConfig
+    listKind: CatalogSourceConfigList
+    plural: catalogsourceconfigs
+    singular: catalogsourceconfig
+  scope: Namespaced
+  version: v1alpha1
