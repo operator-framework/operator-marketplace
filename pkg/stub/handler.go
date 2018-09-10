@@ -3,7 +3,7 @@ package stub
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/marketplace-operator/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/sirupsen/logrus"
