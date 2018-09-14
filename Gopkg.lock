@@ -26,6 +26,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  name = "github.com/coreos/go-semver"
+  packages = ["semver"]
+  revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
+  version = "v0.2.0"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
@@ -167,6 +173,15 @@
   packages = ["."]
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
+
+[[projects]]
+  name = "github.com/operator-framework/operator-lifecycle-manager"
+  packages = [
+    "pkg/api/apis/operators",
+    "pkg/api/apis/operators/v1alpha1"
+  ]
+  revision = "8799f39ef342dc1ff7430eba7a88c1c3c70cbdcc"
+  version = "0.7.1"
 
 [[projects]]
   branch = "master"
@@ -370,6 +385,15 @@
   revision = "73d903622b7391f3312dcbac6483fed484e185f8"
 
 [[projects]]
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/scheme"
+  ]
+  revision = "4347b330d0ff094db860f2f75fa725b4f4b53618"
+
+[[projects]]
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -538,6 +562,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "22a3131aff0c3b6f0a97bc22324996cfa5dabe1f626a90facb0daf29bbe0d52a"
+  inputs-digest = "df1b41a02323780768a6a18108f4b5c97b197a6b23469591f14978b627084aaf"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -30,6 +30,12 @@ rules:
   - statefulsets
   verbs:
   - "*"
+- apiGroups:
+  - operators.coreos.com
+  resources:
+  - catalogsources
+  verbs:
+  - "*"
 
 ---
 
@@ -40,7 +46,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: default
+  namespace: marketplace
 roleRef:
   kind: ClusterRole
   name: marketplace-operator

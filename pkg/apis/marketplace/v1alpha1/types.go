@@ -4,6 +4,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// ConfigMapPrefix is the prefix used for the ConfigMap created by the handler
+	ConfigMapPrefix = "csc-cm-"
+	// CatalogSourcePrefix is the prefix used for the CatalogSource created by the handler
+	CatalogSourcePrefix = "csc-cs-"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CatalogSourceConfigList struct {
@@ -22,7 +29,8 @@ type CatalogSourceConfig struct {
 }
 
 type CatalogSourceConfigSpec struct {
-	// Fill me
+	TargetNamespace string `json:"targetNamespace"`
+	Packages        string `json:"packages"`
 }
 type CatalogSourceConfigStatus struct {
 	// Fill me
