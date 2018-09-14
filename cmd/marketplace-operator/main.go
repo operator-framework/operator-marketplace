@@ -31,10 +31,12 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to get watch namespace: %v", err)
 	}
-	resyncPeriod := time.Duration(5) * time.Second
-	logrus.Infof("Watching %s, %s, %s", resource, catalogSourceConfigKind, namespace)
+
 	// No reason to resync until we implement updating of CatalogSourceConfig CRs
-	sdk.Watch(resource, catalogSourceConfigKind, namespace, 0)
+	resyncPeriod := time.Duration(0) * time.Second
+
+	logrus.Infof("Watching %s, %s, %s", resource, catalogSourceConfigKind, namespace)
+	sdk.Watch(resource, catalogSourceConfigKind, namespace, resyncPeriod)
 
 	operatorSourceKind := "OperatorSource"
 	logrus.Infof("Watching %s, %s, %s, %d", resource, operatorSourceKind, namespace, resyncPeriod)
