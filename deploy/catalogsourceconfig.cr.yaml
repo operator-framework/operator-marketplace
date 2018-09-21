@@ -2,3 +2,5 @@ apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "CatalogSourceConfig"
 metadata:
   name: "example"
+spec:
+  targetNamespace: "global"
