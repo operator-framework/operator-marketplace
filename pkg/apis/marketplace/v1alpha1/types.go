@@ -54,8 +54,13 @@ type OperatorSource struct {
 }
 
 type OperatorSourceSpec struct {
-	// Fill me
+	// Type of operator source
+	Type string `json:"type"`
+
+	// Endpoint points to the URL from where operator manifests can be fetched
+	Endpoint string `json:"endpoint"`
 }
+
 type OperatorSourceStatus struct {
 	// Fill me
 }

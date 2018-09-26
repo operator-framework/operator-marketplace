@@ -1,4 +1,7 @@
 apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "OperatorSource"
 metadata:
-  name: "operatorsource-example"
+  name: "localhost"
+spec:
+  type: appregistry
+  endpoint: "http://localhost:5000/cnr"
