@@ -11,14 +11,14 @@ import (
 )
 
 func NewHandler() sdk.Handler {
-	operatorSourceHandler, _ := operatorsource.NewHandler()
+	opsrcHandler, _ := operatorsource.NewHandler()
 	return &Handler{
-		operatorSourceHanlder: operatorSourceHandler,
+		operatorSourceHandler: opsrcHandler,
 	}
 }
 
 type Handler struct {
-	operatorSourceHanlder operatorsource.Handler
+	operatorSourceHandler operatorsource.Handler
 }
 
 // Handle function for handling CatalogSourceConfig and OperatorSource CR events
@@ -33,7 +33,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		return createCatalogSource(o)
 
 	case *v1alpha1.OperatorSource:
-		if err := h.operatorSourceHanlder.Handle(ctx, event); err != nil {
+		if err := h.operatorSourceHandler.Handle(ctx, event); err != nil {
 			logrus.Errorf("reconciliation error: %v", err)
 			return err
 		}
