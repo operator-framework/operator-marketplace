@@ -6,6 +6,17 @@ import (
 	"strings"
 )
 
+// Client exposes the functionality of app registry server
+type Client interface {
+	// RetrieveAll retrieves all visible packages from the given source
+	// When namespace is specified, only package(s) associated with the given namespace are returned.
+	// If namespace is empty then visible package(s) across all namespaces are returned.
+	RetrieveAll(namespace string) ([]*OperatorMetadata, error)
+
+	// RetrieveOne retrieves a given package from the source
+	RetrieveOne(name, release string) (*OperatorMetadata, error)
+}
+
 // OperatorMetadata encapsulates operator metadata and manifest assocated with a package
 type OperatorMetadata struct {
 	// Namespace is the namespace in app registry server under which the package is hosted.
@@ -34,8 +45,8 @@ type client struct {
 	unmarshaller blobUnmarshaller
 }
 
-func (c *client) RetrieveAll() ([]*OperatorMetadata, error) {
-	packages, err := c.adapter.ListPackages()
+func (c *client) RetrieveAll(namespace string) ([]*OperatorMetadata, error) {
+	packages, err := c.adapter.ListPackages(namespace)
 	if err != nil {
 		return nil, err
 	}

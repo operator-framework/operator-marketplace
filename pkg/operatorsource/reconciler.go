@@ -51,7 +51,7 @@ func (r *reconciler) Reconcile(opsrc *v1alpha1.OperatorSource) error {
 		return err
 	}
 
-	manifests, err := registry.RetrieveAll()
+	manifests, err := registry.RetrieveAll(opsrc.Spec.RegistryNamespace)
 	if err != nil {
 		return err
 	}

@@ -12,11 +12,12 @@ import (
 func TestRetrieveAll(t *testing.T) {
 	factory := appregistry.NewClientFactory()
 
-	client, err := factory.New("appregistry", "http://localhost:5000/cnr")
+	client, err := factory.New("appregistry", "https://quay.io/cnr")
 	require.NoError(t, err)
 
-	packages, err := client.RetrieveAll()
+	packages, err := client.RetrieveAll("operators")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, packages)
+	assert.True(t, len(packages) >= 1)
 }

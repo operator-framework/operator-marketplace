@@ -34,16 +34,16 @@ func (m *MockapprApiAdapter) EXPECT() *MockapprApiAdapterMockRecorder {
 }
 
 // ListPackages mocks base method
-func (m *MockapprApiAdapter) ListPackages() (models.Packages, error) {
-	ret := m.ctrl.Call(m, "ListPackages")
+func (m *MockapprApiAdapter) ListPackages(namespace string) (models.Packages, error) {
+	ret := m.ctrl.Call(m, "ListPackages", namespace)
 	ret0, _ := ret[0].(models.Packages)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListPackages indicates an expected call of ListPackages
-func (mr *MockapprApiAdapterMockRecorder) ListPackages() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPackages", reflect.TypeOf((*MockapprApiAdapter)(nil).ListPackages))
+func (mr *MockapprApiAdapterMockRecorder) ListPackages(namespace interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPackages", reflect.TypeOf((*MockapprApiAdapter)(nil).ListPackages), namespace)
 }
 
 // GetPackageMetadata mocks base method

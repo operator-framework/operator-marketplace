@@ -19,15 +19,6 @@ type ClientFactory interface {
 	New(sourceType, source string) (Client, error)
 }
 
-// Client exposes the functionality of app registry server
-type Client interface {
-	// RetrieveAll retrieves all visible packages from the given source
-	RetrieveAll() ([]*OperatorMetadata, error)
-
-	// RetrieveOneretrieves a given package from the source
-	RetrieveOne(name, release string) (*OperatorMetadata, error)
-}
-
 type factory struct{}
 
 func (f *factory) New(sourceType, source string) (Client, error) {

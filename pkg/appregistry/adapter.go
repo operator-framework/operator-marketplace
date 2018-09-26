@@ -15,8 +15,10 @@ const (
 
 // This interface (internal to this package) encapsulates nitty gritty details of go-appr client bindings
 type apprApiAdapter interface {
-	// ListPackages returns a list of package(s) available to the user
-	ListPackages() (appr_models.Packages, error)
+	// ListPackages returns a list of package(s) available to the user.
+	// When namespace is specified, only package(s) associated with the given namespace are returned.
+	// If namespace is empty then visible package(s) across all namespaces are returned.
+	ListPackages(namespace string) (appr_models.Packages, error)
 
 	// GetPackageMetadata returns metadata associated with a given package
 	GetPackageMetadata(namespace string, repository string, release string) (*appr_models.Package, error)
@@ -29,8 +31,12 @@ type apprApiAdapterImpl struct {
 	client *appr.Appregistry
 }
 
-func (a *apprApiAdapterImpl) ListPackages() (appr_models.Packages, error) {
+func (a *apprApiAdapterImpl) ListPackages(namespace string) (appr_models.Packages, error) {
 	params := appr_package.NewListPackagesParams()
+
+	if namespace != "" {
+		params.SetNamespace(&namespace)
+	}
 
 	packages, err := a.client.PackageAppr.ListPackages(params)
 	if err != nil {
