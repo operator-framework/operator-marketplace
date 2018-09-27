@@ -1,6 +1,8 @@
-package stub
+package catalogsourceconfig
 
 import (
+	"context"
+
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -10,25 +12,56 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Handler is the interface that wraps the Handle method
+type Handler interface {
+	Handle(ctx context.Context, event sdk.Event) error
+}
+
+type handler struct {
+}
+
+var log *logrus.Entry
+
+// Handle handles a new event associated with CatalogSourceConfig type
+func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
+	csc := event.Object.(*v1alpha1.CatalogSourceConfig)
+	log = getLoggerWithCatalogSourceConfigTypeFields(csc)
+	// Ignore the delete event as the garbage collector will clean up the created resources as per the OwnerReference
+	if event.Deleted {
+		log.Infof("Deleted")
+		return nil
+	}
+	return createCatalogSource(csc)
+}
+
 // createCatalogSource creates a new CatalogSource CR and all the resources it requires
 func createCatalogSource(cr *v1alpha1.CatalogSourceConfig) error {
 	// Create the ConfigMap that will be used by the CatalogSource
 	catalogConfigMap := newConfigMap(cr)
-	logrus.Infof("Creating %s ConfigMap in %s namespace", catalogConfigMap.Name, cr.Spec.TargetNamespace)
+	log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
 	err := sdk.Create(catalogConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
-		logrus.Errorf("Failed to create catalog source : %v", err)
+		log.Errorf("Failed to create ConfigMap : %v", err)
 		return err
 	}
 
 	catalogSource := newCatalogSource(cr, catalogConfigMap.Name)
-	logrus.Infof("Creating %s CatalogSource in %s namespace", catalogSource.Name, cr.Spec.TargetNamespace)
 	err = sdk.Create(catalogSource)
 	if err != nil && !errors.IsAlreadyExists(err) {
-		logrus.Errorf("Failed to create catalog source : %v", err)
+		log.Errorf("Failed to create CatalogSource : %v", err)
 		return err
 	}
+	log.Infof("Created")
 	return nil
+}
+
+// getLoggerWithCatalogSourceConfigTypeFields returns a logger entry that can be used for consistent logging
+func getLoggerWithCatalogSourceConfigTypeFields(csc *v1alpha1.CatalogSourceConfig) *logrus.Entry {
+	return logrus.WithFields(logrus.Fields{
+		"type":            csc.TypeMeta.Kind,
+		"targetNamespace": csc.Spec.TargetNamespace,
+		"name":            csc.GetName(),
+	})
 }
 
 // newCatalogSource returns a CatalogSource object
