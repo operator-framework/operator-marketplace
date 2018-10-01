@@ -13,8 +13,8 @@ import (
 )
 
 func NewHandler() sdk.Handler {
-	opsrcHandler, _ := operatorsource.NewHandler()
-	cscHandler := catalogsourceconfig.NewHandler()
+	opsrcHandler, reader := operatorsource.NewHandler()
+	cscHandler := catalogsourceconfig.NewHandler(reader)
 	return &Handler{
 		operatorSourceHandler:      opsrcHandler,
 		catalogSourceConfigHandler: cscHandler,

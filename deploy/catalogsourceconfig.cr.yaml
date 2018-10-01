@@ -4,3 +4,4 @@ metadata:
   name: "example"
 spec:
   targetNamespace: "global"
+  packages: "operators/marketplace-operators"

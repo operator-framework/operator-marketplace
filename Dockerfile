@@ -5,6 +5,7 @@ COPY . .
 RUN make osbs-build
 
 FROM alpine:3.6
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 RUN useradd marketplace-operator
 USER marketplace-operator
 COPY --from=builder /go/src/github.com/operator-framework/operator-marketplace/tmp/_output/bin/marketplace-operator /usr/bin
