@@ -57,8 +57,12 @@ type OperatorSourceSpec struct {
 	// Type of operator source
 	Type string `json:"type"`
 
-	// Endpoint points to the URL from where operator manifests can be fetched
+	// Endpoint points to the remote app registry server from where operator manifests can be fetched
 	Endpoint string `json:"endpoint"`
+
+	// RegistryNamespace refers to the namespace in app registry. Only operator manifests under
+	// this namespace will be vsible. This is not a k8s namespace.
+	RegistryNamespace string `json:"registryNamespace"`
 }
 
 type OperatorSourceStatus struct {

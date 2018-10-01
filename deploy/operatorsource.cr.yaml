@@ -1,7 +1,8 @@
 apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "OperatorSource"
 metadata:
-  name: "localhost"
+  name: "global-operators"
 spec:
   type: appregistry
-  endpoint: "http://localhost:5000/cnr"
+  endpoint: "https://quay.io/cnr"
+  registryNamespace: "operators"
