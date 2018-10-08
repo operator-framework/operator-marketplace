@@ -8,9 +8,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Handler is the interface that wraps the Hanlde method
+// Handler is the interface that wraps the Handle method
 //
-// Handle hanldes a new event associated with OperatorSource type
+// Handle handles a new event associated with OperatorSource type
 type Handler interface {
 	Handle(ctx context.Context, event sdk.Event) error
 }
