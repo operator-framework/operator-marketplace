@@ -2,6 +2,8 @@ package phase
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -42,8 +44,15 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Opera
 		return
 	}
 
-	// No change is being made, so return the received OperatorSource object as is.
+	// No change is being made to the received OperatorSource object.
 	out = in
+
+	// Validate that operator source endpoint is a valid URL.
+	_, err = url.ParseRequestURI(in.Spec.Endpoint)
+	if err != nil {
+		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
+		return
+	}
 
 	r.logger.Info("Scheduling for download")
 
