@@ -56,3 +56,36 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	assert.Equal(t, opsrcIn, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
 }
+
+// Use Case: Registry returns an empty list of manifest(s).
+// Expected Result: Next phase is set to "Failed".
+func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	datastore := mocks.NewDatastoreWriter(controller)
+	factory := mocks.NewAppRegistryClientFactory(controller)
+
+	reconciler := phase.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
+
+	ctx := context.TODO()
+	opsrcIn := helperNewOperatorSource("marketplace", "foo", v1alpha1.OperatorSourcePhaseDownloading)
+
+	registryClient := mocks.NewAppRegistryClient(controller)
+	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
+
+	// We expect the registry to return an empty manifest list.
+	manifests := []*appregistry.OperatorMetadata{}
+	registryClient.EXPECT().RetrieveAll(opsrcIn.Spec.RegistryNamespace).Return(manifests, nil).Times(1)
+
+	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	assert.Error(t, errGot)
+
+	nextPhaseWant := &phase.NextPhase{
+		Phase:   v1alpha1.OperatorSourcePhaseFailed,
+		Message: errGot.Error(),
+	}
+
+	assert.Equal(t, opsrcIn, opsrcGot)
+	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+}

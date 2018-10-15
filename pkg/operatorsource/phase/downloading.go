@@ -2,6 +2,7 @@ package phase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
@@ -63,6 +64,12 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	manifests, err := registry.RetrieveAll(in.Spec.RegistryNamespace)
 	if err != nil {
+		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		return
+	}
+
+	if len(manifests) == 0 {
+		err = errors.New("The operator source endpoint returned an empty manifest list")
 		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
 		return
 	}
