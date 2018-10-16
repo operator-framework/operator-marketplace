@@ -1,14 +1,14 @@
-package operatorsource
+package datastore_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 )
 
 func TestGetPackageIDs(t *testing.T) {
@@ -20,7 +20,7 @@ func TestGetPackageIDs(t *testing.T) {
 		&appregistry.OperatorMetadata{Namespace: "braz", Repository: "3"},
 	}
 
-	ds := newDatastore()
+	ds := datastore.New()
 	err := ds.Write(packages)
 	require.NoError(t, err)
 

@@ -2,50 +2,83 @@ package operatorsource
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/kube"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
+
+// NewHandlerWithParams returns a new Handler.
+func NewHandlerWithParams(factory PhaseReconcilerFactory, kubeclient kube.Client, transitioner phase.Transitioner) Handler {
+	return &handler{
+		factory:      factory,
+		kubeclient:   kubeclient,
+		transitioner: transitioner,
+	}
+}
 
 // Handler is the interface that wraps the Handle method
 //
-// Handle handles a new event associated with OperatorSource type
+// Handle handles a new event associated with OperatorSource type.
+//
+// ctx represents the parent context.
+// event encapsulates the event fired by operator sdk.
 type Handler interface {
 	Handle(ctx context.Context, event sdk.Event) error
 }
 
+// handler implements the Handler interface
 type handler struct {
-	reconciler Reconciler
+	factory      PhaseReconcilerFactory
+	kubeclient   kube.Client
+	transitioner phase.Transitioner
 }
 
 func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
-	opsrc := event.Object.(*v1alpha1.OperatorSource)
-
-	if event.Deleted {
-		logrus.Infof("No action taken, object has been deleted [type=%s object=%s/%s]",
-			opsrc.TypeMeta.Kind, opsrc.ObjectMeta.Namespace, opsrc.ObjectMeta.Name)
-
-		return nil
+	in, ok := event.Object.(*v1alpha1.OperatorSource)
+	if !ok {
+		return fmt.Errorf("casting failed, wrong type provided")
 	}
 
-	reconciled, err := h.reconciler.IsAlreadyReconciled(opsrc)
+	logger := log.WithFields(log.Fields{
+		"type":      in.TypeMeta.Kind,
+		"namespace": in.GetNamespace(),
+		"name":      in.GetName(),
+	})
+
+	reconciler, err := h.factory.GetPhaseReconciler(logger, event)
 	if err != nil {
 		return err
 	}
 
-	if reconciled {
-		logrus.Infof("Already reconciled, no action taken [type=%s object=%s/%s]",
-			opsrc.TypeMeta.Kind, opsrc.ObjectMeta.Namespace, opsrc.ObjectMeta.Name)
+	out, status, err := reconciler.Reconcile(ctx, in)
 
-		return nil
-	}
+	// If reconciliation threw an error, we can't quit just yet. We need to
+	// figure out whether the OperatorSource object needs to be updated.
 
-	if err := h.reconciler.Reconcile(opsrc); err != nil {
+	if !h.transitioner.TransitionInto(out, status) {
+		// OperatorSource object has not changed, no need to update. We are done.
 		return err
 	}
 
-	logrus.Infof("Reconciliation completed successfully [type=%s object=%s/%s]",
-		opsrc.TypeMeta.Kind, opsrc.ObjectMeta.Namespace, opsrc.ObjectMeta.Name)
-	return nil
+	// OperatorSource object has been changed. At this point, reconciliation has
+	// either completed successfully or failed.
+	// In either case, we need to update the modified OperatorSource object.
+	if updateErr := h.kubeclient.Update(out); updateErr != nil {
+		if err == nil {
+			// No reconciliation err, but update of object has failed!
+			return updateErr
+		}
+
+		// Presence of both Reconciliation error and object update error.
+		logger.Errorf("Failed to update object - %v", updateErr)
+
+		// TODO: find a way to chain the update error?
+		return err
+	}
+
+	return err
 }

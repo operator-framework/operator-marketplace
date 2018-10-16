@@ -3,6 +3,8 @@
 tmp/_output
 tmp/_test
 
+# Generated mock go files used for testing
+pkg/mocks
 
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 

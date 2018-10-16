@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	opsrc "github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
@@ -30,7 +30,7 @@ type Handler interface {
 }
 
 type handler struct {
-	reader opsrc.DatastoreReader
+	reader datastore.Reader
 }
 
 var log *logrus.Entry
