@@ -20,6 +20,9 @@ osbs-build:
 	# hack/build.sh
 	./tmp/build/build.sh
 
+unit:
+	go test -v ./pkg/...
+
 generate-mocks:
 	go install -i github.com/golang/mock/mockgen
 	
