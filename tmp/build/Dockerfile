@@ -1,7 +1,6 @@
-FROM alpine:3.6
+FROM openshift/origin-base
 
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-RUN adduser -D marketplace-operator
+RUN useradd marketplace-operator
 USER marketplace-operator
 
 ADD tmp/_output/bin/marketplace-operator /usr/local/bin/marketplace-operator
