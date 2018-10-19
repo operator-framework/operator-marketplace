@@ -20,11 +20,13 @@ osbs-build:
 	# hack/build.sh
 	./tmp/build/build.sh
 
-unit:
+unit: generate-mocks unit-test
+
+unit-test:
 	go test -v ./pkg/...
 
 generate-mocks:
-	go install -i github.com/golang/mock/mockgen
+	go get github.com/golang/mock/mockgen
 	
 	@echo making sure directory for mocks exists
 	mkdir -p $(MOCKS_DIR)
