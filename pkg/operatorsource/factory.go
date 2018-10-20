@@ -46,7 +46,7 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, event sdk
 		return phase.NewDeletedEventReconciler(logger, s.datastore), nil
 	}
 
-	switch opsrc.Status.Phase {
+	switch opsrc.Status.CurrentPhase.Name {
 	case v1alpha1.OperatorSourcePhaseInitial:
 		return phase.NewInitialReconciler(logger), nil
 
@@ -67,6 +67,6 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, event sdk
 
 	default:
 		return nil,
-			fmt.Errorf("No phase reconciler returned, invalid phase for OperatorSource type [phase=%s]", opsrc.Status.Phase)
+			fmt.Errorf("No phase reconciler returned, invalid phase for OperatorSource type [phase=%s]", opsrc.Status.CurrentPhase.Phase)
 	}
 }

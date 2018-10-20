@@ -30,7 +30,11 @@ func helperNewOperatorSource(namespace, name, phase string) *v1alpha1.OperatorSo
 		},
 
 		Status: v1alpha1.OperatorSourceStatus{
-			Phase: phase,
+			CurrentPhase: v1alpha1.ObjectPhase{
+				Phase: v1alpha1.Phase{
+					Name: phase,
+				},
+			},
 		},
 	}
 }

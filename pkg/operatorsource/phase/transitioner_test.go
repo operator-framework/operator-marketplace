@@ -12,6 +12,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 )
 
+var (
+	phaseWantValidating = v1alpha1.Phase{
+		Name:    "Validating",
+		Message: "Scheduled for validation",
+	}
+	nextPhaseAfterValidating = &phase.NextPhase{
+		Phase:   phaseWantValidating.Name,
+		Message: phaseWantValidating.Message,
+	}
+)
+
 // Use Case: Phase and Message specified in both objects are identical.
 // Expected Result: The function is expected to return false to indicate that no
 // transition has taken place.
@@ -19,25 +30,19 @@ func TestTransitionInto_IdenticalPhase_FalseExpected(t *testing.T) {
 	clock := clock.NewFakeClock(time.Now())
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	phaseWant, messageWant := "Validating", "Scheduled for validation"
-
 	opsrcIn := &v1alpha1.OperatorSource{
 		Status: v1alpha1.OperatorSourceStatus{
-			Phase:   phaseWant,
-			Message: messageWant,
+			CurrentPhase: v1alpha1.ObjectPhase{
+				Phase: phaseWantValidating,
+			},
 		},
 	}
 
-	nextPhase := &phase.NextPhase{
-		Phase:   phaseWant,
-		Message: messageWant,
-	}
-
-	changedGot := transitioner.TransitionInto(opsrcIn, nextPhase)
+	changedGot := transitioner.TransitionInto(&opsrcIn.Status.CurrentPhase, nextPhaseAfterValidating)
 
 	assert.False(t, changedGot)
-	assert.Equal(t, phaseWant, opsrcIn.Status.Phase)
-	assert.Equal(t, messageWant, opsrcIn.Status.Message)
+	assert.Equal(t, phaseWantValidating.Name, opsrcIn.Status.CurrentPhase.Name)
+	assert.Equal(t, phaseWantValidating.Message, opsrcIn.Status.CurrentPhase.Message)
 }
 
 // Use Case: Both Phase and Message specified in both objects are different.
@@ -49,27 +54,24 @@ func TestTransitionInto_BothPhaseAndMessageAreDifferent_TrueExpected(t *testing.
 	clock := clock.NewFakeClock(now)
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	phaseWant, messageWant := "Validating", "Scheduled for validation"
-
 	opsrcIn := &v1alpha1.OperatorSource{
 		Status: v1alpha1.OperatorSourceStatus{
-			Phase:   "Initial",
-			Message: "Not validated",
+			CurrentPhase: v1alpha1.ObjectPhase{
+				Phase: v1alpha1.Phase{
+					Name:    "Initial",
+					Message: "Not validated",
+				},
+			},
 		},
 	}
 
-	nextPhase := &phase.NextPhase{
-		Phase:   phaseWant,
-		Message: messageWant,
-	}
-
-	changedGot := transitioner.TransitionInto(opsrcIn, nextPhase)
+	changedGot := transitioner.TransitionInto(&opsrcIn.Status.CurrentPhase, nextPhaseAfterValidating)
 
 	assert.True(t, changedGot)
-	assert.Equal(t, phaseWant, opsrcIn.Status.Phase)
-	assert.Equal(t, messageWant, opsrcIn.Status.Message)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.LastTransitionTime)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.LastUpdateTime)
+	assert.Equal(t, phaseWantValidating.Name, opsrcIn.Status.CurrentPhase.Name)
+	assert.Equal(t, phaseWantValidating.Message, opsrcIn.Status.CurrentPhase.Message)
+	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastTransitionTime)
+	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastUpdateTime)
 }
 
 // Use Case: Phase specified in both objects are same but Message is different.
@@ -80,25 +82,32 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 	clock := clock.NewFakeClock(now)
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	phaseWant, messageWant := "Failed", "Second try- reason 2"
+	phaseWant := v1alpha1.Phase{
+		Name:    "Failed",
+		Message: "Second try- reason 2",
+	}
 
 	opsrcIn := &v1alpha1.OperatorSource{
 		Status: v1alpha1.OperatorSourceStatus{
-			Phase:   phaseWant,
-			Message: "First try- reason 1",
+			CurrentPhase: v1alpha1.ObjectPhase{
+				Phase: v1alpha1.Phase{
+					Name:    phaseWant.Name,
+					Message: "First try- reason 1",
+				},
+			},
 		},
 	}
 
 	nextPhase := &phase.NextPhase{
-		Phase:   phaseWant,
-		Message: messageWant,
+		Phase:   phaseWant.Name,
+		Message: phaseWant.Message,
 	}
 
-	changedGot := transitioner.TransitionInto(opsrcIn, nextPhase)
+	changedGot := transitioner.TransitionInto(&opsrcIn.Status.CurrentPhase, nextPhase)
 
 	assert.True(t, changedGot)
-	assert.Equal(t, phaseWant, opsrcIn.Status.Phase)
-	assert.Equal(t, messageWant, opsrcIn.Status.Message)
-	assert.Empty(t, opsrcIn.Status.LastTransitionTime)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.LastUpdateTime)
+	assert.Equal(t, phaseWant.Name, opsrcIn.Status.CurrentPhase.Name)
+	assert.Equal(t, phaseWant.Message, opsrcIn.Status.CurrentPhase.Message)
+	assert.Empty(t, opsrcIn.Status.CurrentPhase.LastTransitionTime)
+	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastUpdateTime)
 }

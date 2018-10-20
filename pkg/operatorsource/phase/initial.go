@@ -36,7 +36,7 @@ type initialReconciler struct {
 //
 // Upon success, it returns "Validating" as the next desired phase.
 func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error) {
-	if in.Status.Phase != v1alpha1.OperatorSourcePhaseInitial {
+	if in.Status.CurrentPhase.Name != v1alpha1.OperatorSourcePhaseInitial {
 		err = ErrWrongReconcilerInvoked
 		return
 	}

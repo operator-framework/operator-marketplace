@@ -35,7 +35,7 @@ type succeededReconciler struct {
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
 func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error) {
-	if in.Status.Phase != v1alpha1.OperatorSourcePhaseSucceeded {
+	if in.Status.CurrentPhase.Name != v1alpha1.OperatorSourcePhaseSucceeded {
 		err = ErrWrongReconcilerInvoked
 		return
 	}

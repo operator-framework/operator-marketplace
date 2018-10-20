@@ -71,7 +71,7 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpcted, nil).Times(1)
 
 	// We expect the transitioner to indicate that the object has changed and needs update.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nextPhaseExpcted).Return(true).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpcted).Return(true).Times(1)
 
 	// We expect the object to be updated successfully.
 	kubeclient.EXPECT().Update(opsrcOut).Return(nil).Times(1)
@@ -111,7 +111,7 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil).Times(1)
 
 	// We expect transitioner to indicate that the object has not been changed.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nil).Return(false).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nil).Return(false).Times(1)
 
 	errGot := handler.Handle(ctx, event)
 
@@ -152,7 +152,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, reconcileErrorExpected).Times(1)
 
 	// We expect transitioner to indicate that the object has been changed.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nextPhaseExpected).Return(true).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
 	// We expect the object to be updated
 	updateErrorExpected := errors.New("object update error")

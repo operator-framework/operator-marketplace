@@ -40,17 +40,6 @@ type OperatorSourceSpec struct {
 }
 
 type OperatorSourceStatus struct {
-	// Current phase of the given OperatorSource object.
-	Phase string `json:"phase,omitempty"`
-
-	// A human readable message indicating why the OperatorSource object
-	// is in this phase.
-	Message string `json:"message,omitempty"`
-
-	// Last time the given OperatorSource object has transitioned
-	// from one phase to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-
-	// Last time we update the status of the given OperatorSource object.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	// Current phase of the OperatorSource object
+	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
 }

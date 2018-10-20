@@ -22,13 +22,14 @@ func NewTransitioner() Transitioner {
 
 // Transitioner is an interface that wraps the TransitionInto method
 //
-// TransitionInto transitions a given OperatorSource object into the specified next phase.
-// If the given OperatorSource object is nil, the function returns false to indicate no transition took place.
-// If the given OperatorSource object has the same phase and message specified in next phase,
-// then the function returns false to indicate no transition took place.
-// If a new phase is being set then LastTransitionTime is set appropriately, otherwise it is left untouched.
+// TransitionInto transitions the OperatorSource object into the specified
+// next phase. If the currentPhase is nil, the function returns false to
+// indicate no transition took place. If the currentPhase has the same phase and
+// message specified in next phase, then the function returns false to indicate
+// no transition took place. If a new phase is being set then LastTransitionTime
+// is set appropriately, otherwise it is left untouched.
 type Transitioner interface {
-	TransitionInto(opsrc *v1alpha1.OperatorSource, nextPhase *NextPhase) (changed bool)
+	TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) (changed bool)
 }
 
 // transitioner implements Transitioner interface.s
@@ -36,35 +37,34 @@ type transitioner struct {
 	clock clock.Clock
 }
 
-func (t *transitioner) TransitionInto(opsrc *v1alpha1.OperatorSource, nextPhase *NextPhase) (changed bool) {
-	if opsrc == nil || nextPhase == nil {
+func (t *transitioner) TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) (changed bool) {
+	if currentPhase == nil || nextPhase == nil {
 		return false
 	}
 
-	status := &opsrc.Status
-	if !hasPhaseChanged(status, nextPhase) {
+	if !hasPhaseChanged(currentPhase, nextPhase) {
 		return false
 	}
 
 	now := metav1.NewTime(t.clock.Now())
-	status.LastUpdateTime = now
-	status.Message = nextPhase.Message
+	currentPhase.LastUpdateTime = now
+	currentPhase.Message = nextPhase.Message
 
-	if status.Phase != nextPhase.Phase {
-		status.LastTransitionTime = now
-		status.Phase = nextPhase.Phase
+	if currentPhase.Name != nextPhase.Phase {
+		currentPhase.LastTransitionTime = now
+		currentPhase.Name = nextPhase.Phase
 	}
 
 	return true
 }
 
-// hasPhaseChanged returns true if the current phase specified in NextPhase
-// has changed from that of the given OperatorSourceStatus object.
+// hasPhaseChanged returns true if the current phase specified in nextPhase
+// has changed from that of the currentPhase.
 //
 // If both Phase and Message are equal, the function will return false
 // indicating no change. Otherwise, the function will return true.
-func hasPhaseChanged(status *v1alpha1.OperatorSourceStatus, NextPhase *NextPhase) bool {
-	if status.Phase == NextPhase.Phase && status.Message == NextPhase.Message {
+func hasPhaseChanged(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) bool {
+	if currentPhase.Name == nextPhase.Phase && currentPhase.Message == nextPhase.Message {
 		return false
 	}
 
