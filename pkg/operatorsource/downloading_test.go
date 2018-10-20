@@ -1,4 +1,4 @@
-package phase_test
+package operatorsource_test
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 )
 
 // Use Case: Successfully validated and scheduled for download.
@@ -21,17 +22,17 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	defer controller.Finish()
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    v1alpha1.OperatorSourcePhaseConfiguring,
-		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseConfiguring),
+		Name:    phase.Configuring,
+		Message: phase.GetMessage(phase.Configuring),
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 
-	reconciler := phase.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
 
 	ctx := context.TODO()
-	opsrcIn := helperNewOperatorSource("marketplace", "foo", v1alpha1.OperatorSourcePhaseDownloading)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
 
 	registryClient := mocks.NewAppRegistryClient(controller)
 	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
@@ -66,10 +67,10 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	datastore := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 
-	reconciler := phase.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
 
 	ctx := context.TODO()
-	opsrcIn := helperNewOperatorSource("marketplace", "foo", v1alpha1.OperatorSourcePhaseDownloading)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
 
 	registryClient := mocks.NewAppRegistryClient(controller)
 	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
@@ -82,7 +83,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	assert.Error(t, errGot)
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    v1alpha1.OperatorSourcePhaseFailed,
+		Name:    phase.Failed,
 		Message: errGot.Error(),
 	}
 

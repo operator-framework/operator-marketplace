@@ -6,7 +6,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/kube"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	log "github.com/sirupsen/logrus"
 )

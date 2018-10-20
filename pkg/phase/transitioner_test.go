@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 )

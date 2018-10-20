@@ -52,7 +52,7 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
-	opsrcIn, opsrcOut := helperNewOperatorSource("marketplace", "foo", "remote"), helperNewOperatorSource("marketplace", "foo", "local")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("marketplace", "foo", "remote"), helperNewOperatorSourceWithEndpoint("marketplace", "foo", "local")
 
 	event := sdk.Event{
 		Deleted: false,
@@ -96,7 +96,7 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
-	opsrcIn, opsrcOut := helperNewOperatorSource("namespace", "foo", "local"), helperNewOperatorSource("namespace", "foo", "remote")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
 
 	event := sdk.Event{
 		Deleted: false,
@@ -132,7 +132,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 
 	ctx := context.TODO()
 
-	opsrcIn, opsrcOut := helperNewOperatorSource("namespace", "foo", "local"), helperNewOperatorSource("namespace", "foo", "remote")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
 
 	event := sdk.Event{
 		Deleted: false,

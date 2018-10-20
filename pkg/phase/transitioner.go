@@ -32,7 +32,7 @@ type Transitioner interface {
 	TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *v1alpha1.Phase) (changed bool)
 }
 
-// transitioner implements Transitioner interface.s
+// transitioner implements Transitioner interface.
 type transitioner struct {
 	clock clock.Clock
 }

@@ -1,4 +1,4 @@
-package phase_test
+package operatorsource_test
 
 import (
 	"context"
@@ -11,7 +11,8 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,17 +29,17 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	defer controller.Finish()
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    v1alpha1.OperatorSourcePhaseSucceeded,
-		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseSucceeded),
+		Name:    phase.Succeeded,
+		Message: phase.GetMessage(phase.Succeeded),
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
 	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := phase.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
 
 	ctx := context.TODO()
-	opsrcIn := helperNewOperatorSource("marketplace", "foo", v1alpha1.OperatorSourcePhaseConfiguring)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 
 	// We expect that the given CatalogConfigSource object does not exist.
 	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
@@ -79,17 +80,17 @@ func TestReconcile_AlreadyConfigured_NoActionTaken(t *testing.T) {
 	defer controller.Finish()
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    v1alpha1.OperatorSourcePhaseSucceeded,
-		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseSucceeded),
+		Name:    phase.Succeeded,
+		Message: phase.GetMessage(phase.Succeeded),
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
 	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := phase.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
 
 	ctx := context.TODO()
-	opsrcIn := helperNewOperatorSource("marketplace", "foo", v1alpha1.OperatorSourcePhaseConfiguring)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
 
 	// We expect that the given CatalogConfigSource object already exists.

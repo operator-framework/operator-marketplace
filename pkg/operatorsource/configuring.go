@@ -1,13 +1,20 @@
-package phase
+package operatorsource
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/kube"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+)
+
+const (
+	// The prefix to a name we use to create CatalogSourceConfig object.
+	catalogSourceConfigPrefix = "opsrc"
 )
 
 // NewConfiguringReconciler returns a Reconciler that reconciles
@@ -50,8 +57,8 @@ type configuringReconciler struct {
 // If the corresponding CatalogSourceConfig object already exists
 // then no further action is taken.
 func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
-	if in.Status.CurrentPhase.Name != v1alpha1.OperatorSourcePhaseConfiguring {
-		err = ErrWrongReconcilerInvoked
+	if in.Status.CurrentPhase.Name != phase.Configuring {
+		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
 
@@ -64,12 +71,12 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	if err == nil {
 		r.logger.Infof("No action taken, CatalogSourceConfig [name=%s] already exists", cscName)
-		nextPhase = getNextPhase(v1alpha1.OperatorSourcePhaseSucceeded)
+		nextPhase = phase.GetNext(phase.Succeeded)
 		return
 	}
 
 	if !k8s_errors.IsNotFound(err) {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
@@ -82,12 +89,18 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	err = r.kubeclient.Create(csc)
 	if err != nil {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
-	nextPhase = getNextPhase(v1alpha1.OperatorSourcePhaseSucceeded)
+	nextPhase = phase.GetNext(phase.Succeeded)
 	r.logger.Info("The object has been successfully reconciled")
 
 	return
+}
+
+// Given a name of OperatorSource object, this function returns the name
+// of the corresponding CatalogSourceConfig type object.
+func getCatalogSourceConfigName(operatorsourceName string) string {
+	return fmt.Sprintf("%s-%s", catalogSourceConfigPrefix, operatorsourceName)
 }

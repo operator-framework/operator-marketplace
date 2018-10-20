@@ -1,9 +1,10 @@
-package phase
+package operatorsource
 
 import (
 	"context"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,8 +36,8 @@ type succeededReconciler struct {
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
 func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
-	if in.Status.CurrentPhase.Name != v1alpha1.OperatorSourcePhaseSucceeded {
-		err = ErrWrongReconcilerInvoked
+	if in.Status.CurrentPhase.Name != phase.Succeeded {
+		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
 
