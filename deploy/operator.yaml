@@ -4,6 +4,7 @@ metadata:
   name: marketplace-operator
 spec:
   replicas: 1
+  serviceAccountName: marketplace-operator-serviceaccount
   selector:
     matchLabels:
       name: marketplace-operator

@@ -45,7 +45,7 @@ metadata:
   name: default-account-marketplace-operator
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: marketplace-operator-serviceaccount
   namespace: marketplace
 roleRef:
   kind: ClusterRole
