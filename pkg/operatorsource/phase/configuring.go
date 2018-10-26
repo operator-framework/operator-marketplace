@@ -49,7 +49,7 @@ type configuringReconciler struct {
 //
 // If the corresponding CatalogSourceConfig object already exists
 // then no further action is taken.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
 	if in.Status.CurrentPhase.Name != v1alpha1.OperatorSourcePhaseConfiguring {
 		err = ErrWrongReconcilerInvoked
 		return

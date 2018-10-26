@@ -9,7 +9,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,14 +63,14 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), event).Return(reconciler, nil).Times(1)
 
 	// We expect the reconciler to successfully reconcile the object inside event.
-	nextPhaseExpcted := &phase.NextPhase{
-		Phase:   "validating",
+	nextPhaseExpected := &v1alpha1.Phase{
+		Name:    "validating",
 		Message: "validation is in progress",
 	}
-	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpcted, nil).Times(1)
+	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, nil).Times(1)
 
 	// We expect the transitioner to indicate that the object has changed and needs update.
-	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpcted).Return(true).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
 	// We expect the object to be updated successfully.
 	kubeclient.EXPECT().Update(opsrcOut).Return(nil).Times(1)
@@ -145,8 +144,8 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 
 	// We expect reconciler to throw an error.
 	reconcileErrorExpected := errors.New("reconciliation error")
-	nextPhaseExpected := &phase.NextPhase{
-		Phase:   "Failed",
+	nextPhaseExpected := &v1alpha1.Phase{
+		Name:    "Failed",
 		Message: "Reconciliation has failed",
 	}
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, reconcileErrorExpected).Times(1)

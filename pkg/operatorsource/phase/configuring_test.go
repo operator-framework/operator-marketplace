@@ -27,8 +27,8 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &phase.NextPhase{
-		Phase:   v1alpha1.OperatorSourcePhaseSucceeded,
+	nextPhaseWant := &v1alpha1.Phase{
+		Name:    v1alpha1.OperatorSourcePhaseSucceeded,
 		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseSucceeded),
 	}
 
@@ -78,8 +78,8 @@ func TestReconcile_AlreadyConfigured_NoActionTaken(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &phase.NextPhase{
-		Phase:   v1alpha1.OperatorSourcePhaseSucceeded,
+	nextPhaseWant := &v1alpha1.Phase{
+		Name:    v1alpha1.OperatorSourcePhaseSucceeded,
 		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseSucceeded),
 	}
 

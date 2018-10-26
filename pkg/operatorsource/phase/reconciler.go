@@ -32,5 +32,5 @@ import (
 // Reconcile operation is expected to be idempotent so that in the event of
 // multiple invocations there would be no adverse or side effect.
 type Reconciler interface {
-	Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error)
+	Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error)
 }

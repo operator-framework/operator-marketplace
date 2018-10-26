@@ -17,8 +17,8 @@ var (
 		Name:    "Validating",
 		Message: "Scheduled for validation",
 	}
-	nextPhaseAfterValidating = &phase.NextPhase{
-		Phase:   phaseWantValidating.Name,
+	nextPhaseAfterValidating = &v1alpha1.Phase{
+		Name:    phaseWantValidating.Name,
 		Message: phaseWantValidating.Message,
 	}
 )
@@ -98,8 +98,8 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 		},
 	}
 
-	nextPhase := &phase.NextPhase{
-		Phase:   phaseWant.Name,
+	nextPhase := &v1alpha1.Phase{
+		Name:    phaseWant.Name,
 		Message: phaseWant.Message,
 	}
 

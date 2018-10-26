@@ -29,7 +29,7 @@ func NewTransitioner() Transitioner {
 // no transition took place. If a new phase is being set then LastTransitionTime
 // is set appropriately, otherwise it is left untouched.
 type Transitioner interface {
-	TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) (changed bool)
+	TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *v1alpha1.Phase) (changed bool)
 }
 
 // transitioner implements Transitioner interface.s
@@ -37,7 +37,7 @@ type transitioner struct {
 	clock clock.Clock
 }
 
-func (t *transitioner) TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) (changed bool) {
+func (t *transitioner) TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPhase *v1alpha1.Phase) (changed bool) {
 	if currentPhase == nil || nextPhase == nil {
 		return false
 	}
@@ -50,9 +50,9 @@ func (t *transitioner) TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPh
 	currentPhase.LastUpdateTime = now
 	currentPhase.Message = nextPhase.Message
 
-	if currentPhase.Name != nextPhase.Phase {
+	if currentPhase.Name != nextPhase.Name {
 		currentPhase.LastTransitionTime = now
-		currentPhase.Name = nextPhase.Phase
+		currentPhase.Name = nextPhase.Name
 	}
 
 	return true
@@ -63,8 +63,8 @@ func (t *transitioner) TransitionInto(currentPhase *v1alpha1.ObjectPhase, nextPh
 //
 // If both Phase and Message are equal, the function will return false
 // indicating no change. Otherwise, the function will return true.
-func hasPhaseChanged(currentPhase *v1alpha1.ObjectPhase, nextPhase *NextPhase) bool {
-	if currentPhase.Name == nextPhase.Phase && currentPhase.Message == nextPhase.Message {
+func hasPhaseChanged(currentPhase *v1alpha1.ObjectPhase, nextPhase *v1alpha1.Phase) bool {
+	if currentPhase.Name == nextPhase.Name && currentPhase.Message == nextPhase.Message {
 		return false
 	}
 

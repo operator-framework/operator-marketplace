@@ -20,8 +20,8 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &phase.NextPhase{
-		Phase:   v1alpha1.OperatorSourcePhaseConfiguring,
+	nextPhaseWant := &v1alpha1.Phase{
+		Name:    v1alpha1.OperatorSourcePhaseConfiguring,
 		Message: v1alpha1.GetOperatorSourcePhaseMessage(v1alpha1.OperatorSourcePhaseConfiguring),
 	}
 
@@ -81,8 +81,8 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 	assert.Error(t, errGot)
 
-	nextPhaseWant := &phase.NextPhase{
-		Phase:   v1alpha1.OperatorSourcePhaseFailed,
+	nextPhaseWant := &v1alpha1.Phase{
+		Name:    v1alpha1.OperatorSourcePhaseFailed,
 		Message: errGot.Error(),
 	}
 
