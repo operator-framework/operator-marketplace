@@ -1,4 +1,4 @@
-package phase
+package operatorsource
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,9 +47,9 @@ type downloadingReconciler struct {
 // given OperatorSource object.
 // On error, the function returns "Failed" as the next desied phase
 // and Message is set to appropriate error message.
-func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error) {
-	if in.Status.Phase != v1alpha1.OperatorSourcePhaseDownloading {
-		err = ErrWrongReconcilerInvoked
+func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
+	if in.Status.CurrentPhase.Name != phase.OperatorSourceDownloading {
+		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
 
@@ -58,19 +59,19 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	registry, err := r.factory.New(in.Spec.Type, in.Spec.Endpoint)
 	if err != nil {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
 	manifests, err := registry.RetrieveAll(in.Spec.RegistryNamespace)
 	if err != nil {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
 	if len(manifests) == 0 {
 		err = errors.New("The operator source endpoint returned an empty manifest list")
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
@@ -78,12 +79,12 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	err = r.datastore.Write(manifests)
 	if err != nil {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
 
 	r.logger.Info("Download complete, scheduling for configuration")
 
-	nextPhase = getNextPhase(v1alpha1.OperatorSourcePhaseConfiguring)
+	nextPhase = phase.GetNext(phase.Configuring)
 	return
 }

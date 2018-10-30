@@ -1,4 +1,4 @@
-package phase
+package operatorsource
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 )
 
-// PhaseReconciler is the interface that wraps the Reconcile method.
+// Reconciler is the interface that wraps the Reconcile method.
 //
 // Reconcile reconciles a particular phase of a given OperatorSource object
 // and returns the next desired phase.
@@ -32,5 +32,5 @@ import (
 // Reconcile operation is expected to be idempotent so that in the event of
 // multiple invocations there would be no adverse or side effect.
 type Reconciler interface {
-	Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error)
+	Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,7 +52,7 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
-	opsrcIn, opsrcOut := helperNewOperatorSource("marketplace", "foo", "remote"), helperNewOperatorSource("marketplace", "foo", "local")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("marketplace", "foo", "remote"), helperNewOperatorSourceWithEndpoint("marketplace", "foo", "local")
 
 	event := sdk.Event{
 		Deleted: false,
@@ -64,14 +63,14 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), event).Return(reconciler, nil).Times(1)
 
 	// We expect the reconciler to successfully reconcile the object inside event.
-	nextPhaseExpcted := &phase.NextPhase{
-		Phase:   "validating",
+	nextPhaseExpected := &v1alpha1.Phase{
+		Name:    "validating",
 		Message: "validation is in progress",
 	}
-	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpcted, nil).Times(1)
+	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, nil).Times(1)
 
 	// We expect the transitioner to indicate that the object has changed and needs update.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nextPhaseExpcted).Return(true).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
 	// We expect the object to be updated successfully.
 	kubeclient.EXPECT().Update(opsrcOut).Return(nil).Times(1)
@@ -97,7 +96,7 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
-	opsrcIn, opsrcOut := helperNewOperatorSource("namespace", "foo", "local"), helperNewOperatorSource("namespace", "foo", "remote")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
 
 	event := sdk.Event{
 		Deleted: false,
@@ -111,7 +110,7 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil).Times(1)
 
 	// We expect transitioner to indicate that the object has not been changed.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nil).Return(false).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nil).Return(false).Times(1)
 
 	errGot := handler.Handle(ctx, event)
 
@@ -133,7 +132,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 
 	ctx := context.TODO()
 
-	opsrcIn, opsrcOut := helperNewOperatorSource("namespace", "foo", "local"), helperNewOperatorSource("namespace", "foo", "remote")
+	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
 
 	event := sdk.Event{
 		Deleted: false,
@@ -145,14 +144,14 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 
 	// We expect reconciler to throw an error.
 	reconcileErrorExpected := errors.New("reconciliation error")
-	nextPhaseExpected := &phase.NextPhase{
-		Phase:   "Failed",
+	nextPhaseExpected := &v1alpha1.Phase{
+		Name:    "Failed",
 		Message: "Reconciliation has failed",
 	}
 	reconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, reconcileErrorExpected).Times(1)
 
 	// We expect transitioner to indicate that the object has been changed.
-	transitioner.EXPECT().TransitionInto(opsrcOut, nextPhaseExpected).Return(true).Times(1)
+	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
 	// We expect the object to be updated
 	updateErrorExpected := errors.New("object update error")

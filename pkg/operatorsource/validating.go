@@ -1,4 +1,4 @@
-package phase
+package operatorsource
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,9 +39,9 @@ type validatingReconciler struct {
 //
 // On success, it returns "Downloading" as the next phase.
 // On error, it returns "Failed" as the next phase.
-func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *NextPhase, err error) {
-	if in.Status.Phase != v1alpha1.OperatorSourcePhaseValidating {
-		err = ErrWrongReconcilerInvoked
+func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
+	if in.Status.CurrentPhase.Name != phase.OperatorSourceValidating {
+		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
 
@@ -50,12 +51,13 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Opera
 	// Validate that operator source endpoint is a valid URL.
 	_, err = url.ParseRequestURI(in.Spec.Endpoint)
 	if err != nil {
-		nextPhase = getNextPhaseWithMessage(v1alpha1.OperatorSourcePhaseFailed, fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
+		nextPhase = phase.GetNextWithMessage(phase.Failed,
+			fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
 		return
 	}
 
 	r.logger.Info("Scheduling for download")
 
-	nextPhase = getNextPhase(v1alpha1.OperatorSourcePhaseDownloading)
+	nextPhase = phase.GetNext(phase.OperatorSourceDownloading)
 	return
 }

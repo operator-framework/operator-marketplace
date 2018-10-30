@@ -6,7 +6,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/kube"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	log "github.com/sirupsen/logrus"
 )
@@ -59,7 +59,7 @@ func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
 	// If reconciliation threw an error, we can't quit just yet. We need to
 	// figure out whether the OperatorSource object needs to be updated.
 
-	if !h.transitioner.TransitionInto(out, status) {
+	if !h.transitioner.TransitionInto(&out.Status.CurrentPhase, status) {
 		// OperatorSource object has not changed, no need to update. We are done.
 		return err
 	}
