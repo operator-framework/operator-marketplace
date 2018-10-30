@@ -32,6 +32,8 @@ type CatalogSourceConfigSpec struct {
 	TargetNamespace string `json:"targetNamespace"`
 	Packages        string `json:"packages"`
 }
+
 type CatalogSourceConfigStatus struct {
-	// Fill me
+	// Current phase of the CatalogSourceConfig object.
+	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
 }
