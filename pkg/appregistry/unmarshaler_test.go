@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnmarshall(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	// Do not use tabs for indentation as yaml forbids tabs http://yaml.org/faq.html
 	data := `
 publisher: redhat
@@ -17,7 +17,7 @@ data:
   packages: "my packages"
 `
 
-	u := blobUnmarshallerImpl{}
+	u := blobUnmarshalerImpl{}
 	manifest, err := u.Unmarshal([]byte(data))
 
 	require.NoError(t, err)

@@ -16,12 +16,12 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 
 	adapter := NewMockapprApiAdapter(controller)
 	decoder := NewMockblobDecoder(controller)
-	unmarshaller := NewMockblobUnmarshaller(controller)
+	unmarshaler := NewMockblobUnmarshaler(controller)
 
 	client := client{
-		adapter:      adapter,
-		decoder:      decoder,
-		unmarshaller: unmarshaller,
+		adapter:     adapter,
+		decoder:     decoder,
+		unmarshaler: unmarshaler,
 	}
 
 	namespace := "redhat"
@@ -48,7 +48,7 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 			Packages: "my packages",
 		},
 	}
-	unmarshaller.EXPECT().Unmarshal(decodedExpected).Return(manifestExpected, nil)
+	unmarshaler.EXPECT().Unmarshal(decodedExpected).Return(manifestExpected, nil)
 
 	metadata, err := client.RetrieveOne(fmt.Sprintf("%s/%s", namespace, repository), release)
 

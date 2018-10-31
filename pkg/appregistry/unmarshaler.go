@@ -20,18 +20,18 @@ type Data struct {
 	// CSVs is the list of CSV associated with a package
 	CSVs string `yaml:"clusterServiceVersions"`
 
-	// Packages is the list of channles associated with a package
+	// Packages is the list of channels associated with a package
 	Packages string `yaml:"packages"`
 }
 
-type blobUnmarshaller interface {
-	// Unmarshall unmarshals package blob into structured representations
+type blobUnmarshaler interface {
+	// Unmarshal unmarshals package blob into structured representations
 	Unmarshal(in []byte) (*Manifest, error)
 }
 
-type blobUnmarshallerImpl struct{}
+type blobUnmarshalerImpl struct{}
 
-func (*blobUnmarshallerImpl) Unmarshal(in []byte) (*Manifest, error) {
+func (*blobUnmarshalerImpl) Unmarshal(in []byte) (*Manifest, error) {
 	m := &Manifest{}
 	if err := yaml.Unmarshal(in, m); err != nil {
 		return nil, err

@@ -40,9 +40,9 @@ func (om *OperatorMetadata) ID() string {
 }
 
 type client struct {
-	adapter      apprApiAdapter
-	decoder      blobDecoder
-	unmarshaller blobUnmarshaller
+	adapter     apprApiAdapter
+	decoder     blobDecoder
+	unmarshaler blobUnmarshaler
 }
 
 func (c *client) RetrieveAll(namespace string) ([]*OperatorMetadata, error) {
@@ -86,7 +86,7 @@ func (c *client) RetrieveOne(name, release string) (*OperatorMetadata, error) {
 		return nil, err
 	}
 
-	manifest, err := c.unmarshaller.Unmarshal(decoded)
+	manifest, err := c.unmarshaler.Unmarshal(decoded)
 	if err != nil {
 		return nil, err
 	}
