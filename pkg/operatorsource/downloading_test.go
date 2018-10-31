@@ -8,7 +8,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -26,10 +26,10 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 		Message: phase.GetMessage(phase.Configuring),
 	}
 
-	datastore := mocks.NewDatastoreWriter(controller)
+	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -38,8 +38,8 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
 
 	// We expect the remote registry to return a non-empty list of manifest(s).
-	manifestExpected := []*appregistry.OperatorMetadata{
-		&appregistry.OperatorMetadata{
+	manifestExpected := []*datastore.OperatorMetadata{
+		&datastore.OperatorMetadata{
 			Namespace:  "redhat",
 			Repository: "myapp",
 			Release:    "1.0.0",
@@ -49,7 +49,7 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	registryClient.EXPECT().RetrieveAll(opsrcIn.Spec.RegistryNamespace).Return(manifestExpected, nil).Times(1)
 
 	// We expect the datastore to save downloaded manifest(s) returned by the registry.
-	datastore.EXPECT().Write(manifestExpected).Return(nil)
+	writer.EXPECT().Write(manifestExpected).Return(nil)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -64,10 +64,10 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	datastore := mocks.NewDatastoreWriter(controller)
+	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, datastore)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -76,7 +76,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
 
 	// We expect the registry to return an empty manifest list.
-	manifests := []*appregistry.OperatorMetadata{}
+	manifests := []*datastore.OperatorMetadata{}
 	registryClient.EXPECT().RetrieveAll(opsrcIn.Spec.RegistryNamespace).Return(manifests, nil).Times(1)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)

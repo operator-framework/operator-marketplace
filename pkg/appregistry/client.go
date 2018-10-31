@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 )
 
 // Client exposes the functionality of app registry server
@@ -11,32 +13,10 @@ type Client interface {
 	// RetrieveAll retrieves all visible packages from the given source
 	// When namespace is specified, only package(s) associated with the given namespace are returned.
 	// If namespace is empty then visible package(s) across all namespaces are returned.
-	RetrieveAll(namespace string) ([]*OperatorMetadata, error)
+	RetrieveAll(namespace string) ([]*datastore.OperatorMetadata, error)
 
 	// RetrieveOne retrieves a given package from the source
-	RetrieveOne(name, release string) (*OperatorMetadata, error)
-}
-
-// OperatorMetadata encapsulates operator metadata and manifest assocated with a package
-type OperatorMetadata struct {
-	// Namespace is the namespace in app registry server under which the package is hosted.
-	Namespace string
-
-	// Repository is the repository name for the specified package in app registry
-	Repository string
-
-	// Release represents the release or version number of the given package
-	Release string
-
-	// Digest is the sha256 hash value that uniquely corresponds to the blob associated with the release
-	Digest string
-
-	// Manifest encapsulates operator manifest
-	Manifest *Manifest
-}
-
-func (om *OperatorMetadata) ID() string {
-	return fmt.Sprintf("%s/%s", om.Namespace, om.Repository)
+	RetrieveOne(name, release string) (*datastore.OperatorMetadata, error)
 }
 
 type client struct {
@@ -45,13 +25,13 @@ type client struct {
 	unmarshaler blobUnmarshaler
 }
 
-func (c *client) RetrieveAll(namespace string) ([]*OperatorMetadata, error) {
+func (c *client) RetrieveAll(namespace string) ([]*datastore.OperatorMetadata, error) {
 	packages, err := c.adapter.ListPackages(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	list := make([]*OperatorMetadata, len(packages))
+	list := make([]*datastore.OperatorMetadata, len(packages))
 	for i, pkg := range packages {
 		manifest, err := c.RetrieveOne(pkg.Name, pkg.Default)
 		if err != nil {
@@ -64,7 +44,7 @@ func (c *client) RetrieveAll(namespace string) ([]*OperatorMetadata, error) {
 	return list, nil
 }
 
-func (c *client) RetrieveOne(name, release string) (*OperatorMetadata, error) {
+func (c *client) RetrieveOne(name, release string) (*datastore.OperatorMetadata, error) {
 	namespace, repository, err := split(name)
 	if err != nil {
 		return nil, err
@@ -91,7 +71,7 @@ func (c *client) RetrieveOne(name, release string) (*OperatorMetadata, error) {
 		return nil, err
 	}
 
-	om := &OperatorMetadata{
+	om := &datastore.OperatorMetadata{
 		Namespace:  namespace,
 		Repository: repository,
 		Release:    release,

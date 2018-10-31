@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	appr_models "github.com/operator-framework/go-appr/models"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 )
 
 func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
@@ -40,9 +41,9 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 	decodedExpected := []byte{'d', 'e', 'c', 'o', 'd', 'e', 'd'}
 	decoder.EXPECT().Decode(blobExpected).Return(decodedExpected, nil).Times(1)
 
-	manifestExpected := &Manifest{
+	manifestExpected := &datastore.Manifest{
 		Publisher: "redhat",
-		Data: Data{
+		Data: datastore.Data{
 			CRDs:     "my crds",
 			CSVs:     "my csvs",
 			Packages: "my packages",

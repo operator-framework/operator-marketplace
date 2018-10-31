@@ -3,8 +3,6 @@ package datastore
 import (
 	"errors"
 	"strings"
-
-	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 )
 
 var (
@@ -14,7 +12,7 @@ var (
 // New returns a new instance of datastore for Operator Manifest(s)
 func New() *memoryDatastore {
 	return &memoryDatastore{
-		manifests: map[string]*appregistry.OperatorMetadata{},
+		manifests: map[string]*OperatorMetadata{},
 	}
 }
 
@@ -22,7 +20,7 @@ func New() *memoryDatastore {
 //
 // Read returns the associated operator manifest given a package ID
 type Reader interface {
-	Read(packageID string) (*appregistry.OperatorMetadata, error)
+	Read(packageID string) (*OperatorMetadata, error)
 }
 
 // Writer is an interface that is used to manage the underlying datastore
@@ -33,16 +31,16 @@ type Writer interface {
 	GetPackageIDs() string
 
 	// Write stores the list of operator manifest(s) into datastore
-	Write(packages []*appregistry.OperatorMetadata) error
+	Write(packages []*OperatorMetadata) error
 }
 
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	manifests map[string]*appregistry.OperatorMetadata
+	manifests map[string]*OperatorMetadata
 }
 
-func (ds *memoryDatastore) Read(packageID string) (*appregistry.OperatorMetadata, error) {
+func (ds *memoryDatastore) Read(packageID string) (*OperatorMetadata, error) {
 	manifest, exists := ds.manifests[packageID]
 	if !exists {
 		return nil, ErrManifestNotFound
@@ -51,7 +49,7 @@ func (ds *memoryDatastore) Read(packageID string) (*appregistry.OperatorMetadata
 	return manifest, nil
 }
 
-func (ds *memoryDatastore) Write(packages []*appregistry.OperatorMetadata) error {
+func (ds *memoryDatastore) Write(packages []*OperatorMetadata) error {
 	for _, pkg := range packages {
 		ds.manifests[pkg.ID()] = pkg
 	}
