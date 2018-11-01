@@ -32,8 +32,7 @@ func (f *factory) New(sourceType, source string) (Client, error) {
 	c := apprclient.New(transport, strfmt.Default)
 
 	return &client{
-		adapter:     &apprApiAdapterImpl{client: c},
-		decoder:     &blobDecoderImpl{},
-		unmarshaler: &blobUnmarshalerImpl{},
+		adapter: &apprApiAdapterImpl{client: c},
+		decoder: &blobDecoderImpl{},
 	}, nil
 }

@@ -7,6 +7,16 @@ import (
 // OperatorMetadata encapsulates operator metadata and manifest
 // associated with a package.
 type OperatorMetadata struct {
+	// Metadata that uniquely identifies the given operator manifest in registry.
+	RegistryMetadata RegistryMetadata
+
+	// operator manifest blob in raw form.
+	Manifest []byte
+}
+
+// RegistryMetadata encapsulates metadata that uniquely describes the source of
+// a given operator manifest(s) in a registry.
+type RegistryMetadata struct {
 	// Namespace is the namespace in app registry server
 	// under which the package is hosted.
 	Namespace string
@@ -21,12 +31,9 @@ type OperatorMetadata struct {
 	// Digest is the sha256 hash value that uniquely corresponds to the blob
 	// associated with the release.
 	Digest string
-
-	// Manifest encapsulates operator manifest.
-	Manifest *Manifest
 }
 
 // ID returns the unique identifier associated with this operator manifest.
 func (om *OperatorMetadata) ID() string {
-	return fmt.Sprintf("%s/%s", om.Namespace, om.Repository)
+	return fmt.Sprintf("%s/%s", om.RegistryMetadata.Namespace, om.RegistryMetadata.Repository)
 }

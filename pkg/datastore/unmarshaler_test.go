@@ -1,4 +1,4 @@
-package appregistry
+package datastore
 
 import (
 	"testing"

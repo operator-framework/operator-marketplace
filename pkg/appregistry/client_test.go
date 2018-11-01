@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	appr_models "github.com/operator-framework/go-appr/models"
-	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 )
 
 func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
@@ -17,12 +16,10 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 
 	adapter := NewMockapprApiAdapter(controller)
 	decoder := NewMockblobDecoder(controller)
-	unmarshaler := NewMockblobUnmarshaler(controller)
 
 	client := client{
-		adapter:     adapter,
-		decoder:     decoder,
-		unmarshaler: unmarshaler,
+		adapter: adapter,
+		decoder: decoder,
 	}
 
 	namespace := "redhat"
@@ -41,22 +38,12 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 	decodedExpected := []byte{'d', 'e', 'c', 'o', 'd', 'e', 'd'}
 	decoder.EXPECT().Decode(blobExpected).Return(decodedExpected, nil).Times(1)
 
-	manifestExpected := &datastore.Manifest{
-		Publisher: "redhat",
-		Data: datastore.Data{
-			CRDs:     "my crds",
-			CSVs:     "my csvs",
-			Packages: "my packages",
-		},
-	}
-	unmarshaler.EXPECT().Unmarshal(decodedExpected).Return(manifestExpected, nil)
-
 	metadata, err := client.RetrieveOne(fmt.Sprintf("%s/%s", namespace, repository), release)
 
 	assert.NoError(t, err)
-	assert.Equal(t, namespace, metadata.Namespace)
-	assert.Equal(t, repository, metadata.Repository)
-	assert.Equal(t, release, metadata.Release)
-	assert.Equal(t, digest, metadata.Digest)
-	assert.Equal(t, manifestExpected, metadata.Manifest)
+	assert.Equal(t, namespace, metadata.RegistryMetadata.Namespace)
+	assert.Equal(t, repository, metadata.RegistryMetadata.Repository)
+	assert.Equal(t, release, metadata.RegistryMetadata.Release)
+	assert.Equal(t, digest, metadata.RegistryMetadata.Digest)
+	assert.Equal(t, decodedExpected, metadata.Manifest)
 }

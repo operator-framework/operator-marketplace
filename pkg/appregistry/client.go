@@ -20,9 +20,8 @@ type Client interface {
 }
 
 type client struct {
-	adapter     apprApiAdapter
-	decoder     blobDecoder
-	unmarshaler blobUnmarshaler
+	adapter apprApiAdapter
+	decoder blobDecoder
 }
 
 func (c *client) RetrieveAll(namespace string) ([]*datastore.OperatorMetadata, error) {
@@ -66,17 +65,14 @@ func (c *client) RetrieveOne(name, release string) (*datastore.OperatorMetadata,
 		return nil, err
 	}
 
-	manifest, err := c.unmarshaler.Unmarshal(decoded)
-	if err != nil {
-		return nil, err
-	}
-
 	om := &datastore.OperatorMetadata{
-		Namespace:  namespace,
-		Repository: repository,
-		Release:    release,
-		Manifest:   manifest,
-		Digest:     digest,
+		RegistryMetadata: datastore.RegistryMetadata{
+			Namespace:  namespace,
+			Repository: repository,
+			Release:    release,
+			Digest:     digest,
+		},
+		Manifest: decoded,
 	}
 
 	return om, nil

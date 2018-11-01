@@ -40,10 +40,12 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	// We expect the remote registry to return a non-empty list of manifest(s).
 	manifestExpected := []*datastore.OperatorMetadata{
 		&datastore.OperatorMetadata{
-			Namespace:  "redhat",
-			Repository: "myapp",
-			Release:    "1.0.0",
-			Digest:     "abcdefgh",
+			RegistryMetadata: datastore.RegistryMetadata{
+				Namespace:  "redhat",
+				Repository: "myapp",
+				Release:    "1.0.0",
+				Digest:     "abcdefgh",
+			},
 		},
 	}
 	registryClient.EXPECT().RetrieveAll(opsrcIn.Spec.RegistryNamespace).Return(manifestExpected, nil).Times(1)

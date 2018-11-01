@@ -1,19 +1,18 @@
-package appregistry
+package datastore
 
 import (
-	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type blobUnmarshaler interface {
 	// Unmarshal unmarshals package blob into structured representations
-	Unmarshal(in []byte) (*datastore.Manifest, error)
+	Unmarshal(in []byte) (*Manifest, error)
 }
 
 type blobUnmarshalerImpl struct{}
 
-func (*blobUnmarshalerImpl) Unmarshal(in []byte) (*datastore.Manifest, error) {
-	m := &datastore.Manifest{}
+func (*blobUnmarshalerImpl) Unmarshal(in []byte) (*Manifest, error) {
+	m := &Manifest{}
 	if err := yaml.Unmarshal(in, m); err != nil {
 		return nil, err
 	}

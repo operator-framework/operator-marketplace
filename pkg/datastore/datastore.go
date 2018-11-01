@@ -12,7 +12,8 @@ var (
 // New returns a new instance of datastore for Operator Manifest(s)
 func New() *memoryDatastore {
 	return &memoryDatastore{
-		manifests: map[string]*OperatorMetadata{},
+		manifests:   map[string]*OperatorMetadata{},
+		unmarshaler: &blobUnmarshalerImpl{},
 	}
 }
 
@@ -20,7 +21,7 @@ func New() *memoryDatastore {
 //
 // Read returns the associated operator manifest given a package ID
 type Reader interface {
-	Read(packageID string) (*OperatorMetadata, error)
+	Read(packageID string) (*Manifest, error)
 }
 
 // Writer is an interface that is used to manage the underlying datastore
@@ -37,13 +38,19 @@ type Writer interface {
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	manifests map[string]*OperatorMetadata
+	manifests   map[string]*OperatorMetadata
+	unmarshaler blobUnmarshaler
 }
 
-func (ds *memoryDatastore) Read(packageID string) (*OperatorMetadata, error) {
-	manifest, exists := ds.manifests[packageID]
+func (ds *memoryDatastore) Read(packageID string) (*Manifest, error) {
+	metadata, exists := ds.manifests[packageID]
 	if !exists {
 		return nil, ErrManifestNotFound
+	}
+
+	manifest, err := ds.unmarshaler.Unmarshal(metadata.Manifest)
+	if err != nil {
+		return nil, err
 	}
 
 	return manifest, nil
@@ -51,6 +58,11 @@ func (ds *memoryDatastore) Read(packageID string) (*OperatorMetadata, error) {
 
 func (ds *memoryDatastore) Write(packages []*OperatorMetadata) error {
 	for _, pkg := range packages {
+		// Validate that the manifest is properly structured.
+		if _, err := ds.unmarshaler.Unmarshal(pkg.Manifest); err != nil {
+			return err
+		}
+
 		ds.manifests[pkg.ID()] = pkg
 	}
 
