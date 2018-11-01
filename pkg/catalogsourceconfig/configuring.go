@@ -91,8 +91,8 @@ func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceCon
 			continue
 		}
 		// TODO: Add more error checking.
-		data[ConfigMapCRDName] += manifest.Data.CRDs
-		data[ConfigMapCSVName] += manifest.Data.CSVs
+		data[ConfigMapCRDName] += manifest.Data.CustomResourceDefinitions
+		data[ConfigMapCSVName] += manifest.Data.ClusterServiceVersions
 		data[ConfigMapPackageName] += manifest.Data.Packages
 	}
 	return data, nil

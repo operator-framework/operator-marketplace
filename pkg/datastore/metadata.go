@@ -10,8 +10,9 @@ type OperatorMetadata struct {
 	// Metadata that uniquely identifies the given operator manifest in registry.
 	RegistryMetadata RegistryMetadata
 
-	// operator manifest blob in raw form.
-	Manifest []byte
+	// Operator manifest(s) in raw YAML format that contains a set of CRD(s),
+	// CSV(s) and package channel(s).
+	RawYAML []byte
 }
 
 // RegistryMetadata encapsulates metadata that uniquely describes the source of

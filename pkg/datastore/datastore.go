@@ -48,7 +48,7 @@ func (ds *memoryDatastore) Read(packageID string) (*Manifest, error) {
 		return nil, ErrManifestNotFound
 	}
 
-	manifest, err := ds.unmarshaler.Unmarshal(metadata.Manifest)
+	manifest, err := ds.unmarshaler.Unmarshal(metadata.RawYAML)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (ds *memoryDatastore) Read(packageID string) (*Manifest, error) {
 func (ds *memoryDatastore) Write(packages []*OperatorMetadata) error {
 	for _, pkg := range packages {
 		// Validate that the manifest is properly structured.
-		if _, err := ds.unmarshaler.Unmarshal(pkg.Manifest); err != nil {
+		if _, err := ds.unmarshaler.Unmarshal(pkg.RawYAML); err != nil {
 			return err
 		}
 

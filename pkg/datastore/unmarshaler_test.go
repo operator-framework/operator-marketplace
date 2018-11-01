@@ -23,7 +23,7 @@ data:
 	require.NoError(t, err)
 
 	assert.Equal(t, "redhat", manifest.Publisher)
-	assert.Equal(t, "my crds", manifest.Data.CRDs)
-	assert.Equal(t, "my csvs", manifest.Data.CSVs)
+	assert.Equal(t, "my crds", manifest.Data.CustomResourceDefinitions)
+	assert.Equal(t, "my csvs", manifest.Data.ClusterServiceVersions)
 	assert.Equal(t, "my packages", manifest.Data.Packages)
 }

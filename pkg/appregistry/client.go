@@ -72,7 +72,7 @@ func (c *client) RetrieveOne(name, release string) (*datastore.OperatorMetadata,
 			Release:    release,
 			Digest:     digest,
 		},
-		Manifest: decoded,
+		RawYAML: decoded,
 	}
 
 	return om, nil

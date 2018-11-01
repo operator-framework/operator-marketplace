@@ -45,5 +45,5 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 	assert.Equal(t, repository, metadata.RegistryMetadata.Repository)
 	assert.Equal(t, release, metadata.RegistryMetadata.Release)
 	assert.Equal(t, digest, metadata.RegistryMetadata.Digest)
-	assert.Equal(t, decodedExpected, metadata.Manifest)
+	assert.Equal(t, decodedExpected, metadata.RawYAML)
 }
