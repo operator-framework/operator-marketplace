@@ -56,13 +56,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 	out = in
 
-	data, err := r.createCatalogData(in)
-	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
-		return
-	}
-
-	err = r.createCatalogSource(in, data)
+	err = r.createCatalogSource(in)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
@@ -100,11 +94,18 @@ func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceCon
 
 // createCatalogSource creates a new CatalogSource CR and all the resources it
 // requires.
-func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceConfig, data map[string]string) error {
+func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
+	// Construct the operator artifact data to be placed in the ConfigMap data
+	// section.
+	data, err := r.createCatalogData(csc)
+	if err != nil {
+		return err
+	}
+
 	// Create the ConfigMap that will be used by the CatalogSource.
 	catalogConfigMap := newConfigMap(csc, data)
 	r.log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
-	err := sdk.Create(catalogConfigMap)
+	err = sdk.Create(catalogConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create ConfigMap : %v", err)
 		return err
