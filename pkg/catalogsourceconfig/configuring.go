@@ -100,9 +100,10 @@ func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceCon
 
 // createCatalogSource creates a new CatalogSource CR and all the resources it
 // requires.
-func (r *configuringReconciler) createCatalogSource(cr *v1alpha1.CatalogSourceConfig, data map[string]string) error {
+func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceConfig, data map[string]string) error {
 	// Create the ConfigMap that will be used by the CatalogSource.
-	catalogConfigMap := newConfigMap(cr, data)
+	catalogConfigMap := newConfigMap(csc, data)
+	r.log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
 	err := sdk.Create(catalogConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create ConfigMap : %v", err)
@@ -110,7 +111,7 @@ func (r *configuringReconciler) createCatalogSource(cr *v1alpha1.CatalogSourceCo
 	}
 	r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
 
-	catalogSource := newCatalogSource(cr, catalogConfigMap.Name)
+	catalogSource := newCatalogSource(csc, catalogConfigMap.Name)
 	err = sdk.Create(catalogSource)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create CatalogSource : %v", err)
