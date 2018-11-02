@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Copied from https://github.com/operator-framework/operator-lifecycle-manager/blob/master/pkg/controller/registry/configmap_loader.go#L18
@@ -129,45 +128,20 @@ func getPackageIDs(csIDs string) []string {
 }
 
 // newConfigMap returns a new ConfigMap object.
-func newConfigMap(cr *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
-	name := v1alpha1.ConfigMapPrefix + cr.Name
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cr.Spec.TargetNamespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, cr.GroupVersionKind()),
-			},
-		},
-		Data: data,
-	}
+func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
+	return new(ConfigMapBuilder).
+		WithMeta(v1alpha1.ConfigMapPrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithOwner(csc).
+		WithData(data).
+		ConfigMap()
 }
 
 // newCatalogSource returns a CatalogSource object.
-func newCatalogSource(cr *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
-	name := v1alpha1.CatalogSourcePrefix + cr.Name
-	return &olm.CatalogSource{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       olm.CatalogSourceKind,
-			APIVersion: olm.CatalogSourceCRDAPIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cr.Spec.TargetNamespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, cr.GroupVersionKind()),
-			},
-		},
-		Spec: olm.CatalogSourceSpec{
-			SourceType:  "internal",
-			ConfigMap:   configMapName,
-			DisplayName: cr.Name,
-			// TBD: Where do we get this information from?
-			Publisher: cr.Name,
-		},
-	}
+func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
+	return new(CatalogSourceBuilder).
+		WithMeta(v1alpha1.CatalogSourcePrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithOwner(csc).
+		// TBD: where do we get display name and publisher from?
+		WithSpec("internal", configMapName, csc.Name, csc.Name).
+		CatalogSource()
 }
