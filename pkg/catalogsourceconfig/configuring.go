@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Copied from https://github.com/operator-framework/operator-lifecycle-manager/blob/master/pkg/controller/registry/configmap_loader.go#L18
@@ -56,13 +55,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 	out = in
 
-	data, err := r.createCatalogData(in)
-	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
-		return
-	}
-
-	err = r.createCatalogSource(in, data)
+	err = r.createCatalogSource(in)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
@@ -100,17 +93,25 @@ func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceCon
 
 // createCatalogSource creates a new CatalogSource CR and all the resources it
 // requires.
-func (r *configuringReconciler) createCatalogSource(cr *v1alpha1.CatalogSourceConfig, data map[string]string) error {
+func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
+	// Construct the operator artifact data to be placed in the ConfigMap data
+	// section.
+	data, err := r.createCatalogData(csc)
+	if err != nil {
+		return err
+	}
+
 	// Create the ConfigMap that will be used by the CatalogSource.
-	catalogConfigMap := newConfigMap(cr, data)
-	err := sdk.Create(catalogConfigMap)
+	catalogConfigMap := newConfigMap(csc, data)
+	r.log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
+	err = sdk.Create(catalogConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create ConfigMap : %v", err)
 		return err
 	}
 	r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
 
-	catalogSource := newCatalogSource(cr, catalogConfigMap.Name)
+	catalogSource := newCatalogSource(csc, catalogConfigMap.Name)
 	err = sdk.Create(catalogSource)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create CatalogSource : %v", err)
@@ -127,45 +128,20 @@ func getPackageIDs(csIDs string) []string {
 }
 
 // newConfigMap returns a new ConfigMap object.
-func newConfigMap(cr *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
-	name := v1alpha1.ConfigMapPrefix + cr.Name
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cr.Spec.TargetNamespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, cr.GroupVersionKind()),
-			},
-		},
-		Data: data,
-	}
+func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
+	return new(ConfigMapBuilder).
+		WithMeta(v1alpha1.ConfigMapPrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithOwner(csc).
+		WithData(data).
+		ConfigMap()
 }
 
 // newCatalogSource returns a CatalogSource object.
-func newCatalogSource(cr *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
-	name := v1alpha1.CatalogSourcePrefix + cr.Name
-	return &olm.CatalogSource{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       olm.CatalogSourceKind,
-			APIVersion: olm.CatalogSourceCRDAPIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cr.Spec.TargetNamespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, cr.GroupVersionKind()),
-			},
-		},
-		Spec: olm.CatalogSourceSpec{
-			SourceType:  "internal",
-			ConfigMap:   configMapName,
-			DisplayName: cr.Name,
-			// TBD: Where do we get this information from?
-			Publisher: cr.Name,
-		},
-	}
+func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
+	return new(CatalogSourceBuilder).
+		WithMeta(v1alpha1.CatalogSourcePrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithOwner(csc).
+		// TBD: where do we get display name and publisher from?
+		WithSpec("internal", configMapName, csc.Name, csc.Name).
+		CatalogSource()
 }
