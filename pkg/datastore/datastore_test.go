@@ -27,5 +27,5 @@ func TestGetPackageIDs(t *testing.T) {
 	result := ds.GetPackageIDs()
 	actual := strings.Split(result, ",")
 
-	assert.EqualValues(t, expected, actual)
+	assert.ElementsMatch(t, expected, actual)
 }
