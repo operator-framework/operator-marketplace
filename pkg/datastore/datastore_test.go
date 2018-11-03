@@ -24,12 +24,12 @@ func TestGetPackageIDs(t *testing.T) {
 	unmarshaler := NewMockblobUnmarshaler(controller)
 
 	ds := &memoryDatastore{
-		manifests:   map[string]*OperatorMetadata{},
+		manifests:   map[string]*OperatorManifest{},
 		unmarshaler: unmarshaler,
 	}
 
 	// We expect Unmarshal function to be invoked for each package.
-	unmarshaler.EXPECT().Unmarshal(gomock.Any()).Return(&Manifest{}, nil).Times(len(packages))
+	unmarshaler.EXPECT().Unmarshal(gomock.Any()).Return(&StructuredOperatorManifestData{}, nil).Times(len(packages))
 
 	err := ds.Write(packages)
 	require.NoError(t, err)

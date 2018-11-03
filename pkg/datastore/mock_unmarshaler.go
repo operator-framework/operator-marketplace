@@ -33,14 +33,27 @@ func (m *MockblobUnmarshaler) EXPECT() *MockblobUnmarshalerMockRecorder {
 }
 
 // Unmarshal mocks base method
-func (m *MockblobUnmarshaler) Unmarshal(in []byte) (*Manifest, error) {
-	ret := m.ctrl.Call(m, "Unmarshal", in)
-	ret0, _ := ret[0].(*Manifest)
+func (m *MockblobUnmarshaler) Unmarshal(rawYAML []byte) (*StructuredOperatorManifestData, error) {
+	ret := m.ctrl.Call(m, "Unmarshal", rawYAML)
+	ret0, _ := ret[0].(*StructuredOperatorManifestData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Unmarshal indicates an expected call of Unmarshal
-func (mr *MockblobUnmarshalerMockRecorder) Unmarshal(in interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmarshal", reflect.TypeOf((*MockblobUnmarshaler)(nil).Unmarshal), in)
+func (mr *MockblobUnmarshalerMockRecorder) Unmarshal(rawYAML interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmarshal", reflect.TypeOf((*MockblobUnmarshaler)(nil).Unmarshal), rawYAML)
+}
+
+// Marshal mocks base method
+func (m *MockblobUnmarshaler) Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error) {
+	ret := m.ctrl.Call(m, "Marshal", marshaled)
+	ret0, _ := ret[0].(*OperatorManifestData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Marshal indicates an expected call of Marshal
+func (mr *MockblobUnmarshalerMockRecorder) Marshal(marshaled interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockblobUnmarshaler)(nil).Marshal), marshaled)
 }
