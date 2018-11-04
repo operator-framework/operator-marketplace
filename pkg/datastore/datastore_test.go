@@ -21,15 +21,15 @@ func TestGetPackageIDs(t *testing.T) {
 		helperNewOperatorMetadata("braz", "3"),
 	}
 
-	unmarshaler := NewMockblobUnmarshaler(controller)
+	parser := NewMockManifestYAMLParser(controller)
 
 	ds := &memoryDatastore{
-		manifests:   map[string]*OperatorManifest{},
-		unmarshaler: unmarshaler,
+		manifests: map[string]*OperatorManifest{},
+		parser:    parser,
 	}
 
 	// We expect Unmarshal function to be invoked for each package.
-	unmarshaler.EXPECT().Unmarshal(gomock.Any()).Return(&StructuredOperatorManifestData{}, nil).Times(len(packages))
+	parser.EXPECT().Unmarshal(gomock.Any()).Return(&StructuredOperatorManifestData{}, nil).Times(len(packages))
 
 	err := ds.Write(packages)
 	require.NoError(t, err)

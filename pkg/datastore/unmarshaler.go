@@ -7,7 +7,9 @@ import (
 	"github.com/ghodss/yaml"
 )
 
-type blobUnmarshaler interface {
+// ManifestYAMLParser is an interface that is responsible for marshaling raw operator
+// manifest into structured representation and vice versa.
+type ManifestYAMLParser interface {
 	// Unmarshal unmarshals raw operator manifest YAML into structured
 	// representation.
 	//
@@ -24,9 +26,9 @@ type blobUnmarshaler interface {
 	Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error)
 }
 
-type blobUnmarshalerImpl struct{}
+type manifestYAMLParser struct{}
 
-func (*blobUnmarshalerImpl) Unmarshal(rawYAML []byte) (*StructuredOperatorManifestData, error) {
+func (*manifestYAMLParser) Unmarshal(rawYAML []byte) (*StructuredOperatorManifestData, error) {
 	var manifestYAML struct {
 		Data OperatorManifestData `yaml:"data"`
 	}
@@ -72,7 +74,7 @@ func (*blobUnmarshalerImpl) Unmarshal(rawYAML []byte) (*StructuredOperatorManife
 	return marshaled, nil
 }
 
-func (*blobUnmarshalerImpl) Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error) {
+func (*manifestYAMLParser) Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error) {
 	crdRaw, err := yaml.Marshal(marshaled.CustomResourceDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling CRD list into yaml : %s", err)
