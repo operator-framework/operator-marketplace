@@ -1,18 +1,46 @@
 package datastore
 
-import (
-	"encoding/json"
+// SingleOperatorManifest is a structured representation of a single operator
+// manifest.
+type SingleOperatorManifest struct {
+	// Package holds information about the associated with this operator.
+	Package *PackageManifest
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+	// CustomResourceDefinitions is the list of CRD(s) that this operator owns.
+	CustomResourceDefinitions []*CustomResourceDefinition
 
-// OperatorManifestData encapsulates the list of CRD(s), CSV(s) and package(s)
-// associated with an operator manifest. It contains a complete and
+	// ClusterServiceVersions is the list of CSV(s) that this operator manages.
+	ClusterServiceVersions []*ClusterServiceVersion
+}
+
+// GetPackageID returns the name that uniquely identifies this operator package.
+func (p *SingleOperatorManifest) GetPackageID() string {
+	return p.Package.PackageName
+}
+
+// MultiOperatorManifest is a structured representation of a manifest that has
+// multiple operator(s).
+type MultiOperatorManifest struct {
+	// Packages is the list of packages each of which uniquely describes a given
+	// operator in the manifest.
+	Packages []*PackageManifest
+
+	// CustomResourceDefinitions is the list of CRD(s) that managed by the
+	// operator(s) specified in the manifest.
+	CustomResourceDefinitions []*CustomResourceDefinition
+
+	// ClusterServiceVersions is the list of CSV(s) managed by the operator(s)
+	// specified in the manifest.
+	ClusterServiceVersions []*ClusterServiceVersion
+}
+
+// RawOperatorManifestData encapsulates the list of CRD(s), CSV(s) and
+// package(s) associated with an operator manifest. It contains a complete and
 // properly indented operator manifest.
 //
 // The Reader interface returns an object of this type so that it can be used to
 // create a ConfigMap object associated with a given operator manifest.
-type OperatorManifestData struct {
+type RawOperatorManifestData struct {
 	// CustomResourceDefinitions is the set of custom resource definition(s)
 	// associated with this package manifest.
 	CustomResourceDefinitions string `yaml:"customResourceDefinitions"`
@@ -23,19 +51,6 @@ type OperatorManifestData struct {
 
 	// Packages is the set of package(s) associated with this operator manifest.
 	Packages string `yaml:"packages"`
-}
-
-// OperatorManifest is a structured representation of an operator manifest.
-//
-// The Writer interface accepts a raw operator manifest and marshals it into
-// this type before writing it to the underlying storage.
-type OperatorManifest struct {
-	// RegistryMetadata uniquely identifies a given operator manifest and
-	// points to its source in remote registry.
-	RegistryMetadata RegistryMetadata
-
-	// Data is a structured representation of the given operator manifest.
-	Data StructuredOperatorManifestData
 }
 
 // StructuredOperatorManifestData is a structured representation of an operator
@@ -53,33 +68,14 @@ type OperatorManifest struct {
 type StructuredOperatorManifestData struct {
 	// CustomResourceDefinitions is the list of custom resource definition(s)
 	// associated with this operator manifest.
-	CustomResourceDefinitions []OLMObject `json:"customResourceDefinitions"`
+	CustomResourceDefinitions []CustomResourceDefinition `json:"customResourceDefinitions"`
 
 	// ClusterServiceVersions is the list of cluster service version(s)
 	//associated with this operators manifest.
-	ClusterServiceVersions []OLMObject `json:"clusterServiceVersions"`
+	ClusterServiceVersions []ClusterServiceVersion `json:"clusterServiceVersions"`
 
 	// Packages is the list of package(s) associated with this operator manifest.
 	Packages []PackageManifest `json:"packages"`
-}
-
-// OLMObject is a structured representation of OLM object and is
-// used to unmarshal CustomResourceDefinition, ClusterServiceVersion
-// from raw operator manifest YAML.
-//
-// This allows us to achieve loose coupling with OLM type(s). We don't need to
-// parse the entire CustomResourceDefinition or ClusterServiceVersion object.
-type OLMObject struct {
-	// Type metadata.
-	metav1.TypeMeta `json:",inline"`
-
-	// Object metadata.
-	metav1.ObjectMeta `json:"metadata"`
-
-	// Spec is the raw representation of the 'spec' element of
-	// CustomResourceDefinition and ClusterServiceVersion object. Since we are
-	// not interested in the content of spec we are not parsing it.
-	Spec json.RawMessage `json:"spec"`
 }
 
 // PackageManifest holds information about a package, which is a reference to
