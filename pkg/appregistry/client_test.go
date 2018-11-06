@@ -16,12 +16,10 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 
 	adapter := NewMockapprApiAdapter(controller)
 	decoder := NewMockblobDecoder(controller)
-	unmarshaller := NewMockblobUnmarshaller(controller)
 
 	client := client{
-		adapter:      adapter,
-		decoder:      decoder,
-		unmarshaller: unmarshaller,
+		adapter: adapter,
+		decoder: decoder,
 	}
 
 	namespace := "redhat"
@@ -40,22 +38,12 @@ func TestRetrieveOne_PackageExists_SuccessExpected(t *testing.T) {
 	decodedExpected := []byte{'d', 'e', 'c', 'o', 'd', 'e', 'd'}
 	decoder.EXPECT().Decode(blobExpected).Return(decodedExpected, nil).Times(1)
 
-	manifestExpected := &Manifest{
-		Publisher: "redhat",
-		Data: Data{
-			CRDs:     "my crds",
-			CSVs:     "my csvs",
-			Packages: "my packages",
-		},
-	}
-	unmarshaller.EXPECT().Unmarshal(decodedExpected).Return(manifestExpected, nil)
-
 	metadata, err := client.RetrieveOne(fmt.Sprintf("%s/%s", namespace, repository), release)
 
 	assert.NoError(t, err)
-	assert.Equal(t, namespace, metadata.Namespace)
-	assert.Equal(t, repository, metadata.Repository)
-	assert.Equal(t, release, metadata.Release)
-	assert.Equal(t, digest, metadata.Digest)
-	assert.Equal(t, manifestExpected, metadata.Manifest)
+	assert.Equal(t, namespace, metadata.RegistryMetadata.Namespace)
+	assert.Equal(t, repository, metadata.RegistryMetadata.Repository)
+	assert.Equal(t, release, metadata.RegistryMetadata.Release)
+	assert.Equal(t, digest, metadata.RegistryMetadata.Digest)
+	assert.Equal(t, decodedExpected, metadata.RawYAML)
 }

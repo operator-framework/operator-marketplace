@@ -1,4 +1,4 @@
-package appregistry
+package datastore
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnmarshall(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	// Do not use tabs for indentation as yaml forbids tabs http://yaml.org/faq.html
 	data := `
 publisher: redhat
@@ -17,13 +17,13 @@ data:
   packages: "my packages"
 `
 
-	u := blobUnmarshallerImpl{}
+	u := blobUnmarshalerImpl{}
 	manifest, err := u.Unmarshal([]byte(data))
 
 	require.NoError(t, err)
 
 	assert.Equal(t, "redhat", manifest.Publisher)
-	assert.Equal(t, "my crds", manifest.Data.CRDs)
-	assert.Equal(t, "my csvs", manifest.Data.CSVs)
+	assert.Equal(t, "my crds", manifest.Data.CustomResourceDefinitions)
+	assert.Equal(t, "my csvs", manifest.Data.ClusterServiceVersions)
 	assert.Equal(t, "my packages", manifest.Data.Packages)
 }
