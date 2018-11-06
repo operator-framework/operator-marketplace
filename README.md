@@ -22,14 +22,22 @@ $ export REGISTRY=<SOME_REGISTRY> \
 ```
 2. Update the `deploy/operator.yaml` to pull the Marketplace Operator image you just pushed. You should update the `spec.template.spec.containers[0].image` field with the `$REGISTRY/$NAMESPACE/$REPOSITORY:$TAG` value.
 
-## Deploying the Marketplace Operator
+## Using the Marketplace Operator
 
-### In an OKD Cluster
+### Description
+
+The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "marketplace"), the operator will download manifests stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+
+The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
+
+### Deploying the Marketplace Operator
+
+#### In an OKD Cluster
 ```bash
-$ oc apply -f deploy
+$ oc apply -f deploy/
 ```
 
-### In a Kubernetes Cluster
+#### In a Kubernetes Cluster
 ```bash
-$ kubectl apply -f deploy
+$ kubectl apply -f deploy/
 ```
