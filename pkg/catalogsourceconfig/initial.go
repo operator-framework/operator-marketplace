@@ -25,18 +25,7 @@ type initialReconciler struct {
 // Reconcile reconciles a CatalogSourceConfig object that is in the "Initial"
 // phase. This is the first phase in the reconciliation process.
 //
-// in represents the original CatalogSourceConfig object received from the sdk
-// and before reconciliation has started.
-//
-// out represents the CatalogSourceConfig object after reconciliation has
-// completed and could be different from the original. The CatalogSourceConfig
-// object received (in) should be deep copied into (out) before changes are
-// made.
-//
-// nextPhase represents the next desired phase for the CatalogSourceConfig
-// object. If nil is returned, it implies that no phase transition is expected.
-//
-// Upon success, it returns "Validating" as the next desired phase.
+// Upon success, it returns "Configuring" as the next desired phase.
 func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSourceConfig) (out *v1alpha1.CatalogSourceConfig, nextPhase *v1alpha1.Phase, err error) {
 	if in.Status.CurrentPhase.Name != phase.Initial {
 		err = phase.ErrWrongReconcilerInvoked

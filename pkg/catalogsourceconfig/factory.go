@@ -35,7 +35,7 @@ type phaseReconcilerFactory struct {
 	reader datastore.Reader
 }
 
-func (f *phaseReconcilerFactory) GetPhaseReconciler(logger *logrus.Entry, event sdk.Event) (Reconciler, error) {
+func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, event sdk.Event) (Reconciler, error) {
 	csc := event.Object.(*v1alpha1.CatalogSourceConfig)
 
 	if event.Deleted {

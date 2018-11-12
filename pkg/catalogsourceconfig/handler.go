@@ -23,8 +23,6 @@ type handler struct {
 	reader       datastore.Reader
 }
 
-var log *logrus.Entry
-
 // Handle handles a new event associated with the CatalogSourceConfig type.
 func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
 	in, ok := event.Object.(*v1alpha1.CatalogSourceConfig)
@@ -32,7 +30,7 @@ func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
 		return fmt.Errorf("Received event for incorrect kind %v", event.Object.GetObjectKind().GroupVersionKind())
 	}
 
-	log = getLoggerWithCatalogSourceConfigTypeFields(in)
+	log := getLoggerWithCatalogSourceConfigTypeFields(in)
 	reconciler, err := h.factory.GetPhaseReconciler(log, event)
 	if err != nil {
 		return err
