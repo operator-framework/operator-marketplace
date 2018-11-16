@@ -5,9 +5,12 @@ import (
 	"strings"
 )
 
-// New returns a new instance of datastore for Operator Manifest(s).
-func New() *memoryDatastore {
-	return &memoryDatastore{
+var (
+	Cache *memoryDatastore
+)
+
+func init() {
+	Cache = &memoryDatastore{
 		manifests: map[string]*OperatorManifest{},
 		parser:    &manifestYAMLParser{},
 	}

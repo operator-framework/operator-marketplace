@@ -10,7 +10,7 @@ import (
 // NewHandler returns an instance of the Handler interface
 // that can be used to reconcile an OperatorSource type object.
 func NewHandler() (Handler, datastore.Reader) {
-	datastore := datastore.New()
+	datastore := datastore.Cache
 	kubeclient := kube.New()
 	transitioner := phase.NewTransitioner()
 
