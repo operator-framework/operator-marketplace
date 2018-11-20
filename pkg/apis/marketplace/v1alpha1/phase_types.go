@@ -5,7 +5,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // Phase describes the phase the object is in
 type Phase struct {
 	// Name of the phase
-	Name string `json:"phase,omitempty"`
+	Name string `json:"name,omitempty"`
 
 	// A human readable message indicating why the object is in this phase
 	Message string `json:"message,omitempty"`
