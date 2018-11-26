@@ -30,7 +30,7 @@ The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsou
 
 The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
 
-### Deploying the Marketplace Operator
+### Deploying the Marketplace Operator using Operator Artifacts
 
 #### In an OKD Cluster
 ```bash
@@ -40,4 +40,22 @@ $ oc apply -f deploy/
 #### In a Kubernetes Cluster
 ```bash
 $ kubectl apply -f deploy/
+```
+
+### Deploying the Marketplace Operator with OLM
+
+#### In an OKD Cluster
+```bash
+$ oc apply -f deploy/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/operatorsource.crd.yaml
+$ oc apply -f deploy/rbac.yaml
+$ oc apply -f deploy/csv/marketplace.csv.yaml
+```
+
+#### In a Kubernetes Cluster
+```bash
+$ kubectl apply -f deploy/catalogsourceconfig.crd.yaml
+$ kubectl apply -f deploy/operatorsource.crd.yaml
+$ kubectl apply -f deploy/rbac.yaml
+$ kubectl apply -f deploy/csv/marketplace.csv.yaml
 ```
