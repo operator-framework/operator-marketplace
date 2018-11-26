@@ -7,9 +7,8 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PhaseReconcilerFactory is the interface that wraps GetPhaseReconciler method.
@@ -27,27 +26,22 @@ import (
 //
 //  On error, the object is transitioned into "Failed" phase.
 type PhaseReconcilerFactory interface {
-	GetPhaseReconciler(log *logrus.Entry, event sdk.Event) (Reconciler, error)
+	GetPhaseReconciler(log *logrus.Entry, currentPhase string) (Reconciler, error)
 }
 
 // phaseReconcilerFactory implements PhaseReconcilerFactory interface.
 type phaseReconcilerFactory struct {
 	reader datastore.Reader
+	client client.Client
 }
 
-func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, event sdk.Event) (Reconciler, error) {
-	csc := event.Object.(*v1alpha1.CatalogSourceConfig)
-
-	if event.Deleted {
-		return NewDeletedEventReconciler(log), nil
-	}
-
-	switch csc.Status.CurrentPhase.Name {
+func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, currentPhase string) (Reconciler, error) {
+	switch currentPhase {
 	case phase.Initial:
 		return NewInitialReconciler(log), nil
 
 	case phase.Configuring:
-		return NewConfiguringReconciler(log, f.reader), nil
+		return NewConfiguringReconciler(log, f.reader, f.client), nil
 
 	case phase.Succeeded:
 		return NewSucceededReconciler(log), nil
@@ -57,6 +51,6 @@ func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, event sdk
 
 	default:
 		return nil,
-			fmt.Errorf("No phase reconciler returned, invalid phase for CatalogSourceConfig type [phase=%s]", csc.Status.CurrentPhase.Name)
+			fmt.Errorf("No phase reconciler returned, invalid phase for CatalogSourceConfig type [phase=%s]", currentPhase)
 	}
 }

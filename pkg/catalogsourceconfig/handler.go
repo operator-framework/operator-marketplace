@@ -2,36 +2,48 @@ package catalogsourceconfig
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/sirupsen/logrus"
 )
 
-// Handler is the interface that wraps the Handle method
-type Handler interface {
-	Handle(ctx context.Context, event sdk.Event) error
+func NewHandler(mgr manager.Manager) Handler {
+	return &catalogsourceconfighandler{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		factory: &phaseReconcilerFactory{
+			reader: datastore.Cache,
+			client: mgr.GetClient(),
+		},
+		transitioner: phase.NewTransitioner(),
+		reader:       datastore.Cache,
+	}
 }
 
-type handler struct {
+// Handler is the interface that wraps the Handle method
+type Handler interface {
+	Handle(ctx context.Context, catalogSourceConfig *v1alpha1.CatalogSourceConfig) error
+}
+
+type catalogsourceconfighandler struct {
+	client       client.Client
+	scheme       *runtime.Scheme
 	factory      PhaseReconcilerFactory
 	transitioner phase.Transitioner
 	reader       datastore.Reader
 }
 
 // Handle handles a new event associated with the CatalogSourceConfig type.
-func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
-	in, ok := event.Object.(*v1alpha1.CatalogSourceConfig)
-	if !ok {
-		return fmt.Errorf("Received event for incorrect kind %v", event.Object.GetObjectKind().GroupVersionKind())
-	}
+func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v1alpha1.CatalogSourceConfig) error {
 
 	log := getLoggerWithCatalogSourceConfigTypeFields(in)
-	reconciler, err := h.factory.GetPhaseReconciler(log, event)
+	reconciler, err := h.factory.GetPhaseReconciler(log, in.Status.CurrentPhase.Name)
 	if err != nil {
 		return err
 	}
@@ -48,7 +60,7 @@ func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
 	// CatalogSourceConfig object has been changed. At this point,
 	// reconciliation has either completed successfully or failed. In either
 	// case, we need to update the modified CatalogSourceConfig object.
-	if updateErr := sdk.Update(out); updateErr != nil {
+	if updateErr := h.client.Update(ctx, out); updateErr != nil {
 		if err == nil {
 			// No reconciliation err, but update of object has failed!
 			return updateErr

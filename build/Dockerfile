@@ -3,4 +3,4 @@ FROM openshift/origin-base
 RUN useradd marketplace-operator
 USER marketplace-operator
 
-ADD tmp/_output/bin/marketplace-operator /usr/local/bin/marketplace-operator
+ADD build/_output/bin/operator-marketplace /usr/local/bin/operator-marketplace

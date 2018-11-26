@@ -9,10 +9,10 @@ if ! which go > /dev/null; then
 	exit 1
 fi
 
-BIN_DIR="$(pwd)/tmp/_output/bin"
+BIN_DIR="$(pwd)/build/_output/bin"
 mkdir -p ${BIN_DIR}
 PROJECT_NAME="marketplace-operator"
 REPO_PATH="github.com/operator-framework/operator-marketplace/"
-BUILD_PATH="${REPO_PATH}/cmd/${PROJECT_NAME}"
+BUILD_PATH="${REPO_PATH}/cmd/manager"
 echo "building "${PROJECT_NAME}"..."
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
