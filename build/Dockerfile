@@ -1,4 +1,4 @@
-FROM openshift/origin-base
+FROM registry.svc.ci.openshift.org/openshift/origin-v4.0:base
 
 RUN useradd marketplace-operator
 USER marketplace-operator
