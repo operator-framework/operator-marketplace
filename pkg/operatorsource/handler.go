@@ -2,21 +2,37 @@ package operatorsource
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/kube"
+	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // NewHandlerWithParams returns a new Handler.
-func NewHandlerWithParams(factory PhaseReconcilerFactory, kubeclient kube.Client, transitioner phase.Transitioner) Handler {
-	return &handler{
+func NewHandlerWithParams(client client.Client, scheme *runtime.Scheme, factory PhaseReconcilerFactory, transitioner phase.Transitioner) Handler {
+	return &operatorsourcehandler{
+		client:       client,
+		scheme:       scheme,
 		factory:      factory,
-		kubeclient:   kubeclient,
 		transitioner: transitioner,
+	}
+}
+
+func NewHandler(mgr manager.Manager) Handler {
+	return &operatorsourcehandler{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		factory: &phaseReconcilerFactory{
+			registryClientFactory: appregistry.NewClientFactory(),
+			datastore:             datastore.Cache,
+			client:                mgr.GetClient(),
+		},
+		transitioner: phase.NewTransitioner(),
 	}
 }
 
@@ -27,29 +43,27 @@ func NewHandlerWithParams(factory PhaseReconcilerFactory, kubeclient kube.Client
 // ctx represents the parent context.
 // event encapsulates the event fired by operator sdk.
 type Handler interface {
-	Handle(ctx context.Context, event sdk.Event) error
+	Handle(ctx context.Context, operatorSource *v1alpha1.OperatorSource) error
 }
 
-// handler implements the Handler interface
-type handler struct {
+// operatorsourcehandler implements the Handler interface
+type operatorsourcehandler struct {
+	// This client, initialized using mgr.Client() above, is a split client
+	// that reads objects from the cache and writes to the apiserver
+	client       client.Client
+	scheme       *runtime.Scheme
 	factory      PhaseReconcilerFactory
-	kubeclient   kube.Client
 	transitioner phase.Transitioner
 }
 
-func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
-	in, ok := event.Object.(*v1alpha1.OperatorSource)
-	if !ok {
-		return fmt.Errorf("casting failed, wrong type provided")
-	}
-
+func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1alpha1.OperatorSource) error {
 	logger := log.WithFields(log.Fields{
 		"type":      in.TypeMeta.Kind,
 		"namespace": in.GetNamespace(),
 		"name":      in.GetName(),
 	})
 
-	reconciler, err := h.factory.GetPhaseReconciler(logger, event)
+	reconciler, err := h.factory.GetPhaseReconciler(logger, in.Status.CurrentPhase.Name)
 	if err != nil {
 		return err
 	}
@@ -67,7 +81,7 @@ func (h *handler) Handle(ctx context.Context, event sdk.Event) error {
 	// OperatorSource object has been changed. At this point, reconciliation has
 	// either completed successfully or failed.
 	// In either case, we need to update the modified OperatorSource object.
-	if updateErr := h.kubeclient.Update(out); updateErr != nil {
+	if updateErr := h.client.Update(ctx, out); updateErr != nil {
 		if err == nil {
 			// No reconciliation err, but update of object has failed!
 			return updateErr

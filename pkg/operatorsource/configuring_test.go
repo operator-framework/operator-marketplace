@@ -15,6 +15,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func getExpectedCatalogSourceConfigName(opsrcName string) string {
@@ -40,11 +41,12 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
+	namespacedName := types.NamespacedName{Name: "opsrc-foo", Namespace: "marketplace"}
 
 	// We expect that the given CatalogConfigSource object does not exist.
 	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
 	kubeClientErr := k8s_errors.NewNotFound(schema.GroupResource{}, "CatalogSourceConfig not found")
-	kubeclient.EXPECT().Get(cscGet).Return(kubeClientErr)
+	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(kubeClientErr)
 
 	packages := "a,b,c"
 	datastore.EXPECT().GetPackageIDs().Return(packages)
@@ -64,7 +66,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
-	kubeclient.EXPECT().Create(cscWant).Return(nil)
+	kubeclient.EXPECT().Create(context.TODO(), cscWant).Return(nil)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -91,10 +93,11 @@ func TestReconcile_AlreadyConfigured_NoActionTaken(t *testing.T) {
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
+	namespacedName := types.NamespacedName{Name: "opsrc-foo", Namespace: "marketplace"}
 	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
 
 	// We expect that the given CatalogConfigSource object already exists.
-	kubeclient.EXPECT().Get(cscGet).Return(nil).Times(1)
+	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(nil).Times(1)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 

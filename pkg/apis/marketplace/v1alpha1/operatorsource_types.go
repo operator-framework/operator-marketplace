@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Only type definitions go into this file.
@@ -10,21 +11,25 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// OperatorSourceList contains a list of OperatorSource
 type OperatorSourceList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OperatorSource `json:"items"`
+}
+
+// OperatorSource is the Schema for the operatorsources API
+// +k8s:openapi-gen=true
+type OperatorSource struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              OperatorSourceSpec   `json:"spec,omitempty"`
+	Status            OperatorSourceStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type OperatorSource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
-	Spec              OperatorSourceSpec   `json:"spec"`
-	Status            OperatorSourceStatus `json:"status,omitempty"`
-}
-
+// OperatorSourceSpec defines the desired state of OperatorSource
 type OperatorSourceSpec struct {
 	// Type of operator source.
 	Type string `json:"type,omitempty"`
@@ -39,7 +44,25 @@ type OperatorSourceSpec struct {
 	RegistryNamespace string `json:"registryNamespace,omitempty"`
 }
 
+// OperatorSourceStatus defines the observed state of OperatorSource
 type OperatorSourceStatus struct {
 	// Current phase of the OperatorSource object
 	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
+}
+
+func init() {
+	SchemeBuilder.Register(&OperatorSource{}, &OperatorSourceList{})
+}
+
+// Set group, version, and kind strings
+// from the internal reference that we defined in the v1alpha1 package.
+// The object the sdk client returns does not set these
+// so we must find the correct values and set them manually.
+func (opsrc *OperatorSource) EnsureGVK() {
+	gvk := schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    OperatorSourceKind,
+	}
+	opsrc.SetGroupVersionKind(gvk)
 }

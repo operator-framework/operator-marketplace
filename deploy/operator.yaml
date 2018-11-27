@@ -12,6 +12,7 @@ spec:
       labels:
         name: marketplace-operator
     spec:
+      serviceAccountName: marketplace-operator
       containers:
         - name: marketplace-operator
           image: quay.io/redhat/marketplace

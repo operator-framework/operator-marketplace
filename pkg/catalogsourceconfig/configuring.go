@@ -9,10 +9,10 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Copied from https://github.com/operator-framework/operator-lifecycle-manager/blob/master/pkg/controller/registry/configmap_loader.go#L18
@@ -26,10 +26,11 @@ const (
 
 // NewConfiguringReconciler returns a Reconciler that reconciles a
 // CatalogSourceConfig object in the "Configuring" phase.
-func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader) Reconciler {
+func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader, client client.Client) Reconciler {
 	return &configuringReconciler{
 		log:    log,
 		reader: reader,
+		client: client,
 	}
 }
 
@@ -38,6 +39,7 @@ func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader) Reconc
 type configuringReconciler struct {
 	log    *logrus.Entry
 	reader datastore.Reader
+	client client.Client
 }
 
 // Reconcile reconciles a CatalogSourceConfig object that is in the
@@ -106,7 +108,7 @@ func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceC
 	// Create the ConfigMap that will be used by the CatalogSource.
 	catalogConfigMap := newConfigMap(csc, data)
 	r.log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
-	err = sdk.Create(catalogConfigMap)
+	err = r.client.Create(context.TODO(), catalogConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create ConfigMap : %v", err)
 		return err
@@ -114,7 +116,8 @@ func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceC
 	r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
 
 	catalogSource := newCatalogSource(csc, catalogConfigMap.Name)
-	err = sdk.Create(catalogSource)
+
+	err = r.client.Create(context.TODO(), catalogSource)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		r.log.Errorf("Failed to create CatalogSource : %v", err)
 		return err

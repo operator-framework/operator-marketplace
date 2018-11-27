@@ -4,15 +4,12 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
-	"github.com/operator-framework/operator-marketplace/pkg/kube"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
 )
 
 // PhaseReconcilerFactory is the interface that wraps GetPhaseReconciler method.
@@ -30,24 +27,18 @@ import (
 //
 //  On error, the object is transitioned into "Failed" phase.
 type PhaseReconcilerFactory interface {
-	GetPhaseReconciler(logger *log.Entry, event sdk.Event) (Reconciler, error)
+	GetPhaseReconciler(logger *log.Entry, currentPhase string) (Reconciler, error)
 }
 
 // phaseReconcilerFactory implements PhaseReconcilerFactory interface.
 type phaseReconcilerFactory struct {
 	registryClientFactory appregistry.ClientFactory
 	datastore             datastore.Writer
-	kubeclient            kube.Client
+	client                client.Client
 }
 
-func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, event sdk.Event) (Reconciler, error) {
-	opsrc := event.Object.(*v1alpha1.OperatorSource)
-
-	if event.Deleted {
-		return NewDeletedEventReconciler(logger, s.datastore), nil
-	}
-
-	switch opsrc.Status.CurrentPhase.Name {
+func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, currentPhase string) (Reconciler, error) {
+	switch currentPhase {
 	case phase.Initial:
 		return NewInitialReconciler(logger), nil
 
@@ -58,7 +49,7 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, event sdk
 		return NewDownloadingReconciler(logger, s.registryClientFactory, s.datastore), nil
 
 	case phase.Configuring:
-		return NewConfiguringReconciler(logger, s.datastore, s.kubeclient), nil
+		return NewConfiguringReconciler(logger, s.datastore, s.client), nil
 
 	case phase.Succeeded:
 		return NewSucceededReconciler(logger), nil
@@ -68,6 +59,6 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, event sdk
 
 	default:
 		return nil,
-			fmt.Errorf("No phase reconciler returned, invalid phase for OperatorSource type [phase=%s]", opsrc.Status.CurrentPhase.Phase)
+			fmt.Errorf("No phase reconciler returned, invalid phase for OperatorSource type [phase=%s]", currentPhase)
 	}
 }

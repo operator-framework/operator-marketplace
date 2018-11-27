@@ -6,10 +6,11 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
-	"github.com/operator-framework/operator-marketplace/pkg/kube"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -19,22 +20,22 @@ const (
 
 // NewConfiguringReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Configuring" phase.
-func NewConfiguringReconciler(logger *log.Entry, datastore datastore.Writer, kubeclient kube.Client) Reconciler {
+func NewConfiguringReconciler(logger *log.Entry, datastore datastore.Writer, client client.Client) Reconciler {
 	return &configuringReconciler{
-		logger:     logger,
-		datastore:  datastore,
-		kubeclient: kubeclient,
-		builder:    &CatalogSourceConfigBuilder{},
+		logger:    logger,
+		datastore: datastore,
+		client:    client,
+		builder:   &CatalogSourceConfigBuilder{},
 	}
 }
 
 // configuringReconciler is an implementation of Reconciler interface that
 // reconciles an OperatorSource object in "Configuring" phase.
 type configuringReconciler struct {
-	logger     *log.Entry
-	datastore  datastore.Writer
-	kubeclient kube.Client
-	builder    *CatalogSourceConfigBuilder
+	logger    *log.Entry
+	datastore datastore.Writer
+	client    client.Client
+	builder   *CatalogSourceConfigBuilder
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Configuring" phase.
@@ -65,9 +66,10 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	out = in
 
 	cscName := getCatalogSourceConfigName(in.Name)
+	cscNamespacedName := types.NamespacedName{Name: cscName, Namespace: in.Namespace}
 	cscRetrievedInto := r.builder.WithMeta(in.Namespace, cscName).CatalogSourceConfig()
 
-	err = r.kubeclient.Get(cscRetrievedInto)
+	err = r.client.Get(ctx, cscNamespacedName, cscRetrievedInto)
 
 	if err == nil {
 		r.logger.Infof("No action taken, CatalogSourceConfig [name=%s] already exists", cscName)
@@ -87,8 +89,9 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		WithOwner(in).
 		CatalogSourceConfig()
 
-	err = r.kubeclient.Create(csc)
+	err = r.client.Create(ctx, csc)
 	if err != nil {
+		r.logger.Infof("Unexpected error: %s", err.Error())
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
