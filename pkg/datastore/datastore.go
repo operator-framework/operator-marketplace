@@ -1,8 +1,12 @@
 package datastore
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
@@ -10,16 +14,18 @@ var (
 )
 
 func init() {
-	Cache = newDataStore()
+	// Cache is the global instance of datastore used by
+	// the Marketplace operator.
+	Cache = New()
 }
 
-func newDataStore() *memoryDatastore {
+// New returns an instance of memoryDatastore.
+func New() *memoryDatastore {
 	return &memoryDatastore{
-		rows:     map[string]*operatorSourceRow{},
-		packages: map[string]*SingleOperatorManifest{},
-		parser:   &manifestYAMLParser{},
-		walker:   &walker{},
-		bundler:  &bundler{},
+		rows:    operatorSourceRowMap{},
+		parser:  &manifestYAMLParser{},
+		walker:  &walker{},
+		bundler: &bundler{},
 	}
 }
 
@@ -44,8 +50,13 @@ type Writer interface {
 	// operator from underlying datastore.
 	GetPackageIDs() string
 
-	// Write stores the list of operator manifest(s) into datastore.
-	Write(rawManifests []*OperatorMetadata) error
+	// Write saves the Spec associated with a given OperatorSource object and
+	// the downloaded operator manifest(s) into datastore.
+	//
+	// opsrc represents the given OperatorSource object.
+	// rawManifests is the list of raw operator manifest(s) associated with
+	// a given operator source.
+	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) error
 }
 
 // operatorSourceRow is what gets stored in datastore after an OperatorSource CR
@@ -55,22 +66,69 @@ type Writer interface {
 // in datastore. The Writer interface accepts a raw operator manifest and
 // marshals it into this type before writing it to the underlying storage.
 type operatorSourceRow struct {
-	// RegistryMetadata uniquely identifies a given operator manifest and
-	// points to its source in remote registry.
-	RegistryMetadata RegistryMetadata
+	// We store the Spec associated with a given OperatorSource object. This is
+	// so that we can determine whether Spec for an existing operator source
+	// has been updated.
+	//
+	// We compare the Spec of the received OperatorSource object to the one
+	// in datastore.
+	Spec *v1alpha1.OperatorSourceSpec
 
-	// Data is a structured representation of the given operator manifest.
-	Data StructuredOperatorManifestData
+	// Operators is the collection of all single-operator manifest(s) associated
+	// with the underlying operator source.
+	// The package name is used to uniquely identify the operator manifest(s).
+	Operators map[string]*SingleOperatorManifest
+}
+
+// GetPackages returns the list of available package(s) associated with an
+// operator source.
+// An empty list is returned if there are no package(s).
+func (r *operatorSourceRow) GetPackages() []string {
+	packages := make([]string, 0)
+	for packageID, _ := range r.Operators {
+		packages = append(packages, packageID)
+	}
+
+	return packages
+}
+
+// operatorSourceRowMap is a map that holds a collection of operator source(s)
+// represented by operatorSourceRow.
+// The UID of an OperatorSource object is used as the key to uniquely identify
+// an operator source.
+type operatorSourceRowMap map[types.UID]*operatorSourceRow
+
+// GetAllPackages return a list of all package(s) available across all
+// operator source(s).
+func (m operatorSourceRowMap) GetAllPackages() []string {
+	packages := make([]string, 0)
+	for _, row := range m {
+		packages = append(packages, row.GetPackages()...)
+	}
+
+	return packages
+}
+
+// GetAllPackagesMap returns a collection of all available package(s) across all
+// operator sources in a map. Package name is used as the key to this map.
+func (m operatorSourceRowMap) GetAllPackagesMap() map[string]*SingleOperatorManifest {
+	packages := map[string]*SingleOperatorManifest{}
+	for _, row := range m {
+		for packageID, manifest := range row.Operators {
+			packages[packageID] = manifest
+		}
+	}
+
+	return packages
 }
 
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	rows     map[string]*operatorSourceRow
-	packages map[string]*SingleOperatorManifest
-	parser   ManifestYAMLParser
-	walker   ManifestWalker
-	bundler  Bundler
+	rows    operatorSourceRowMap
+	parser  ManifestYAMLParser
+	walker  ManifestWalker
+	bundler Bundler
 }
 
 func (ds *memoryDatastore) Read(packageIDs []string) (*RawOperatorManifestData, error) {
@@ -87,7 +145,12 @@ func (ds *memoryDatastore) Read(packageIDs []string) (*RawOperatorManifestData, 
 	return ds.parser.Marshal(multiOperatorManifest)
 }
 
-func (ds *memoryDatastore) Write(rawManifests []*OperatorMetadata) error {
+func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) error {
+	if opsrc == nil || rawManifests == nil {
+		return errors.New("invalid argument")
+	}
+
+	operators := map[string]*SingleOperatorManifest{}
 	for _, rawManifest := range rawManifests {
 		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
 		if err != nil {
@@ -101,26 +164,22 @@ func (ds *memoryDatastore) Write(rawManifests []*OperatorMetadata) error {
 
 		packages := decomposer.Packages()
 		for i, operatorPackage := range packages {
-			ds.packages[operatorPackage.GetPackageID()] = packages[i]
+			operators[operatorPackage.GetPackageID()] = packages[i]
 		}
-
-		row := &operatorSourceRow{
-			RegistryMetadata: rawManifest.RegistryMetadata,
-			Data:             *data,
-		}
-
-		ds.rows[rawManifest.ID()] = row
 	}
+
+	row := &operatorSourceRow{
+		Spec:      &opsrc.Spec,
+		Operators: operators,
+	}
+
+	ds.rows[opsrc.GetUID()] = row
 
 	return nil
 }
 
 func (ds *memoryDatastore) GetPackageIDs() string {
-	keys := make([]string, 0, len(ds.packages))
-	for key := range ds.packages {
-		keys = append(keys, key)
-	}
-
+	keys := ds.rows.GetAllPackages()
 	return strings.Join(keys, ",")
 }
 
@@ -131,8 +190,12 @@ func (ds *memoryDatastore) validate(packageIDs []string) ([]*SingleOperatorManif
 	packages := make([]*SingleOperatorManifest, 0)
 	packageMap := map[string]*SingleOperatorManifest{}
 
+	// Get a list of all available package(s) across all operator source(s)
+	// in a map.
+	existing := ds.rows.GetAllPackagesMap()
+
 	for _, packageID := range packageIDs {
-		operatorPackage, exists := ds.packages[packageID]
+		operatorPackage, exists := existing[packageID]
 		if !exists {
 			return nil, fmt.Errorf("package [%s] not found", packageID)
 		}
