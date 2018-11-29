@@ -1,16 +1,14 @@
-# How To Push Operator Manifest(s) To App Registry
-This document shows how one can push operator manifest(s) into `quay.io` or any other compatible app registry server.
+# How To Push an Operator Artifact To an App Registry
 
-*The example script(s) in this document refers to quay.io*
+This document shows how one can push an operator artifact onto `quay.io` or any other compatible app registry server. All commands in this document should be run in the root of this repository.
 
-## Format of Operator Manifest
-*As proof of concept, we are storing the operator manifest into one file. It could change in the future.*
+## What is an Operator Artifact?
 
-The operator manifest file has the following structure -
+An operator artifact is a collection of data required to make an operator offering available to a cluster. Each operator artifact represents one operator offering. Multiple operator offerings can be pushed to an app registry namespace.
+
+An operator artifact is stored in a `yaml` file with the following structure:
+
 ```yaml
-name: certified operators
-publisher: redhat
-
 data:
   customResourceDefinitions: |-
   clusterServiceVersions: |-
@@ -18,90 +16,55 @@ data:
 ```
 
 ## Pre-Requisite
-*You need to have an account with quay.io. If you don't have one you can sign up for it.* 
+
+You need to have an account with `quay.io`. If you don't have one you can sign up for it at [quay.io](https://quay.io).
 
 ### Obtain Access Token
-All API requests made by executing HTTP verb (GET, POST, PUT or DELETE) against the API endpoint URL require an `Authorization header` with an access token. By logging in to `quay.io` you will receive an access token.  
 
-* Save the following excerpt into a file, for example `login.sh`  
+All API requests made by executing HTTP verb (GET, POST, PUT or DELETE) against the API endpoint URL require an `Authorization header` with an access token. By logging in to `quay.io` you will receive an access token. You can get the token running the following bash script:
+
 ```bash
-#!/bin/sh
-
-USERNAME=$1
-PASSWORD=$2
-
-curl -H "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '
-{
-    "user": {
-        "username": "'"${USERNAME}"'",
-        "password": "'"${PASSWORD}"'"
-    }
-}'
+$ ./scripts/get-quay-token
 ```
 
-* Execute `login.sh` by providing your `quay.io` account user name and password as arguments
-```bash
-$ chmod a+x login.sh
-$ ./login.sh {username} {password}
-```
+You will be prompted to provide your `quay.io` account user name and password.
 
-Upon successful invocation, you will receive a JSON response with an access token, as shown below. Save the value of the `token` field from the JSON response. We will use this token to make calls to `quay.io` API. 
+Upon successful invocation, you will receive a JSON response with an access token, as shown below. Save the value of the `token` field from the JSON response as we will be using this token to make calls to `quay.io` API.
+
 ```json
 {
     "token": "basic XWtgc2hlbTpsZWR6ZXCwbYlf"
 }
 ```
 
-## Push Operator Manifest
-* Save the manifest into a file, for example `myapp.yaml`
-* Copy the following excerpt and save it into a file, for example `push.sh`. Put appropriate values for the variables.
+## Push An Operator Artifact
+
+You can now push an operator artifact to `quay.io` by using the following bash script:
 
 ```bash
-#!/bin/sh
-
-FILENAME="file name (without the extension)"
-NAMESPACE="namespace in quay.io"
-REPOSITORY="repository name in quay.io"
-RELEASE="version/release of the operator"
-TOKEN="basic {access token here}"
-
-function cleanup() {
-    rm -f ${FILENAME}.tar.gz
-}
-trap cleanup EXIT
-
-tar czf ${FILENAME}.tar.gz ${FILENAME}.yaml
-
-BLOB=$(cat ${FILENAME}.tar.gz | base64 -w 0)
-
-curl -H "Content-Type: application/json" \
-     -H "Authorization: ${TOKEN}" \
-     -XPOST https://quay.io/cnr/api/v1/packages/${NAMESPACE}/${REPOSITORY} -d '
-{
-    "blob": "'"${BLOB}"'",
-    "release": "'"${RELEASE}"'",
-    "media_type": "helm"
-}'
+$ ./scripts/push-to-quay
 ```
 
-If you have saved the manifest into `myapp.yaml` and want to push it to `myoperators/myapp:1.0.0` then the variables will have the following values.
+You will be prompted for the path to your operator artifact file, your `quay.io` namespace, your operator's name, the operator's version/release, and your access token obtained from the previous step. Your operator name corresponds to the repository in your namespace where your operator artifact is stored. The repository will be created automatically if it doesn't already exist.
+
+For example, if you have saved the operator artifact into a file named `myapp.yaml` in the root if this repository and want to push it to `myoperators/myapp:1.0.0` then the inputs will have the following values:
+
 ```bash
-FILENAME="myapp"
-NAMESPACE="myoperators"
-REPOSITORY="myapp"
-RELEASE="1.0.0"
+Relative path to your operator artifact file: myapp.yaml
+Namespace in quay.io: myoperators
+Operator name: myapp
+Version/Release of operator: 1.0.0
+Quay.io token (TOKEN value of ./scripts/get-quay-token ): basic XWtgc2hlbTpsZWR6ZXCwbYlf
 ```
 
-* Execute the script 
-```bash
-$ chmod a+x push.sh
-$ ./push.sh
-```
+You should now be able to visit `quay.io` and browse the uploaded operator artifact in your desired namespace. Your namespace can have multiple operator offerings, and `quay.io` will display each as a distinct repository. You cannot view the contents of your operator artifacts from the `quay.io` website.
 
-You can visit `quay.io` and browse the operator manifest in your desired namespace.
+## Troubleshooting
 
-### New Version/Release of Operator Manifest
-Each release of an operator manifest is considered immutable. If you try to push to an existing release you will get the following error from quay.
+### New Version/Release of Operator Artifact
+
+Each release of an operator artifact is considered immutable. If you try to push to an existing release you will get the following error from `quay.io`.
+
 ```json
 {
     "error": {
@@ -110,9 +73,14 @@ Each release of an operator manifest is considered immutable. If you try to push
 }
 ```
 
-If you change your operator manifest then bump up the version in `RELEASE` before pushing the manifest.
+If you change your operator artifact, you should always bump up the version of the version/release before pushing the artifact.
 
-### Delete Operator Manifest
+### Delete Operator Artifacts
+
 *You will need `admin` privileges to delete repositories.*
 
-For now, we have been deleting manifest(s) manually by going to `quay.io`. Go to the `Settings` tab of your desired repository and click the `Delete Application` button. 
+Operator artifacts can be deleted manually by going to `quay.io`. Go to the `Settings` tab of your desired repository and click the `Delete Application` button. This will delete all uploaded versions of your operator artifact. There is no way to delete individual versions of your operator artifact.
+
+### Making your Operator Visible
+
+By default, when pushing an operator artifact to a new repository on `quay.io`, the repository will be created as private. Ensure that you make it public for it to be visible to the marketplace operator. Go to the `Settings` tab of your repository and check that under the `Application Visibility` header the application is set to public.

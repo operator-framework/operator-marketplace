@@ -26,7 +26,7 @@ $ export REGISTRY=<SOME_REGISTRY> \
 
 ### Description
 
-The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "marketplace"), the operator will download manifests stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
 
 The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
 
@@ -59,3 +59,19 @@ $ kubectl apply -f deploy/operatorsource.crd.yaml
 $ kubectl apply -f deploy/rbac.yaml
 $ kubectl apply -f deploy/csv/marketplace.csv.yaml
 ```
+
+## Populating your own App Registry OperatorSource
+
+Follow the steps [here](./docs/how-to-upload-artifact.md) to upload an operator artifact to `quay.io`.
+
+Once your operator artifact is pushed to `quay.io` you can use an `OperatorSource` to add your operator offering to Marketplace. An example `OperatorSource` is provided [here](deploy/examples/operatorsource.cr.yaml).
+
+An `OperatorSource` must specify the `registryNamespace` the operator artifact was pushed to, and set the `name` and `namespace` for creating the `OperatorSource` on your cluster.
+
+Add your `OperatorSource` to your cluster:
+
+```bash
+$ oc create -f your-operator-source.yaml
+```
+
+Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
