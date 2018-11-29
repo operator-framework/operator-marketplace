@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -50,10 +52,6 @@ type OperatorSourceStatus struct {
 	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&OperatorSource{}, &OperatorSourceList{})
-}
-
 // Set group, version, and kind strings
 // from the internal reference that we defined in the v1alpha1 package.
 // The object the sdk client returns does not set these
@@ -65,4 +63,27 @@ func (opsrc *OperatorSource) EnsureGVK() {
 		Kind:    OperatorSourceKind,
 	}
 	opsrc.SetGroupVersionKind(gvk)
+}
+
+// IsEqual returns true if the Spec specified in this is the same as the other.
+// Otherwise, the function returns false.
+//
+// The function performs a case insensitive comparison of corresponding
+// attributes.
+//
+// If the Spec specified in other is nil then the function returns false.
+func (s *OperatorSourceSpec) IsEqual(other *OperatorSourceSpec) bool {
+	if other == nil {
+		return false
+	}
+	if strings.EqualFold(s.Endpoint, other.Endpoint) &&
+		strings.EqualFold(s.RegistryNamespace, other.RegistryNamespace) &&
+		strings.EqualFold(s.Type, other.Type) {
+		return true
+	}
+	return false
+}
+
+func init() {
+	SchemeBuilder.Register(&OperatorSource{}, &OperatorSourceList{})
 }

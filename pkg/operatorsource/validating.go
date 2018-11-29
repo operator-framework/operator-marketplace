@@ -6,22 +6,25 @@ import (
 	"net/url"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 )
 
 // NewValidatingReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Validating" phase
-func NewValidatingReconciler(logger *log.Entry) Reconciler {
+func NewValidatingReconciler(logger *log.Entry, datastore datastore.Writer) Reconciler {
 	return &validatingReconciler{
-		logger: logger,
+		logger:    logger,
+		datastore: datastore,
 	}
 }
 
 // validatingReconciler is an implementation of Reconciler interface that
 // reconciles an OperatorSource object in "Validating" phase.
 type validatingReconciler struct {
-	logger *log.Entry
+	logger    *log.Entry
+	datastore datastore.Writer
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Validating" phase.
@@ -55,6 +58,8 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Opera
 			fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
 		return
 	}
+
+	r.datastore.AddOperatorSource(in)
 
 	r.logger.Info("Scheduling for download")
 

@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
@@ -27,7 +28,7 @@ import (
 //
 //  On error, the object is transitioned into "Failed" phase.
 type PhaseReconcilerFactory interface {
-	GetPhaseReconciler(logger *log.Entry, currentPhase string) (Reconciler, error)
+	GetPhaseReconciler(logger *log.Entry, opsrc *v1alpha1.OperatorSource) (Reconciler, error)
 }
 
 // phaseReconcilerFactory implements PhaseReconcilerFactory interface.
@@ -37,13 +38,21 @@ type phaseReconcilerFactory struct {
 	client                client.Client
 }
 
-func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, currentPhase string) (Reconciler, error) {
+func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1alpha1.OperatorSource) (Reconciler, error) {
+	// If the Spec of the given OperatorSource object has changed from
+	// the one in datastore then we treat it as an update event.
+	if s.datastore.HasOperatorSourceChanged(opsrc) {
+		return NewUpdatedEventReconciler(logger, s.datastore, s.client), nil
+	}
+
+	currentPhase := opsrc.Status.CurrentPhase.Name
+
 	switch currentPhase {
 	case phase.Initial:
 		return NewInitialReconciler(logger), nil
 
 	case phase.OperatorSourceValidating:
-		return NewValidatingReconciler(logger), nil
+		return NewValidatingReconciler(logger, s.datastore), nil
 
 	case phase.OperatorSourceDownloading:
 		return NewDownloadingReconciler(logger, s.registryClientFactory, s.datastore), nil

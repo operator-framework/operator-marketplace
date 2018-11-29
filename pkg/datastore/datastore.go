@@ -57,6 +57,26 @@ type Writer interface {
 	// rawManifests is the list of raw operator manifest(s) associated with
 	// a given operator source.
 	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) error
+
+	// RemoveOperatorSource removes everything associated with a given operator
+	// source from the underlying datastore.
+	//
+	// opsrcUID is the unique identifier associated with a given operator source.
+	RemoveOperatorSource(opsrcUID types.UID)
+
+	// AddOperatorSource registers a new OperatorSource object with the
+	// the underlying datastore.
+	AddOperatorSource(opsrc *v1alpha1.OperatorSource)
+
+	// HasOperatorSourceChanged returns true if the Spec of the
+	// OperatorSource object specified in opsrc is different from
+	// the one in datastore.
+	// Otherwise, the function returns false.
+	//
+	// datastore uses the UID of the given OperatorSource object to check if
+	// a Spec already exists to do the comparison. If no Spec is found then
+	// the function returns false indicating that it was not reconciled before.
+	HasOperatorSourceChanged(opsrc *v1alpha1.OperatorSource) bool
 }
 
 // operatorSourceRow is what gets stored in datastore after an OperatorSource CR
@@ -181,6 +201,25 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 func (ds *memoryDatastore) GetPackageIDs() string {
 	keys := ds.rows.GetAllPackages()
 	return strings.Join(keys, ",")
+}
+
+func (ds *memoryDatastore) AddOperatorSource(opsrc *v1alpha1.OperatorSource) {
+	ds.rows[opsrc.GetUID()] = &operatorSourceRow{
+		Spec:      &opsrc.Spec,
+		Operators: map[string]*SingleOperatorManifest{},
+	}
+}
+
+func (ds *memoryDatastore) RemoveOperatorSource(uid types.UID) {
+	delete(ds.rows, uid)
+}
+
+func (ds *memoryDatastore) HasOperatorSourceChanged(opsrc *v1alpha1.OperatorSource) bool {
+	row, exists := ds.rows[opsrc.GetUID()]
+	if !exists {
+		return false
+	}
+	return !row.Spec.IsEqual(&opsrc.Spec)
 }
 
 // validate ensures that no package is mentioned more than once in the list.

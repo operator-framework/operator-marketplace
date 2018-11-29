@@ -63,7 +63,7 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1alpha1.Operato
 		"name":      in.GetName(),
 	})
 
-	reconciler, err := h.factory.GetPhaseReconciler(logger, in.Status.CurrentPhase.Name)
+	reconciler, err := h.factory.GetPhaseReconciler(logger, in)
 	if err != nil {
 		return err
 	}
