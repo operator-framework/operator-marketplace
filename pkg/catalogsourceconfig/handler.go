@@ -5,7 +5,6 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -16,7 +15,6 @@ import (
 func NewHandler(mgr manager.Manager, client client.Client) Handler {
 	return &catalogsourceconfighandler{
 		client: client,
-		scheme: mgr.GetScheme(),
 		factory: &phaseReconcilerFactory{
 			reader: datastore.Cache,
 			client: client,
@@ -33,7 +31,6 @@ type Handler interface {
 
 type catalogsourceconfighandler struct {
 	client       client.Client
-	scheme       *runtime.Scheme
 	factory      PhaseReconcilerFactory
 	transitioner phase.Transitioner
 	reader       datastore.Reader
