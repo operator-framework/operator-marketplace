@@ -23,9 +23,10 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	client := mgr.GetClient()
 	return &ReconcileCatalogSourceConfig{
-		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr),
-		client: mgr.GetClient(),
+		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr, client),
+		client:                     client,
 	}
 }
 

@@ -23,14 +23,14 @@ func NewHandlerWithParams(client client.Client, scheme *runtime.Scheme, factory 
 	}
 }
 
-func NewHandler(mgr manager.Manager) Handler {
+func NewHandler(mgr manager.Manager, client client.Client) Handler {
 	return &operatorsourcehandler{
-		client: mgr.GetClient(),
+		client: client,
 		scheme: mgr.GetScheme(),
 		factory: &phaseReconcilerFactory{
 			registryClientFactory: appregistry.NewClientFactory(),
 			datastore:             datastore.Cache,
-			client:                mgr.GetClient(),
+			client:                client,
 		},
 		transitioner: phase.NewTransitioner(),
 	}

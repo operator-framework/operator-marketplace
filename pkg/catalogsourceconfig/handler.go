@@ -13,13 +13,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewHandler(mgr manager.Manager) Handler {
+func NewHandler(mgr manager.Manager, client client.Client) Handler {
 	return &catalogsourceconfighandler{
-		client: mgr.GetClient(),
+		client: client,
 		scheme: mgr.GetScheme(),
 		factory: &phaseReconcilerFactory{
 			reader: datastore.Cache,
-			client: mgr.GetClient(),
+			client: client,
 		},
 		transitioner: phase.NewTransitioner(),
 		reader:       datastore.Cache,
