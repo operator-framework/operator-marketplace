@@ -16,12 +16,18 @@ func (b *CatalogSourceBuilder) CatalogSource() *olm.CatalogSource {
 	return &b.cs
 }
 
-// WithMeta sets basic TypeMeta and ObjectMeta.
-func (b *CatalogSourceBuilder) WithMeta(name, namespace string) *CatalogSourceBuilder {
+// WithTypeMeta sets basic TypeMeta.
+func (b *CatalogSourceBuilder) WithTypeMeta() *CatalogSourceBuilder {
 	b.cs.TypeMeta = metav1.TypeMeta{
 		Kind:       olm.CatalogSourceKind,
 		APIVersion: olm.CatalogSourceCRDAPIVersion,
 	}
+	return b
+}
+
+// WithMeta sets basic TypeMeta and ObjectMeta.
+func (b *CatalogSourceBuilder) WithMeta(name, namespace string) *CatalogSourceBuilder {
+	b.WithTypeMeta()
 	b.cs.ObjectMeta = metav1.ObjectMeta{
 		Name:      name,
 		Namespace: namespace,
