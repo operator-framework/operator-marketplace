@@ -23,21 +23,22 @@ type ManifestYAMLParser interface {
 	//
 	// The function accepts a structured representation of an operator manifest
 	// specified in marshaled and returns a raw yaml representation of it.
-	Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error)
+	Marshal(marshaled *MultiOperatorManifest) (*RawOperatorManifestData, error)
 }
 
 type manifestYAMLParser struct{}
 
 func (*manifestYAMLParser) Unmarshal(rawYAML []byte) (*StructuredOperatorManifestData, error) {
 	var manifestYAML struct {
-		Data OperatorManifestData `yaml:"data"`
+		Data RawOperatorManifestData `yaml:"data"`
 	}
 
 	if err := yaml.Unmarshal(rawYAML, &manifestYAML); err != nil {
 		return nil, fmt.Errorf("error parsing raw YAML : %s", err)
 	}
 
-	var crds, csvs []OLMObject
+	var crds []CustomResourceDefinition
+	var csvs []ClusterServiceVersion
 	var packages []PackageManifest
 	data := manifestYAML.Data
 
@@ -74,7 +75,7 @@ func (*manifestYAMLParser) Unmarshal(rawYAML []byte) (*StructuredOperatorManifes
 	return marshaled, nil
 }
 
-func (*manifestYAMLParser) Marshal(marshaled *StructuredOperatorManifestData) (*OperatorManifestData, error) {
+func (*manifestYAMLParser) Marshal(marshaled *MultiOperatorManifest) (*RawOperatorManifestData, error) {
 	crdRaw, err := yaml.Marshal(marshaled.CustomResourceDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling CRD list into yaml : %s", err)
@@ -90,7 +91,7 @@ func (*manifestYAMLParser) Marshal(marshaled *StructuredOperatorManifestData) (*
 		return nil, fmt.Errorf("error marshaling package list into YAML : %s", err)
 	}
 
-	data := &OperatorManifestData{
+	data := &RawOperatorManifestData{
 		CustomResourceDefinitions: string(crdRaw),
 		ClusterServiceVersions:    string(csvRaw),
 		Packages:                  string(packageRaw),
