@@ -16,12 +16,18 @@ func (b *ConfigMapBuilder) ConfigMap() *corev1.ConfigMap {
 	return &b.cm
 }
 
-// WithMeta sets TypeMeta and ObjectMeta.
-func (b *ConfigMapBuilder) WithMeta(name, namespace string) *ConfigMapBuilder {
+// WithTypeMeta sets TypeMeta.
+func (b *ConfigMapBuilder) WithTypeMeta() *ConfigMapBuilder {
 	b.cm.TypeMeta = metav1.TypeMeta{
 		Kind:       "ConfigMap",
 		APIVersion: "v1",
 	}
+	return b
+}
+
+// WithMeta sets TypeMeta and ObjectMeta.
+func (b *ConfigMapBuilder) WithMeta(name, namespace string) *ConfigMapBuilder {
+	b.WithTypeMeta()
 	b.cm.ObjectMeta = metav1.ObjectMeta{
 		Name:      name,
 		Namespace: namespace,

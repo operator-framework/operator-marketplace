@@ -8,29 +8,26 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // NewHandlerWithParams returns a new Handler.
-func NewHandlerWithParams(client client.Client, scheme *runtime.Scheme, factory PhaseReconcilerFactory, transitioner phase.Transitioner) Handler {
+func NewHandlerWithParams(client client.Client, factory PhaseReconcilerFactory, transitioner phase.Transitioner) Handler {
 	return &operatorsourcehandler{
 		client:       client,
-		scheme:       scheme,
 		factory:      factory,
 		transitioner: transitioner,
 	}
 }
 
-func NewHandler(mgr manager.Manager) Handler {
+func NewHandler(mgr manager.Manager, client client.Client) Handler {
 	return &operatorsourcehandler{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
+		client: client,
 		factory: &phaseReconcilerFactory{
 			registryClientFactory: appregistry.NewClientFactory(),
 			datastore:             datastore.Cache,
-			client:                mgr.GetClient(),
+			client:                client,
 		},
 		transitioner: phase.NewTransitioner(),
 	}
@@ -51,7 +48,6 @@ type operatorsourcehandler struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client       client.Client
-	scheme       *runtime.Scheme
 	factory      PhaseReconcilerFactory
 	transitioner phase.Transitioner
 }

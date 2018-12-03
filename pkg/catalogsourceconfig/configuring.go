@@ -26,11 +26,12 @@ const (
 
 // NewConfiguringReconciler returns a Reconciler that reconciles a
 // CatalogSourceConfig object in the "Configuring" phase.
-func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader, client client.Client) Reconciler {
+func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader, client client.Client, cache Cache) Reconciler {
 	return &configuringReconciler{
 		log:    log,
 		reader: reader,
 		client: client,
+		cache:  cache,
 	}
 }
 
@@ -40,6 +41,7 @@ type configuringReconciler struct {
 	log    *logrus.Entry
 	reader datastore.Reader
 	client client.Client
+	cache  Cache
 }
 
 // Reconcile reconciles a CatalogSourceConfig object that is in the
@@ -57,7 +59,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 	out = in
 
-	err = r.createCatalogSource(in)
+	err = r.reconcileCatalogSource(in)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
@@ -72,7 +74,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 // createCatalogData constructs the ConfigMap data by reading the manifest
 // information of all packages from the datasource.
 func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceConfig) (map[string]string, error) {
-	packageIDs := getPackageIDs(csc.Spec.Packages)
+	packageIDs := GetPackageIDs(csc.Spec.Packages)
 	data := make(map[string]string)
 	if len(packageIDs) < 1 {
 		return data, fmt.Errorf("No packages specified in CatalogSourceConfig %s/%s", csc.Namespace, csc.Name)
@@ -95,9 +97,57 @@ func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceCon
 	return data, nil
 }
 
-// createCatalogSource creates a new CatalogSource CR and all the resources it
-// requires.
-func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
+// reconcileCatalogSource ensures a CatalogSource exists with all the
+// resources it requires.
+func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
+	// Reconcile the ConfigMap required for the CatalogSource
+	err := r.reconcileConfigMap(csc)
+	if err != nil {
+		return err
+	}
+
+	// Check if the CatalogSource already exists
+	catalogSourceGet := new(CatalogSourceBuilder).WithTypeMeta().CatalogSource()
+	key := client.ObjectKey{
+		Name:      v1alpha1.CatalogSourcePrefix + csc.Name,
+		Namespace: csc.Spec.TargetNamespace,
+	}
+	err = r.client.Get(context.TODO(), key, catalogSourceGet)
+
+	// Update the CatalogSource if it exists else create one.
+	configMapName := v1alpha1.ConfigMapPrefix + csc.Name
+	if err == nil {
+		if catalogSourceGet.Spec.ConfigMap != configMapName {
+			catalogSourceGet.Spec.ConfigMap = configMapName
+			r.log.Infof("Updating CatalogSource %s", catalogSourceGet.Name)
+			err = r.client.Update(context.TODO(), catalogSourceGet)
+			if err != nil {
+				r.log.Errorf("Failed to update CatalogSource : %v", err)
+				return err
+			}
+			r.log.Infof("Updated CatalogSource %s", catalogSourceGet.Name)
+		}
+	} else {
+		// Create the CatalogSource structure
+		catalogSource := newCatalogSource(csc, configMapName)
+		r.log.Infof("Creating CatalogSource %s", catalogSource.Name)
+		err = r.client.Create(context.TODO(), catalogSource)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			r.log.Errorf("Failed to create CatalogSource : %v", err)
+			return err
+		}
+		r.log.Infof("Created CatalogSource %s", catalogSource.Name)
+	}
+
+	// Populate the cache
+	r.cache.Set(csc)
+
+	return nil
+}
+
+// reconcileConfigMap ensures a ConfigMap exists with all the Operator artifacts
+// in its Data section
+func (r *configuringReconciler) reconcileConfigMap(csc *v1alpha1.CatalogSourceConfig) error {
 	// Construct the operator artifact data to be placed in the ConfigMap data
 	// section.
 	data, err := r.createCatalogData(csc)
@@ -105,30 +155,41 @@ func (r *configuringReconciler) createCatalogSource(csc *v1alpha1.CatalogSourceC
 		return err
 	}
 
-	// Create the ConfigMap that will be used by the CatalogSource.
-	catalogConfigMap := newConfigMap(csc, data)
-	r.log.Infof("Creating %s ConfigMap", catalogConfigMap.Name)
-	err = r.client.Create(context.TODO(), catalogConfigMap)
-	if err != nil && !errors.IsAlreadyExists(err) {
-		r.log.Errorf("Failed to create ConfigMap : %v", err)
-		return err
+	// Check if the ConfigMap already exists
+	configMapName := v1alpha1.ConfigMapPrefix + csc.Name
+	configMapGet := new(ConfigMapBuilder).WithTypeMeta().ConfigMap()
+	key := client.ObjectKey{
+		Name:      configMapName,
+		Namespace: csc.Spec.TargetNamespace,
 	}
-	r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
+	err = r.client.Get(context.TODO(), key, configMapGet)
 
-	catalogSource := newCatalogSource(csc, catalogConfigMap.Name)
-
-	err = r.client.Create(context.TODO(), catalogSource)
-	if err != nil && !errors.IsAlreadyExists(err) {
-		r.log.Errorf("Failed to create CatalogSource : %v", err)
-		return err
+	// Update the ConfigMap if it exists else create one.
+	if err == nil {
+		r.log.Infof("Updating ConfigMap %s", configMapGet.Name)
+		configMapGet.Data = data
+		err = r.client.Update(context.TODO(), configMapGet)
+		if err != nil {
+			r.log.Errorf("Failed to update ConfigMap : %v", err)
+			return err
+		}
+		r.log.Infof("Updated ConfigMap %s", configMapGet.Name)
+	} else {
+		// Create the ConfigMap structure that will be used by the CatalogSource.
+		catalogConfigMap := newConfigMap(csc, data)
+		r.log.Infof("Creating ConfigMap %s", catalogConfigMap.Name)
+		err = r.client.Create(context.TODO(), catalogConfigMap)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			r.log.Errorf("Failed to create ConfigMap : %v", err)
+			return err
+		}
+		r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
 	}
-	r.log.Infof("Created CatalogSource %s", catalogSource.Name)
-
 	return nil
 }
 
-// getPackageIDs returns a list of IDs from a comma separated string of IDs.
-func getPackageIDs(csIDs string) []string {
+// GetPackageIDs returns a list of IDs from a comma separated string of IDs.
+func GetPackageIDs(csIDs string) []string {
 	return strings.Split(csIDs, ",")
 }
 

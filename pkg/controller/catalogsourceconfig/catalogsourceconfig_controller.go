@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,15 +19,34 @@ import (
 // Add creates a new CatalogSourceConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	reconciler, err := newReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCatalogSourceConfig{
-		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr),
-		client: mgr.GetClient(),
+func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
+	// The default client serves read requests from the cache which contains
+	// objects only from the namespace the operator is watching. Given we need
+	// to query other namespaces for ConfigMaps and CatalogSources, we create
+	// our own client and pass it the manager's scheme which has all our
+	// registered types
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, err
 	}
+
+	client, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ReconcileCatalogSourceConfig{
+		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr, client),
+		client:                     client,
+	}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

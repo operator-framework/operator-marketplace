@@ -23,9 +23,10 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	handler := operatorsourcehandler.NewHandler(mgr)
+	client := mgr.GetClient()
+	handler := operatorsourcehandler.NewHandler(mgr, client)
 	return &ReconcileOperatorSource{
-		client:                mgr.GetClient(),
+		client:                client,
 		OperatorSourceHandler: handler,
 	}
 }

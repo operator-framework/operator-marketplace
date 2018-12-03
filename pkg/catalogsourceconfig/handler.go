@@ -5,7 +5,6 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -13,16 +12,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewHandler(mgr manager.Manager) Handler {
+func NewHandler(mgr manager.Manager, client client.Client) Handler {
+	cache := NewCache()
 	return &catalogsourceconfighandler{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
+		client: client,
 		factory: &phaseReconcilerFactory{
 			reader: datastore.Cache,
-			client: mgr.GetClient(),
+			client: client,
+			cache:  cache,
 		},
 		transitioner: phase.NewTransitioner(),
 		reader:       datastore.Cache,
+		cache:        cache,
 	}
 }
 
@@ -33,17 +34,21 @@ type Handler interface {
 
 type catalogsourceconfighandler struct {
 	client       client.Client
-	scheme       *runtime.Scheme
 	factory      PhaseReconcilerFactory
 	transitioner phase.Transitioner
 	reader       datastore.Reader
+	// cache gets updated everytime a CatalogSourceConfig is created or updated.
+	// A cached item is removed when an update is detected.
+	// Note: This is a temporary construct which will be removed when we move to
+	// using the Operator Registry as the data store for CatalogSources
+	cache Cache
 }
 
 // Handle handles a new event associated with the CatalogSourceConfig type.
 func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v1alpha1.CatalogSourceConfig) error {
 
 	log := getLoggerWithCatalogSourceConfigTypeFields(in)
-	reconciler, err := h.factory.GetPhaseReconciler(log, in.Status.CurrentPhase.Name)
+	reconciler, err := h.factory.GetPhaseReconciler(log, in)
 	if err != nil {
 		return err
 	}
