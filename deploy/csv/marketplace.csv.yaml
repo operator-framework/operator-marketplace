@@ -63,7 +63,7 @@ spec:
             spec:
               containers:
                 - name: marketplace-operator
-                  image: quay.io/redhat/marketplace
+                  image: quay.io/openshift/origin-operator-marketplace
                   ports:
                   - containerPort: 60000
                     name: metrics
