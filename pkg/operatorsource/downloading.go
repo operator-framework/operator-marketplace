@@ -77,7 +77,7 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	r.logger.Infof("Downloaded %d manifest(s) from the operator source endpoint", len(manifests))
 
-	err = r.datastore.Write(manifests)
+	err = r.datastore.Write(in, manifests)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return

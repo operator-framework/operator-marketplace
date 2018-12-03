@@ -51,7 +51,7 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	registryClient.EXPECT().RetrieveAll(opsrcIn.Spec.RegistryNamespace).Return(manifestExpected, nil).Times(1)
 
 	// We expect the datastore to save downloaded manifest(s) returned by the registry.
-	writer.EXPECT().Write(manifestExpected).Return(nil)
+	writer.EXPECT().Write(opsrcIn, manifestExpected).Return(nil)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
