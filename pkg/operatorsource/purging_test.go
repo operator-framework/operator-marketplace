@@ -15,27 +15,26 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 )
 
-// Use Case: Admin has changed the Spec to point to different endpoint or namespace.
-// Expected Result: Current operator source should be purged and the next phase
-// should be set to "Validating" so that reconciliation is triggered.
-func TestReconcile_SpecHasChanged_ReconciliationTriggered(t *testing.T) {
+// This test verifies the happy path for purge. We expect purge to be successful
+// and the next desired phase set to "Initial" so that reconciliation can start
+// anew.
+func TestReconcileWithPurging(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
 	ctx := context.TODO()
 
-	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Succeeded)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourcePurging)
 	opsrcWant := opsrcIn.DeepCopy()
-	opsrcWant.Status = v1alpha1.OperatorSourceStatus{}
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    phase.OperatorSourceValidating,
-		Message: phase.GetMessage(phase.OperatorSourceValidating),
+		Name:    phase.Initial,
+		Message: phase.GetMessage(phase.Initial),
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
 	client := mocks.NewKubeClient(controller)
-	reconciler := operatorsource.NewUpdatedEventReconciler(helperGetContextLogger(), datastore, client)
+	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
 
 	// We expect the operator source to be removed from the datastore.
 	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
@@ -51,27 +50,26 @@ func TestReconcile_SpecHasChanged_ReconciliationTriggered(t *testing.T) {
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
 }
 
-// Use Case: The associated CatalogSourceConfig object is not found while purging.
-// Expected Result: NotFound error is ignored and the next phase should be set
-// to "Validating" so that reconciliation is triggered.
-func TestReconcile_CatalogSourceConfigNotFound_ErrorExpected(t *testing.T) {
+// In the event the associated CatalogSourceConfig object is not found while
+// purging is in progress, we expect NotFound error to be ignored and the next
+// phase set to "Initial" so that reconciliation can start anew.
+func TestReconcileWithPurgingWithCatalogSourceConfigNotFound(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
 	ctx := context.TODO()
 
-	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Succeeded)
+	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourcePurging)
 	opsrcWant := opsrcIn.DeepCopy()
-	opsrcWant.Status = v1alpha1.OperatorSourceStatus{}
 
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    phase.OperatorSourceValidating,
-		Message: phase.GetMessage(phase.OperatorSourceValidating),
+		Name:    phase.Initial,
+		Message: phase.GetMessage(phase.Initial),
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
 	client := mocks.NewKubeClient(controller)
-	reconciler := operatorsource.NewUpdatedEventReconciler(helperGetContextLogger(), datastore, client)
+	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
 
 	// We expect the operator source to be removed from the datastore.
 	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))

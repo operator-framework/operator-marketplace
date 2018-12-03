@@ -7,7 +7,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,23 +46,13 @@ type updatedEventReconciler struct {
 func (r *updatedEventReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
 	out = in.DeepCopy()
 
-	r.logger.Info("Spec has changed, purging all resource(s) associated with it")
-
 	r.datastore.RemoveOperatorSource(in.GetUID())
-
-	builder := &CatalogSourceConfigBuilder{}
-	csc := builder.WithMeta(in.Namespace, getCatalogSourceConfigName(in.Name)).CatalogSourceConfig()
-
-	if err = r.client.Delete(ctx, csc); err != nil && !k8s_errors.IsNotFound(err) {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
-		return
-	}
 
 	// Drop existing Status field so that reconciliation can start anew.
 	out.Status = v1alpha1.OperatorSourceStatus{}
 
-	nextPhase = phase.GetNext(phase.OperatorSourceValidating)
-	r.logger.Info("Spec has changed, scheduling for reconciliation from 'Validating' phase")
+	nextPhase = phase.GetNext(phase.OperatorSourcePurging)
+	r.logger.Info("Spec has changed, scheduling for reconciliation from 'Purging' phase")
 
 	return
 }
