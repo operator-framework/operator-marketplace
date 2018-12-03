@@ -75,15 +75,13 @@ type Writer interface {
 	// the underlying datastore.
 	AddOperatorSource(opsrc *v1alpha1.OperatorSource)
 
-	// HasOperatorSourceChanged returns true if the Spec of the
-	// OperatorSource object specified in opsrc is different from
-	// the one in datastore.
-	// Otherwise, the function returns false.
+	// GetOperatorSource returns the Spec of the OperatorSource object
+	// associated with the UID specified in opsrcUID.
 	//
 	// datastore uses the UID of the given OperatorSource object to check if
-	// a Spec already exists to do the comparison. If no Spec is found then
-	// the function returns false indicating that it was not reconciled before.
-	HasOperatorSourceChanged(opsrc *v1alpha1.OperatorSource) bool
+	// a Spec already exists. If no Spec is found then the function
+	// returns (nil, false).
+	GetOperatorSource(opsrcUID types.UID) (spec *v1alpha1.OperatorSourceSpec, ok bool)
 }
 
 // operatorSourceRow is what gets stored in datastore after an OperatorSource CR
@@ -231,12 +229,13 @@ func (ds *memoryDatastore) RemoveOperatorSource(uid types.UID) {
 	delete(ds.rows, uid)
 }
 
-func (ds *memoryDatastore) HasOperatorSourceChanged(opsrc *v1alpha1.OperatorSource) bool {
-	row, exists := ds.rows[opsrc.GetUID()]
+func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (opsrc *v1alpha1.OperatorSourceSpec, ok bool) {
+	row, exists := ds.rows[opsrcUID]
 	if !exists {
-		return false
+		return nil, false
 	}
-	return !row.Spec.IsEqual(&opsrc.Spec)
+
+	return row.Spec, true
 }
 
 // validate ensures that no package is mentioned more than once in the list.

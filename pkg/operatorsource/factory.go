@@ -13,21 +13,23 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 )
 
-// PhaseReconcilerFactory is the interface that wraps GetPhaseReconciler method.
-//
-// GetPhaseReconciler returns an appropriate phase.Reconciler based on the
-// current phase of an OperatorSource object.
-// The following chain shows how an OperatorSource object progresses through
-// a series of transitions from the initial phase to complete reconciled state.
-//
-//  Initial --> Validating --> Downloading --> Configuring --> Succeeded
-//
-// logger is the prepared contextual logger that is to be used for logging.
-// event represents the event fired by sdk, it is used to return the appropriate
-// phase.Reconciler.
-//
-//  On error, the object is transitioned into "Failed" phase.
+// PhaseReconcilerFactory is an interface that wraps the GetPhaseReconciler
+// method.
 type PhaseReconcilerFactory interface {
+	// GetPhaseReconciler returns an appropriate phase.Reconciler based on the
+	// current phase of an OperatorSource object.
+	// The following chain shows how an OperatorSource object progresses through
+	// a series of transitions from the initial phase to complete reconciled state.
+	//
+	//  Initial --> Validating --> Downloading --> Configuring --> Succeeded
+	//     ^
+	//     |
+	//  Purging
+	//
+	// logger is the prepared contextual logger that is to be used for logging.
+	// opsrc represents the given OperatorSource object
+	//
+	// On error, the object is transitioned into "Failed" phase.
 	GetPhaseReconciler(logger *log.Entry, opsrc *v1alpha1.OperatorSource) (Reconciler, error)
 }
 
@@ -39,17 +41,11 @@ type phaseReconcilerFactory struct {
 }
 
 func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1alpha1.OperatorSource) (Reconciler, error) {
-	// If the Spec of the given OperatorSource object has changed from
-	// the one in datastore then we treat it as an update event.
-	if s.datastore.HasOperatorSourceChanged(opsrc) {
-		return NewUpdatedEventReconciler(logger, s.datastore, s.client), nil
-	}
-
 	currentPhase := opsrc.GetCurrentPhaseName()
 
 	switch currentPhase {
 	case phase.Initial:
-		return NewInitialReconciler(logger), nil
+		return NewInitialReconciler(logger, s.datastore), nil
 
 	case phase.OperatorSourceValidating:
 		return NewValidatingReconciler(logger, s.datastore), nil
