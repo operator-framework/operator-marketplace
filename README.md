@@ -30,35 +30,33 @@ The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsou
 
 The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
 
-### Deploying the Marketplace Operator using Operator Artifacts
+### Deploying the Marketplace Operator with OKD
+It is important to note that the order in which you apply the deployment files matters, do not execute the `oc apply` commands featured in this section out of order.
 
-#### In an OKD Cluster
-```bash
-$ oc apply -f deploy/
-```
-
-#### In a Kubernetes Cluster
-```bash
-$ kubectl apply -f deploy/
-```
-
-### Deploying the Marketplace Operator with OLM
-
-#### In an OKD Cluster
+#### Deploying the Marketplace Operator
 ```bash
 $ oc apply -f deploy/catalogsourceconfig.crd.yaml
 $ oc apply -f deploy/operatorsource.crd.yaml
-$ oc apply -f deploy/rbac.yaml
-$ oc apply -f deploy/csv/marketplace.csv.yaml
+$ oc apply -f deploy/service_account.yaml
+$ oc apply -f deploy/role.yaml
+$ oc apply -f deploy/role_binding.yaml
+$ oc apply -f deploy/operator.yaml
 ```
 
-#### In a Kubernetes Cluster
+#### Deploying the Marketplace Operator with OLM
 ```bash
-$ kubectl apply -f deploy/catalogsourceconfig.crd.yaml
-$ kubectl apply -f deploy/operatorsource.crd.yaml
-$ kubectl apply -f deploy/rbac.yaml
-$ kubectl apply -f deploy/csv/marketplace.csv.yaml
+$ oc apply -f deploy/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/operatorsource.crd.yaml
+$ oc apply -f deploy/service_account.yaml
+$ oc apply -f deploy/role.yaml
+$ oc apply -f deploy/role_binding.yaml
+$ oc apply -f deploy/marketplace.csv.yaml
 ```
+
+### Deploying the Marketplace Operator with Kubernetes
+Execute the commands found in the [OKD section](#deploying-the-marketplace-operator-with-okd) in the same order subsituting `kubectl` for `oc`.
+
+Note that a Kubernetes cluster does not have OLM deployed by default.
 
 ## Populating your own App Registry OperatorSource
 
