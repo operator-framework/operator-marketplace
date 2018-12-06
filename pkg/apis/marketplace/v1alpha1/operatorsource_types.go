@@ -65,6 +65,12 @@ func (opsrc *OperatorSource) EnsureGVK() {
 	opsrc.SetGroupVersionKind(gvk)
 }
 
+// GetCurrentPhaseName returns the name of the current phase of the
+// given OperatorSource object.
+func (opsrc *OperatorSource) GetCurrentPhaseName() string {
+	return opsrc.Status.CurrentPhase.Name
+}
+
 // IsEqual returns true if the Spec specified in this is the same as the other.
 // Otherwise, the function returns false.
 //

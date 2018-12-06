@@ -48,7 +48,7 @@ type downloadingReconciler struct {
 // On error, the function returns "Failed" as the next desied phase
 // and Message is set to appropriate error message.
 func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
-	if in.Status.CurrentPhase.Name != phase.OperatorSourceDownloading {
+	if in.GetCurrentPhaseName() != phase.OperatorSourceDownloading {
 		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
