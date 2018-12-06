@@ -83,6 +83,9 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		return
 	}
 
+	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
+	out.Status.Packages = packages
+
 	r.logger.Info("Download complete, scheduling for configuration")
 
 	nextPhase = phase.GetNext(phase.Configuring)

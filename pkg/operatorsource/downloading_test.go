@@ -34,6 +34,9 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
 
+	opsrcWant := opsrcIn.DeepCopy()
+	opsrcWant.Status.Packages = "etcd,prometheus,amqp"
+
 	registryClient := mocks.NewAppRegistryClient(controller)
 	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
 
@@ -53,10 +56,13 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	// We expect the datastore to save downloaded manifest(s) returned by the registry.
 	writer.EXPECT().Write(opsrcIn, manifestExpected).Return(nil)
 
+	// We expect datastore to return the specified list of packages.
+	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(opsrcWant.Status.Packages)
+
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
-	assert.Equal(t, opsrcIn, opsrcGot)
+	assert.Equal(t, opsrcWant, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
 }
 

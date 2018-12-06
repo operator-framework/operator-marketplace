@@ -20,6 +20,7 @@ type OperatorSourceList struct {
 	Items           []OperatorSource `json:"items"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // OperatorSource is the Schema for the operatorsources API
 // +k8s:openapi-gen=true
 type OperatorSource struct {
@@ -28,8 +29,6 @@ type OperatorSource struct {
 	Spec              OperatorSourceSpec   `json:"spec,omitempty"`
 	Status            OperatorSourceStatus `json:"status,omitempty"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // OperatorSourceSpec defines the desired state of OperatorSource
 type OperatorSourceSpec struct {
@@ -50,6 +49,11 @@ type OperatorSourceSpec struct {
 type OperatorSourceStatus struct {
 	// Current phase of the OperatorSource object
 	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
+
+	// Packages is a comma separated list of package(s) each of which has been
+	// downloaded and processed by Marketplace operator from the specified
+	// endpoint.
+	Packages string `json:"packages,omitempty"`
 }
 
 // Set group, version, and kind strings

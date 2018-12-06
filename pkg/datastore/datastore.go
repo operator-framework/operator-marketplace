@@ -45,10 +45,17 @@ type Reader interface {
 // Writer is an interface that is used to manage the underlying datastore
 // for operator manifest.
 type Writer interface {
-	// GetPackageIDs returns a comma separated list of operator ID(s). Each ID
+	// GetPackageIDs returns a comma separated list of operator ID(s). This list
+	// includes operator(s) across all OperatorSource object(s). Each ID
 	// returned can be used to retrieve the manifest associated with the
 	// operator from underlying datastore.
 	GetPackageIDs() string
+
+	// GetPackageIDsByOperatorSource returns a comma separated list of operator
+	// ID(s) associated with a given OperatorSource object.
+	// Each ID returned can be used to retrieve the manifest associated with the
+	// operator from underlying datastore.
+	GetPackageIDsByOperatorSource(opsrcUID types.UID) string
 
 	// Write saves the Spec associated with a given OperatorSource object and
 	// the downloaded operator manifest(s) into datastore.
@@ -201,6 +208,16 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 func (ds *memoryDatastore) GetPackageIDs() string {
 	keys := ds.rows.GetAllPackages()
 	return strings.Join(keys, ",")
+}
+
+func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) string {
+	row, exists := ds.rows[opsrcUID]
+	if !exists {
+		return ""
+	}
+
+	packages := row.GetPackages()
+	return strings.Join(packages, ",")
 }
 
 func (ds *memoryDatastore) AddOperatorSource(opsrc *v1alpha1.OperatorSource) {
