@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: marketplace-operator
-  namespace: openshift-marketplace
+  namespace: openshift-operators
 roleRef:
   kind: ClusterRole
   name: marketplace-operator

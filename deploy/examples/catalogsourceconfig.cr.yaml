@@ -2,7 +2,7 @@ apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "CatalogSourceConfig"
 metadata:
   name: "example"
-  namespace: "openshift-marketplace"
+  namespace: "openshift-operators"
 spec:
   targetNamespace: "global"
   packages: "operators/marketplace-operators"

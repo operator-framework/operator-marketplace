@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-TEST_NAMESPACE="openshift-marketplace"
+TEST_NAMESPACE="openshift-operators"
 MANIFEST_FOLDER="./test/e2e/environment/"
 NAMESPACED_MANIFEST="./${MANIFEST_FOLDER}/namespaced-manifest.yaml"
 GLOBAL_MANIFEST="./${MANIFEST_FOLDER}/global-manifest.yaml"
