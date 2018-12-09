@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   name: marketplace-operator.v0.0.1
-  namespace: marketplace
+  namespace: openshift-marketplace
 spec:
   displayName: marketplace
   description: |-
@@ -27,7 +27,7 @@ spec:
     strategy: deployment
     spec:
       clusterPermissions:
-      - serviceAccountName: default
+      - serviceAccountName: marketplace-operator
         rules:
         - apiGroups:
           - marketplace.redhat.com
@@ -61,15 +61,26 @@ spec:
               labels:
                 name: marketplace-operator
             spec:
+              serviceAccountName: marketplace-operator
               containers:
                 - name: marketplace-operator
                   image: quay.io/openshift/origin-operator-marketplace
                   ports:
                   - containerPort: 60000
                     name: metrics
+                  - containerPort: 8080
+                    name: healthz
                   command:
                   - marketplace-operator
                   imagePullPolicy: Always
+                  livenessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: 8080
+                  readinessProbe:
+                    httpGet:
+                      path: /healthz
+                      port: 8080
                   env:
                     - name: WATCH_NAMESPACE
                       valueFrom:
