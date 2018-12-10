@@ -63,8 +63,8 @@ func (r *outOfSyncCacheReconciler) Reconcile(ctx context.Context, in *v1alpha1.O
 
 	// If we are here, the object is in a particular phase. Now is the time to
 	// determine if Spec of the OperatorSource object has been updated.
-	oldSpec, exists := r.datastore.GetOperatorSource(in.GetUID())
-	if exists && oldSpec.IsEqual(&in.Spec) {
+	source, exists := r.datastore.GetOperatorSource(in.GetUID())
+	if exists && source.Spec.IsEqual(&in.Spec) {
 		// Underlying datastore is aware of the OperatorSource object and
 		// Spec has not been modified.
 		// Let the regular phased reconciler handle the OperatorSource object.

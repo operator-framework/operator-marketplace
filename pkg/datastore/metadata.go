@@ -40,6 +40,6 @@ type RegistryMetadata struct {
 }
 
 // ID returns the unique identifier associated with this operator manifest.
-func (om *OperatorMetadata) ID() string {
-	return fmt.Sprintf("%s/%s", om.RegistryMetadata.Namespace, om.RegistryMetadata.Repository)
+func (rm *RegistryMetadata) ID() string {
+	return fmt.Sprintf("%s/%s", rm.Namespace, rm.Repository)
 }
