@@ -27,7 +27,9 @@ unit-test:
 	go test -v ./pkg/...
 
 generate-mocks:
-	go get github.com/golang/mock/mockgen
+	# Build mockgen from the same version used by gomock. This ensures that 
+	# gomock and mockgen are never out of sync.
+	go install ./vendor/github.com/golang/mock/mockgen
 	
 	@echo making sure directory for mocks exists
 	mkdir -p $(MOCKS_DIR)
