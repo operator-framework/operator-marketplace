@@ -5,13 +5,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// operatorSourceRow is what gets stored in datastore after an OperatorSource CR
-// is reconciled.
-//
-// Every reconciled OperatorSource object has a corresponding operatorSourceRow
-// in datastore. The Writer interface accepts a raw operator manifest and
-// marshals it into this type before writing it to the underlying storage.
-type operatorSourceRow struct {
+// OperatorSourceKey is what datastore uses to relate to an OperatorSource
+// object.
+type OperatorSourceKey struct {
+	// UID is the UID associated with the OperatorSource object.
+	UID types.UID
+
+	// Name is the namespaced name of the given OperatorSource object that
+	// uniquely identifies it and can be used to query the k8s API server.
+	Name types.NamespacedName
+
 	// We store the Spec associated with a given OperatorSource object. This is
 	// so that we can determine whether Spec for an existing operator source
 	// has been updated.
@@ -19,6 +22,16 @@ type operatorSourceRow struct {
 	// We compare the Spec of the received OperatorSource object to the one
 	// in datastore.
 	Spec *v1alpha1.OperatorSourceSpec
+}
+
+// operatorSourceRow is what gets stored in datastore after an OperatorSource CR
+// is reconciled.
+//
+// Every reconciled OperatorSource object has a corresponding operatorSourceRow
+// in datastore. The Writer interface accepts a raw operator manifest and
+// marshals it into this type before writing it to the underlying storage.
+type operatorSourceRow struct {
+	OperatorSourceKey
 
 	// Operators is the collection of all single-operator manifest(s) associated
 	// with the underlying operator source.

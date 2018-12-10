@@ -81,7 +81,28 @@ type Writer interface {
 	// datastore uses the UID of the given OperatorSource object to check if
 	// a Spec already exists. If no Spec is found then the function
 	// returns (nil, false).
-	GetOperatorSource(opsrcUID types.UID) (spec *v1alpha1.OperatorSourceSpec, ok bool)
+	GetOperatorSource(opsrcUID types.UID) (key *OperatorSourceKey, ok bool)
+
+	// OperatorSourceHasUpdate returns true if the operator source in remote
+	// registry specified in metadata has update(s) that need to be pulled.
+	//
+	// It's a rather rudimentary implementation, the function returns true if
+	// the remote registry has any update(s). It does not provide specific
+	// update information related to each repository:
+	//   New repositories added to the operator source.
+	//   Repositories that have been removed from the operator source.
+	//   Repositories that have a new version.
+	//
+	// Right now we consider remote and local operator source to be same only
+	// when the following is true:
+	//
+	// - Number of repositories in both local and remote are exactly the same.
+	// - Each repository in remote has a corresponding local repository with
+	//   exactly the same release.
+	//
+	// The lack of granular (per repository) information will force us to reload
+	// the entire namespace.
+	OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error)
 }
 
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
@@ -112,6 +133,7 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		return errors.New("invalid argument")
 	}
 
+	metadata := map[string]*RegistryMetadata{}
 	operators := map[string]*SingleOperatorManifest{}
 	for _, rawManifest := range rawManifests {
 		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
@@ -128,11 +150,22 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		for i, operatorPackage := range packages {
 			operators[operatorPackage.GetPackageID()] = packages[i]
 		}
+
+		// For each repository store the associated registry metadata.
+		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
 	}
 
 	row := &operatorSourceRow{
-		Spec:      &opsrc.Spec,
+		OperatorSourceKey: OperatorSourceKey{
+			UID: opsrc.GetUID(),
+			Name: types.NamespacedName{
+				Namespace: opsrc.GetNamespace(),
+				Name:      opsrc.GetName(),
+			},
+			Spec: &opsrc.Spec,
+		},
 		Operators: operators,
+		Metadata:  metadata,
 	}
 
 	ds.rows[opsrc.GetUID()] = row
@@ -157,7 +190,14 @@ func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) str
 
 func (ds *memoryDatastore) AddOperatorSource(opsrc *v1alpha1.OperatorSource) {
 	ds.rows[opsrc.GetUID()] = &operatorSourceRow{
-		Spec:      &opsrc.Spec,
+		OperatorSourceKey: OperatorSourceKey{
+			UID: opsrc.GetUID(),
+			Name: types.NamespacedName{
+				Namespace: opsrc.GetNamespace(),
+				Name:      opsrc.GetName(),
+			},
+			Spec: &opsrc.Spec,
+		},
 		Operators: map[string]*SingleOperatorManifest{},
 	}
 }
@@ -166,13 +206,49 @@ func (ds *memoryDatastore) RemoveOperatorSource(uid types.UID) {
 	delete(ds.rows, uid)
 }
 
-func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (opsrc *v1alpha1.OperatorSourceSpec, ok bool) {
+func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (*OperatorSourceKey, bool) {
 	row, exists := ds.rows[opsrcUID]
 	if !exists {
 		return nil, false
 	}
 
-	return row.Spec, true
+	return &row.OperatorSourceKey, true
+}
+
+func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error) {
+	// TODO: Return fine grained information that describes repository that
+	// was removed, added or has a new release.
+	row, exists := ds.rows[opsrcUID]
+	if !exists {
+		return false, fmt.Errorf("datastore has no record of the specified OperatorSource [%s]", opsrcUID)
+	}
+
+	// Right now we consider remote and local operator source to be same only
+	// when the following is true:
+	//  a. Number of repositories in both local and remote are exactly the same.
+	//  b. Each repository in remote has a corresponding local repository with
+	//     exactly the same release.
+
+	if len(row.Metadata) != len(metadata) {
+		return true, nil
+	}
+
+	for _, remote := range metadata {
+		if remote.Release == "" {
+			return false, fmt.Errorf("Release not specified for repository [%s]", remote.ID())
+		}
+
+		local, exists := row.Metadata[remote.Repository]
+		if !exists {
+			return true, nil
+		}
+
+		if local.Release != remote.Release {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // validate ensures that no package is mentioned more than once in the list.
