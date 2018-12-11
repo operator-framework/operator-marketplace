@@ -35,6 +35,8 @@ It is important to note that the order in which you apply the deployment files m
 
 #### Deploying the Marketplace Operator
 ```bash
+$ oc apply -f deploy/marketplace.ns.yaml
+$ oc project openshift-marketplace
 $ oc apply -f deploy/catalogsourceconfig.crd.yaml
 $ oc apply -f deploy/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
@@ -45,6 +47,8 @@ $ oc apply -f deploy/operator.yaml
 
 #### Deploying the Marketplace Operator with OLM
 ```bash
+$ oc apply -f deploy/marketplace.ns.yaml
+$ oc project openshift-marketplace
 $ oc apply -f deploy/catalogsourceconfig.crd.yaml
 $ oc apply -f deploy/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
