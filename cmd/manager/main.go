@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"runtime"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -59,6 +60,12 @@ func main() {
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Fatal(err)
 	}
+
+	// Serve a health check.
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	go http.ListenAndServe(":8080", nil)
 
 	log.Print("Starting the Cmd.")
 
