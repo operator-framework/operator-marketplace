@@ -123,6 +123,18 @@ func (m *operatorSourceRowMap) GetRow(opsrcUID types.UID) (*operatorSourceRow, b
 	return row, ok
 }
 
+func (m *operatorSourceRowMap) GetAllRows() []*OperatorSourceKey {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	keys := make([]*OperatorSourceKey, 0)
+	for _, row := range m.Sources {
+		keys = append(keys, &row.OperatorSourceKey)
+	}
+
+	return keys
+}
+
 // GetAllPackages return a list of all package(s) available across all
 // operator source(s).
 func (m *operatorSourceRowMap) GetAllPackages() []string {

@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -68,7 +70,15 @@ func main() {
 	go http.ListenAndServe(":8080", nil)
 
 	log.Print("Starting the Cmd.")
+	stopCh := signals.SetupSignalHandler()
+
+	// TODO: Registry resync period is hardcoded to 1 minute now, make it
+	// configurable via command line.
+	initialWait, resyncWait := time.Duration(5), time.Duration(1)
+	syncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncWait)
+
+	go syncer.Sync(stopCh)
 
 	// Start the Cmd
-	log.Fatal(mgr.Start(signals.SetupSignalHandler()))
+	log.Fatal(mgr.Start(stopCh))
 }

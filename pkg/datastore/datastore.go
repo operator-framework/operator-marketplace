@@ -103,6 +103,10 @@ type Writer interface {
 	// The lack of granular (per repository) information will force us to reload
 	// the entire namespace.
 	OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error)
+
+	// GetAllOperatorSources returns a list of all OperatorSource objecs(s) that
+	// datastore is aware of.
+	GetAllOperatorSources() []*OperatorSourceKey
 }
 
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
@@ -226,6 +230,10 @@ func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata 
 	}
 
 	return false, nil
+}
+
+func (ds *memoryDatastore) GetAllOperatorSources() []*OperatorSourceKey {
+	return ds.rows.GetAllRows()
 }
 
 // validate ensures that no package is mentioned more than once in the list.
