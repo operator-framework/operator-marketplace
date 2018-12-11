@@ -6,13 +6,17 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 // Use Case: Happy path, sdk passes an event with a valid object, reconciliation
@@ -22,7 +26,10 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	kubeclient := mocks.NewKubeClient(controller)
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+
+	fakeclient := fake.NewFakeClientWithScheme(scheme)
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewMockPhaseReconcilerFactory(controller)
 	transitioner := mocks.NewPhaseTransitioner(controller)
@@ -32,12 +39,15 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(kubeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
 
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
 	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("marketplace", "foo", "remote"), helperNewOperatorSourceWithEndpoint("marketplace", "foo", "local")
+
+	// Add OperatorSource to fakeclient
+	fakeclient.Create(ctx, opsrcIn)
 
 	phaseReconciler := mocks.NewPhaseReconciler(controller)
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), opsrcIn).Return(phaseReconciler, nil).Times(1)
@@ -55,12 +65,16 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	// We expect the transitioner to indicate that the object has changed and needs update.
 	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
-	// We expect the object to be updated successfully.
-	kubeclient.EXPECT().Update(ctx, opsrcOut).Return(nil).Times(1)
-
 	errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
+
+	// We expect the object to be updated successfully.
+	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
+	opsrcGot := &v1alpha1.OperatorSource{}
+
+	fakeclient.Get(ctx, namespacedName, opsrcGot)
+	assert.Equal(t, opsrcOut, opsrcGot)
 }
 
 // Use Case: sdk passes an event with a valid object and reconciliation is
@@ -70,7 +84,10 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	kubeclient := mocks.NewKubeClient(controller)
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+
+	fakeclient := fake.NewFakeClientWithScheme(scheme)
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewMockPhaseReconcilerFactory(controller)
 	transitioner := mocks.NewPhaseTransitioner(controller)
@@ -80,12 +97,15 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(kubeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
 
 	ctx := context.TODO()
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
 	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
+
+	// Add OperatorSource to fakeclient
+	fakeclient.Create(ctx, opsrcIn)
 
 	phaseReconciler := mocks.NewPhaseReconciler(controller)
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), opsrcIn).Return(phaseReconciler, nil).Times(1)
@@ -102,6 +122,13 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
+
+	// We expect no changes to the object
+	namespacedName := types.NamespacedName{Name: "foo", Namespace: "namespace"}
+	opsrcGot := &v1alpha1.OperatorSource{}
+
+	fakeclient.Get(ctx, namespacedName, opsrcGot)
+	assert.Equal(t, opsrcIn, opsrcGot)
 }
 
 // Use Case: sdk passes an event with a valid object, reconciliation is not
@@ -111,7 +138,10 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	kubeclient := mocks.NewKubeClient(controller)
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+
+	fakeclient := fake.NewFakeClientWithScheme(scheme)
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewMockPhaseReconcilerFactory(controller)
 	transitioner := mocks.NewPhaseTransitioner(controller)
@@ -121,7 +151,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(kubeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
 
 	ctx := context.TODO()
 
@@ -144,12 +174,11 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 	// We expect transitioner to indicate that the object has been changed.
 	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
-	// We expect the object to be updated
-	updateErrorExpected := errors.New("object update error")
-	kubeclient.EXPECT().Update(ctx, opsrcOut).Return(updateErrorExpected).Times(1)
-
 	errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.Error(t, errGot)
 	assert.Equal(t, reconcileErrorExpected, errGot)
+
+	// We expect the object to be updated
+	assert.Error(t, fakeclient.Update(ctx, opsrcOut))
 }

@@ -6,9 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gomock "github.com/golang/mock/gomock"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -32,22 +34,27 @@ func TestReconcileWithPurging(t *testing.T) {
 		Message: phase.GetMessage(phase.Initial),
 	}
 
+	scheme := runtime.NewScheme()
+	marketplace.AddToScheme(scheme)
+
 	datastore := mocks.NewDatastoreWriter(controller)
-	client := mocks.NewKubeClient(controller)
-	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
+	fakeclient := fake.NewFakeClientWithScheme(scheme)
+	// We expect the associated CatalogConfigSource object to be deleted.
+	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
+	fakeclient.Create(ctx, csc)
+
+	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, fakeclient)
 
 	// We expect the operator source to be removed from the datastore.
-	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID()).Times(1)
-
-	// We expect the associated CatalogConfigSource object to be deleted.
-	client.EXPECT().Delete(ctx, csc)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
 	assert.Equal(t, opsrcWant, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+
+	assert.True(t, k8s_errors.IsNotFound(fakeclient.Delete(ctx, csc)))
 }
 
 // In the event the associated CatalogSourceConfig object is not found while
@@ -67,21 +74,20 @@ func TestReconcileWithPurgingWithCatalogSourceConfigNotFound(t *testing.T) {
 		Message: phase.GetMessage(phase.Initial),
 	}
 
+	scheme := runtime.NewScheme()
+	marketplace.AddToScheme(scheme)
+
 	datastore := mocks.NewDatastoreWriter(controller)
-	client := mocks.NewKubeClient(controller)
-	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
+	fakeclient := fake.NewFakeClientWithScheme(scheme)
+	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, fakeclient)
 
 	// We expect the operator source to be removed from the datastore.
-	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID())
-
-	// We expect kube client to throw a NotFound error.
-	notFoundErr := k8s_errors.NewNotFound(schema.GroupResource{}, "CatalogSourceConfig not found")
-	client.EXPECT().Delete(ctx, csc).Return(notFoundErr)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
-	assert.Error(t, errGot)
+    // We expect kube client to throw a NotFound error.
+	assert.True(t, k8s_errors.IsNotFound(errGot))
 	assert.Equal(t, opsrcGot, opsrcWant)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
 }
