@@ -19,12 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"github.com/operator-framework/operator-sdk/internal/util/fileutil"
 	"github.com/operator-framework/operator-sdk/pkg/scaffold/input"
 
+	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 	rbacv1 "k8s.io/api/rbac/v1"
 	cgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -34,6 +34,8 @@ const RoleYamlFile = "role.yaml"
 
 type Role struct {
 	input.Input
+
+	IsClusterScoped bool
 }
 
 func (s *Role) GetInput() (input.Input, error) {
@@ -70,7 +72,7 @@ func UpdateRoleForResource(r *Resource, absProjectPath string) error {
 		// check if the resource already exists
 		for _, resource := range pr.Resources {
 			if resource == r.Resource {
-				log.Printf("deploy/role.yaml RBAC rules already up to date for the resource (%v, %v)", r.APIVersion, r.Kind)
+				log.Infof("deploy/role.yaml RBAC rules already up to date for the resource (%v, %v)", r.APIVersion, r.Kind)
 				return nil
 			}
 		}
@@ -112,7 +114,7 @@ func UpdateRoleForResource(r *Resource, absProjectPath string) error {
 		// check if the resource already exists
 		for _, resource := range pr.Resources {
 			if resource == r.Resource {
-				log.Printf("deploy/role.yaml RBAC rules already up to date for the resource (%v, %v)", r.APIVersion, r.Kind)
+				log.Infof("deploy/role.yaml RBAC rules already up to date for the resource (%v, %v)", r.APIVersion, r.Kind)
 				return nil
 			}
 		}
@@ -148,7 +150,7 @@ func UpdateRoleForResource(r *Resource, absProjectPath string) error {
 	return nil
 }
 
-const roleTemplate = `kind: Role
+const roleTemplate = `kind: {{if .IsClusterScoped}}Cluster{{end}}Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{.ProjectName}}

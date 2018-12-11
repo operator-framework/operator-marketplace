@@ -50,7 +50,7 @@ required = [
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.
   # branch = "master" #osdk_branch_annotation
-  version = "=v0.1.1" #osdk_version_annotation
+  version = "=v0.2.0" #osdk_version_annotation
 
 # Everything above this is required by the SDK. For each SDK version upgrade, the
 # above contents should be replaced by code copied from the SDK repo located at:

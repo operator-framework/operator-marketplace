@@ -15,15 +15,17 @@
 package projutil
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
 	SrcDir          = "src"
-	gopkgToml       = "./Gopkg.toml"
+	mainFile        = "./cmd/manager/main.go"
 	buildDockerfile = "./build/Dockerfile"
 )
 
@@ -47,8 +49,20 @@ func MustInProjectRoot() {
 	// if the current directory has the "./build/dockerfile" file, then it is safe to say
 	// we are at the project root.
 	_, err := os.Stat(buildDockerfile)
-	if err != nil && os.IsNotExist(err) {
-		log.Fatalf("must run command in project root dir: %v", err)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Fatal("must run command in project root dir: project structure requires ./build/Dockerfile")
+		}
+		log.Fatalf("error: (%v) while checking if current directory is the project root", err)
+	}
+}
+
+func MustGoProjectCmd(cmd *cobra.Command) {
+	t := GetOperatorType()
+	switch t {
+	case OperatorTypeGo:
+	default:
+		log.Fatalf("'%s' can only be run for Go operators; %s does not exist.", cmd.CommandPath(), mainFile)
 	}
 }
 
@@ -60,19 +74,12 @@ func MustGetwd() string {
 	return wd
 }
 
-// CheckAndGetCurrPkg checks if this project's repository path is rooted under $GOPATH and returns the current directory's import path
+// CheckAndGetProjectGoPkg checks if this project's repository path is rooted under $GOPATH and returns the current directory's import path
 // e.g: "github.com/example-inc/app-operator"
-func CheckAndGetCurrPkg() string {
-	gopath := os.Getenv(GopathEnv)
-	if len(gopath) == 0 {
-		log.Fatalf("get current pkg failed: GOPATH env not set")
-	}
+func CheckAndGetProjectGoPkg() string {
+	gopath := SetGopath(GetGopath())
 	goSrc := filepath.Join(gopath, SrcDir)
-
 	wd := MustGetwd()
-	if !strings.HasPrefix(filepath.Dir(wd), goSrc) {
-		log.Fatalf("check current pkg failed: must run from gopath")
-	}
 	currPkg := strings.Replace(wd, goSrc+string(filepath.Separator), "", 1)
 	// strip any "/" prefix from the repo path.
 	return strings.TrimPrefix(currPkg, string(filepath.Separator))
@@ -82,10 +89,42 @@ func CheckAndGetCurrPkg() string {
 // This function should be called after verifying the user is in project root
 // e.g: "go", "ansible"
 func GetOperatorType() OperatorType {
-	// Assuming that if Gopkg.toml exists then this is a Go operator
-	_, err := os.Stat(gopkgToml)
+	// Assuming that if main.go exists then this is a Go operator
+	_, err := os.Stat(mainFile)
 	if err != nil && os.IsNotExist(err) {
 		return OperatorTypeAnsible
 	}
 	return OperatorTypeGo
+}
+
+// GetGopath gets GOPATH and makes sure it is set and non-empty.
+func GetGopath() string {
+	gopath, ok := os.LookupEnv(GopathEnv)
+	if !ok || len(gopath) == 0 {
+		log.Fatal("GOPATH env not set")
+	}
+	return gopath
+}
+
+// SetGopath sets GOPATH=currentGopath after processing a path list,
+// if any, then returns the set path.
+func SetGopath(currentGopath string) string {
+	var newGopath string
+	cwdInGopath := false
+	wd := MustGetwd()
+	for _, newGopath = range strings.Split(currentGopath, ":") {
+		if strings.HasPrefix(filepath.Dir(wd), newGopath) {
+			cwdInGopath = true
+			break
+		}
+	}
+	if !cwdInGopath {
+		log.Fatalf("project not in $GOPATH")
+		return ""
+	}
+	if err := os.Setenv(GopathEnv, newGopath); err != nil {
+		log.Fatal(err)
+		return ""
+	}
+	return newGopath
 }

@@ -24,6 +24,8 @@ const OperatorYamlFile = "operator.yaml"
 
 type Operator struct {
 	input.Input
+
+	IsClusterScoped bool
 }
 
 func (s *Operator) GetInput() (input.Input, error) {
@@ -59,11 +61,23 @@ spec:
           command:
           - {{.ProjectName}}
           imagePullPolicy: Always
+          readinessProbe:
+            exec:
+              command:
+                - stat
+                - /tmp/operator-sdk-ready
+            initialDelaySeconds: 4
+            periodSeconds: 10
+            failureThreshold: 1
           env:
             - name: WATCH_NAMESPACE
+              {{- if .IsClusterScoped }}
+              value: ""
+              {{- else }}
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+              {{- end}}
             - name: POD_NAME
               valueFrom:
                 fieldRef:
