@@ -77,3 +77,22 @@ $ oc create -f your-operator-source.yaml
 ```
 
 Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
+
+## Running End to End (e2e) Tests
+
+To run the e2e tests defined in test/e2e that were created using the operator-sdk, first ensure that you have the following additional prerequisites:
+
+1. The operator-sdk binary installed on your environment. You can get it by either downloading a released binary on the sdk release page here (https://github.com/operator-framework/operator-sdk/releases/) or by pulling down the source and compiling it locally (https://github.com/operator-framework/operator-sdk).
+2. A namespace on your cluster to run the tests on, e.g.
+```bash
+    $ oc create namespace test-namespace
+```
+3. A Kubeconfig file that points to the cluster you want to run the tests on.
+
+To run the tests, just call operator-sdk test and point to the test directory:
+
+```bash
+operator-sdk test local ./test/e2e --up-local --kubeconfig=$KUBECONFIG --namespace $TEST_NAMESPACE
+```
+
+You can also run the tests with `make e2e-test`.
