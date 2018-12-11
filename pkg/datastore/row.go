@@ -16,6 +16,9 @@ func newOperatorSourceRowMap() *operatorSourceRowMap {
 // OperatorSourceKey is what datastore uses to relate to an OperatorSource
 // object.
 type OperatorSourceKey struct {
+	// UID is the UID associated with the OperatorSource object.
+	UID types.UID
+
 	// Name is the namespaced name of the given OperatorSource object that
 	// uniquely identifies it and can be used to query the k8s API server.
 	Name types.NamespacedName
@@ -93,6 +96,7 @@ func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, metadata map[
 func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, metadata map[string]*RegistryMetadata, operators map[string]*SingleOperatorManifest) {
 	m.Sources[opsrc.GetUID()] = &operatorSourceRow{
 		OperatorSourceKey: OperatorSourceKey{
+			UID: opsrc.GetUID(),
 			Name: types.NamespacedName{
 				Namespace: opsrc.GetNamespace(),
 				Name:      opsrc.GetName(),
@@ -117,6 +121,18 @@ func (m *operatorSourceRowMap) GetRow(opsrcUID types.UID) (*operatorSourceRow, b
 
 	row, ok := m.Sources[opsrcUID]
 	return row, ok
+}
+
+func (m *operatorSourceRowMap) GetAllRows() []*OperatorSourceKey {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	keys := make([]*OperatorSourceKey, 0)
+	for _, row := range m.Sources {
+		keys = append(keys, &row.OperatorSourceKey)
+	}
+
+	return keys
 }
 
 // GetAllPackages return a list of all package(s) available across all
