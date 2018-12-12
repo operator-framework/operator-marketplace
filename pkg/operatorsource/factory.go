@@ -45,7 +45,7 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1
 		return NewUpdatedEventReconciler(logger, s.datastore, s.client), nil
 	}
 
-	currentPhase := opsrc.Status.CurrentPhase.Name
+	currentPhase := opsrc.GetCurrentPhaseName()
 
 	switch currentPhase {
 	case phase.Initial:

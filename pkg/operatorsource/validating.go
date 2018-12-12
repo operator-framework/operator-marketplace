@@ -43,7 +43,7 @@ type validatingReconciler struct {
 // On success, it returns "Downloading" as the next phase.
 // On error, it returns "Failed" as the next phase.
 func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
-	if in.Status.CurrentPhase.Name != phase.OperatorSourceValidating {
+	if in.GetCurrentPhaseName() != phase.OperatorSourceValidating {
 		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
