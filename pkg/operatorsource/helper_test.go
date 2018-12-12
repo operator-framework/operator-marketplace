@@ -68,6 +68,7 @@ func helperNewCatalogSourceConfig(namespace, name string) *v1alpha1.CatalogSourc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    map[string]string{"opsrc-datastore": "true"},
 		},
 	}
 }

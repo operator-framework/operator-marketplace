@@ -3,6 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 	"fmt"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"strings"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -204,10 +205,21 @@ func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *co
 
 // newCatalogSource returns a CatalogSource object.
 func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
-	return new(CatalogSourceBuilder).
-		WithMeta(v1alpha1.CatalogSourcePrefix+csc.Name, csc.Spec.TargetNamespace).
+	builder := new(CatalogSourceBuilder).
 		WithOwner(csc).
+		WithMeta(v1alpha1.CatalogSourcePrefix+csc.Name, csc.Spec.TargetNamespace).
 		// TBD: where do we get display name and publisher from?
-		WithSpec("internal", configMapName, csc.Name, csc.Name).
-		CatalogSource()
+		WithSpec("internal", configMapName, csc.Name, csc.Name)
+
+	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
+	// the CatalogSource is the datastore for an OperatorSource. This is a hint
+	// for us to set the "olm-visibility" label in the CatalogSource so that it
+	// is not visible in the OLM Packages UI. In addition we will set the
+	// "openshift-marketplace" label which will be used by the Marketplace UI
+	// to filter out global CatalogSources.
+	datastoreLabel, found := csc.ObjectMeta.GetLabels()[operatorsource.DatastoreLabel]
+	if found && strings.ToLower(datastoreLabel) == "true" {
+		builder.WithOLMLabels()
+	}
+	return builder.CatalogSource()
 }

@@ -7,6 +7,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DatastoreLabel is the label used in a CatalogSourceConfig to indicate that
+// the resulting CatalogSource acts as the datastore for the OperatorSource
+// if it is set to "true".
+const DatastoreLabel string = "opsrc-datastore"
+
 // CatalogSourceConfigBuilder builds a new CatalogSourceConfig type object.
 type CatalogSourceConfigBuilder struct {
 	object v1alpha1.CatalogSourceConfig
@@ -28,6 +33,7 @@ func (b *CatalogSourceConfigBuilder) WithMeta(namespace, name string) *CatalogSo
 	b.object.ObjectMeta = metav1.ObjectMeta{
 		Name:      name,
 		Namespace: namespace,
+		Labels:    map[string]string{DatastoreLabel: "true"},
 	}
 
 	return b
