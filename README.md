@@ -26,7 +26,7 @@ $ export REGISTRY=<SOME_REGISTRY> \
 
 ### Description
 
-The marketplace operator manages two CRDs: [OperatorSource](./deploy/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
 
 The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
 
@@ -37,8 +37,8 @@ It is important to note that the order in which you apply the deployment files m
 ```bash
 $ oc apply -f deploy/marketplace.ns.yaml
 $ oc project openshift-marketplace
-$ oc apply -f deploy/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/operatorsource.crd.yaml
+$ oc apply -f deploy/crd/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/crd/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
 $ oc apply -f deploy/role.yaml
 $ oc apply -f deploy/role_binding.yaml
@@ -49,8 +49,8 @@ $ oc apply -f deploy/operator.yaml
 ```bash
 $ oc apply -f deploy/marketplace.ns.yaml
 $ oc project openshift-marketplace
-$ oc apply -f deploy/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/operatorsource.crd.yaml
+$ oc apply -f deploy/crd/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/crd/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
 $ oc apply -f deploy/role.yaml
 $ oc apply -f deploy/role_binding.yaml
@@ -77,3 +77,22 @@ $ oc create -f your-operator-source.yaml
 ```
 
 Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
+
+## Running End to End (e2e) Tests
+
+To run the e2e tests defined in test/e2e that were created using the operator-sdk, first ensure that you have the following additional prerequisites:
+
+1. The operator-sdk binary installed on your environment. You can get it by either downloading a released binary on the sdk release page here (https://github.com/operator-framework/operator-sdk/releases/) or by pulling down the source and compiling it locally (https://github.com/operator-framework/operator-sdk).
+2. A namespace on your cluster to run the tests on, e.g.
+```bash
+    $ oc create namespace test-namespace
+```
+3. A Kubeconfig file that points to the cluster you want to run the tests on.
+
+To run the tests, just call operator-sdk test and point to the test directory:
+
+```bash
+operator-sdk test local ./test/e2e --up-local --kubeconfig=$KUBECONFIG --namespace $TEST_NAMESPACE
+```
+
+You can also run the tests with `make e2e-test`.

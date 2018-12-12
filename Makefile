@@ -46,3 +46,6 @@ clean-mocks:
 	rm -rf $(MOCKS_DIR)
 
 clean: clean-mocks
+
+e2e-test:
+	./scripts/e2e-tests.sh

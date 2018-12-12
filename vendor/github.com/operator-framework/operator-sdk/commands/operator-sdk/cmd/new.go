@@ -15,9 +15,7 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +26,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/scaffold/ansible"
 	"github.com/operator-framework/operator-sdk/pkg/scaffold/input"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -54,6 +53,7 @@ generates a skeletal app-operator application in $GOPATH/src/github.com/example.
 	newCmd.Flags().StringVar(&operatorType, "type", "go", "Type of operator to initialize (e.g \"ansible\")")
 	newCmd.Flags().BoolVar(&skipGit, "skip-git-init", false, "Do not init the directory as a git repository")
 	newCmd.Flags().BoolVar(&generatePlaybook, "generate-playbook", false, "Generate a playbook skeleton. (Only used for --type ansible)")
+	newCmd.Flags().BoolVar(&isClusterScoped, "cluster-scoped", false, "Generate cluster-scoped resources instead of namespace-scoped")
 
 	return newCmd
 }
@@ -65,11 +65,10 @@ var (
 	projectName      string
 	skipGit          bool
 	generatePlaybook bool
+	isClusterScoped  bool
 )
 
 const (
-	gopath    = "GOPATH"
-	src       = "src"
 	dep       = "dep"
 	ensureCmd = "ensure"
 )
@@ -82,6 +81,8 @@ func newFunc(cmd *cobra.Command, args []string) {
 	mustBeNewProject()
 	verifyFlags()
 
+	log.Infof("Creating new %s operator '%s'.", strings.Title(operatorType), projectName)
+
 	switch operatorType {
 	case projutil.OperatorTypeGo:
 		doScaffold()
@@ -90,6 +91,8 @@ func newFunc(cmd *cobra.Command, args []string) {
 		doAnsibleScaffold()
 	}
 	initGit()
+
+	log.Info("Project creation complete.")
 }
 
 func parse(args []string) {
@@ -120,7 +123,7 @@ func mustBeNewProject() {
 
 func doScaffold() {
 	cfg := &input.Config{
-		Repo:           filepath.Join(projutil.CheckAndGetCurrPkg(), projectName),
+		Repo:           filepath.Join(projutil.CheckAndGetProjectGoPkg(), projectName),
 		AbsProjectPath: filepath.Join(projutil.MustGetwd(), projectName),
 		ProjectName:    projectName,
 	}
@@ -130,9 +133,15 @@ func doScaffold() {
 		&scaffold.Cmd{},
 		&scaffold.Dockerfile{},
 		&scaffold.ServiceAccount{},
-		&scaffold.Role{},
-		&scaffold.RoleBinding{},
-		&scaffold.Operator{},
+		&scaffold.Role{
+			IsClusterScoped: isClusterScoped,
+		},
+		&scaffold.RoleBinding{
+			IsClusterScoped: isClusterScoped,
+		},
+		&scaffold.Operator{
+			IsClusterScoped: isClusterScoped,
+		},
 		&scaffold.Apis{},
 		&scaffold.Controller{},
 		&scaffold.Version{},
@@ -152,13 +161,13 @@ func doAnsibleScaffold() {
 
 	resource, err := scaffold.NewResource(apiVersion, kind)
 	if err != nil {
-		log.Fatal("Invalid apiVersion and kind.")
+		log.Fatalf("invalid apiVersion and kind: (%v)", err)
 	}
 
 	s := &scaffold.Scaffold{}
 	tmpdir, err := ioutil.TempDir("", "osdk")
 	if err != nil {
-		log.Fatal("unable to get temp directory")
+		log.Fatalf("unable to get temp directory: (%v)", err)
 	}
 
 	galaxyInit := &ansible.GalaxyInit{
@@ -176,9 +185,15 @@ func doAnsibleScaffold() {
 		},
 		galaxyInit,
 		&scaffold.ServiceAccount{},
-		&scaffold.Role{},
-		&scaffold.RoleBinding{},
-		&ansible.Operator{},
+		&scaffold.Role{
+			IsClusterScoped: isClusterScoped,
+		},
+		&scaffold.RoleBinding{
+			IsClusterScoped: isClusterScoped,
+		},
+		&ansible.Operator{
+			IsClusterScoped: isClusterScoped,
+		},
 		&scaffold.Crd{
 			Resource: resource,
 		},
@@ -192,55 +207,38 @@ func doAnsibleScaffold() {
 
 	// Decide on playbook.
 	if generatePlaybook {
+		log.Infof("Generating %s playbook.", strings.Title(operatorType))
+
 		err := s.Execute(cfg,
 			&ansible.Playbook{
 				Resource: *resource,
 			},
 		)
 		if err != nil {
-			log.Fatalf("new scaffold failed: (%v)", err)
+			log.Fatalf("new playbook scaffold failed: (%v)", err)
 		}
 	}
+
+	log.Info("Running galaxy-init.")
 
 	// Run galaxy init.
 	cmd := exec.Command(filepath.Join(galaxyInit.AbsProjectPath, galaxyInit.Path))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Run()
+
 	// Delete Galxy INIT
 	// Mac OS tmp directory is /var/folders/_c/..... this means we have to make sure that we get the top level directory to remove
 	// everything.
 	tmpDirectorySlice := strings.Split(os.TempDir(), "/")
 	if err = os.RemoveAll(filepath.Join(galaxyInit.AbsProjectPath, tmpDirectorySlice[1])); err != nil {
-		log.Fatalf("failed to remove the galaxy init script")
+		log.Fatalf("failed to remove the galaxy init script: (%v)", err)
 	}
 
 	// update deploy/role.yaml for the given resource r.
 	if err := scaffold.UpdateRoleForResource(resource, cfg.AbsProjectPath); err != nil {
-		log.Fatalf("failed to update the RBAC manifest for the resource (%v, %v): %v", resource.APIVersion, resource.Kind, err)
+		log.Fatalf("failed to update the RBAC manifest for the resource (%v, %v): (%v)", resource.APIVersion, resource.Kind, err)
 	}
-}
-
-// repoPath checks if this project's repository path is rooted under $GOPATH and returns project's repository path.
-// repoPath field on generator is used primarily in generation of Go operator. For Ansible we will set it to cwd
-func repoPath() string {
-	// We only care about GOPATH constraint checks if we are a Go operator
-	wd := projutil.MustGetwd()
-	if operatorType == projutil.OperatorTypeGo {
-		gp := os.Getenv(gopath)
-		if len(gp) == 0 {
-			log.Fatal("$GOPATH env not set")
-		}
-		// check if this project's repository path is rooted under $GOPATH
-		if !strings.HasPrefix(wd, gp) {
-			log.Fatalf("project's repository path (%v) is not rooted under GOPATH (%v)", wd, gp)
-		}
-		// compute the repo path by stripping "$GOPATH/src/" from the path of the current directory.
-		rp := filepath.Join(string(wd[len(filepath.Join(gp, src)):]), projectName)
-		// strip any "/" prefix from the repo path.
-		return strings.TrimPrefix(rp, string(filepath.Separator))
-	}
-	return wd
 }
 
 func verifyFlags() {
@@ -278,27 +276,27 @@ func execCmd(stdout *os.File, cmd string, args ...string) {
 	dc.Stderr = os.Stderr
 	err := dc.Run()
 	if err != nil {
-		log.Fatalf("failed to exec %s %#v: %v", cmd, args, err)
+		log.Fatalf("failed to exec %s %#v: (%v)", cmd, args, err)
 	}
 }
 
 func pullDep() {
 	_, err := exec.LookPath(dep)
 	if err != nil {
-		log.Fatalf("looking for dep in $PATH: %v", err)
+		log.Fatalf("looking for dep in $PATH: (%v)", err)
 	}
-	fmt.Fprintln(os.Stdout, "Run dep ensure ...")
+	log.Info("Run dep ensure ...")
 	execCmd(os.Stdout, dep, ensureCmd, "-v")
-	fmt.Fprintln(os.Stdout, "Run dep ensure done")
+	log.Info("Run dep ensure done")
 }
 
 func initGit() {
 	if skipGit {
 		return
 	}
-	fmt.Fprintln(os.Stdout, "Run git init ...")
+	log.Info("Run git init ...")
 	execCmd(os.Stdout, "git", "init")
 	execCmd(os.Stdout, "git", "add", "--all")
 	execCmd(os.Stdout, "git", "commit", "-q", "-m", "INITIAL COMMIT")
-	fmt.Fprintln(os.Stdout, "Run git init done")
+	log.Info("Run git init done")
 }
