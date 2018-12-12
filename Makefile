@@ -49,3 +49,6 @@ clean: clean-mocks
 
 e2e-test:
 	./scripts/e2e-tests.sh
+
+e2e-ci-job:
+	./scripts/run-e2e-job.sh
