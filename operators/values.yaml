@@ -1,0 +1,9 @@
+operators:
+ - amq-streams
+ - descheduler
+ - etcd
+ - federationv2
+ - prometheus
+ - couchbase
+ - dynatrace
+ - mongodb
