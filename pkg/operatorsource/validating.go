@@ -59,8 +59,6 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Opera
 		return
 	}
 
-	r.datastore.AddOperatorSource(in)
-
 	r.logger.Info("Scheduling for download")
 
 	nextPhase = phase.GetNext(phase.OperatorSourceDownloading)
