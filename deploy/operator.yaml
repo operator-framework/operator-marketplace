@@ -15,7 +15,7 @@ spec:
       serviceAccountName: marketplace-operator
       containers:
         - name: marketplace-operator
-          image: quay.io/openshift/origin-operator-marketplace
+          image: quay.io/openshift/origin-operator-marketplace:latest
           ports:
           - containerPort: 60000
             name: metrics

@@ -45,10 +45,6 @@ spec:
       properties:
         spec:
           type: object
-          description: Represents the configuration of an OperatorSource
-          required:
-          - spec
-          type: object
           description: Spec for an OperatorSource.
           required:
           - type
@@ -61,7 +57,10 @@ spec:
               pattern: 'appregistry'
             endpoint:
               type: string
-              description: The endpoint of the OperatorSource
+              description: Points to the remote app registry server from where operator manifests can be fetched.
             registryNamespace:
               type: string
-              description:  App registry namespace
+              description: |-
+                The namespace in app registry.
+                Only operator manifests under this namespace will be visible.
+                Please note that this is not a k8s namespace.
