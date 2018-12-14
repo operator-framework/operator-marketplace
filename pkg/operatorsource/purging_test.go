@@ -37,7 +37,7 @@ func TestReconcileWithPurging(t *testing.T) {
 	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
 
 	// We expect the operator source to be removed from the datastore.
-	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
+	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID()).Times(1)
 
 	// We expect the associated CatalogConfigSource object to be deleted.
@@ -72,7 +72,7 @@ func TestReconcileWithPurgingWithCatalogSourceConfigNotFound(t *testing.T) {
 	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
 
 	// We expect the operator source to be removed from the datastore.
-	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
+	csc := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID())
 
 	// We expect kube client to throw a NotFound error.

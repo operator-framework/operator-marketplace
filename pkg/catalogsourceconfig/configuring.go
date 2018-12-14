@@ -110,13 +110,13 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 	// Check if the CatalogSource already exists
 	catalogSourceGet := new(CatalogSourceBuilder).WithTypeMeta().CatalogSource()
 	key := client.ObjectKey{
-		Name:      v1alpha1.CatalogSourcePrefix + csc.Name,
+		Name:      csc.Name,
 		Namespace: csc.Spec.TargetNamespace,
 	}
 	err = r.client.Get(context.TODO(), key, catalogSourceGet)
 
 	// Update the CatalogSource if it exists else create one.
-	configMapName := v1alpha1.ConfigMapPrefix + csc.Name
+	configMapName := csc.Name
 	if err == nil {
 		if catalogSourceGet.Spec.ConfigMap != configMapName {
 			catalogSourceGet.Spec.ConfigMap = configMapName
@@ -157,7 +157,7 @@ func (r *configuringReconciler) reconcileConfigMap(csc *v1alpha1.CatalogSourceCo
 	}
 
 	// Check if the ConfigMap already exists
-	configMapName := v1alpha1.ConfigMapPrefix + csc.Name
+	configMapName := csc.Name
 	configMapGet := new(ConfigMapBuilder).WithTypeMeta().ConfigMap()
 	key := client.ObjectKey{
 		Name:      configMapName,
@@ -197,7 +197,7 @@ func GetPackageIDs(csIDs string) []string {
 // newConfigMap returns a new ConfigMap object.
 func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
 	return new(ConfigMapBuilder).
-		WithMeta(v1alpha1.ConfigMapPrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithMeta(csc.Name, csc.Spec.TargetNamespace).
 		WithOwner(csc).
 		WithData(data).
 		ConfigMap()
@@ -207,9 +207,9 @@ func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *co
 func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
 	builder := new(CatalogSourceBuilder).
 		WithOwner(csc).
-		WithMeta(v1alpha1.CatalogSourcePrefix+csc.Name, csc.Spec.TargetNamespace).
+		WithMeta(csc.Name, csc.Spec.TargetNamespace).
 		// TBD: where do we get display name and publisher from?
-		WithSpec("internal", configMapName, csc.Name, csc.Name)
+		WithSpec("internal", configMapName, "Marketplace Operators", "Red Hat")
 
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint
