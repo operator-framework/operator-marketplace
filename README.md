@@ -37,8 +37,8 @@ It is important to note that the order in which you apply the deployment files m
 ```bash
 $ oc apply -f deploy/marketplace.ns.yaml
 $ oc project openshift-operators
-$ oc apply -f deploy/crd/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/crd/operatorsource.crd.yaml
+$ oc apply -f deploy/crds/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/crds/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
 $ oc apply -f deploy/role.yaml
 $ oc apply -f deploy/role_binding.yaml
@@ -49,8 +49,8 @@ $ oc apply -f deploy/operator.yaml
 ```bash
 $ oc apply -f deploy/marketplace.ns.yaml
 $ oc project openshift-operators
-$ oc apply -f deploy/crd/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/crd/operatorsource.crd.yaml
+$ oc apply -f deploy/crds/catalogsourceconfig.crd.yaml
+$ oc apply -f deploy/crds/operatorsource.crd.yaml
 $ oc apply -f deploy/service_account.yaml
 $ oc apply -f deploy/role.yaml
 $ oc apply -f deploy/role_binding.yaml
