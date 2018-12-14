@@ -28,10 +28,23 @@ func (b *CatalogSourceBuilder) WithTypeMeta() *CatalogSourceBuilder {
 // WithMeta sets basic TypeMeta and ObjectMeta.
 func (b *CatalogSourceBuilder) WithMeta(name, namespace string) *CatalogSourceBuilder {
 	b.WithTypeMeta()
-	b.cs.ObjectMeta = metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
+	objectMeta := b.cs.GetObjectMeta()
+	if objectMeta == nil {
+		b.cs.ObjectMeta = metav1.ObjectMeta{}
 	}
+	b.cs.SetName(name)
+	b.cs.SetNamespace(namespace)
+	return b
+}
+
+// WithOLMLabels adds "olm-visibility" and "openshift-marketplace" labels to ObjectMeta.
+func (b *CatalogSourceBuilder) WithOLMLabels() *CatalogSourceBuilder {
+	b.WithTypeMeta()
+	objectMeta := b.cs.GetObjectMeta()
+	if objectMeta == nil {
+		b.cs.ObjectMeta = metav1.ObjectMeta{}
+	}
+	b.cs.SetLabels(map[string]string{"olm-visibility": "hidden", "openshift-marketplace": "true"})
 	return b
 }
 
