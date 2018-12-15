@@ -2,7 +2,6 @@ package operatorsource_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,10 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
-
-func getExpectedCatalogSourceConfigName(opsrcName string) string {
-	return fmt.Sprintf("opsrc-%s", opsrcName)
-}
 
 // Use Case: Not configured, CatalogSourceConfig object has not been created yet.
 // Expected Result: A properly populated CatalogSourceConfig should get created
@@ -41,10 +36,10 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
-	namespacedName := types.NamespacedName{Name: "opsrc-foo", Namespace: "marketplace"}
+	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
 
 	// We expect that the given CatalogConfigSource object does not exist.
-	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
+	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	kubeClientErr := k8s_errors.NewNotFound(schema.GroupResource{}, "CatalogSourceConfig not found")
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(kubeClientErr)
 
@@ -93,8 +88,8 @@ func TestReconcile_AlreadyConfigured_NoActionTaken(t *testing.T) {
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
-	namespacedName := types.NamespacedName{Name: "opsrc-foo", Namespace: "marketplace"}
-	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, getExpectedCatalogSourceConfigName(opsrcIn.Name))
+	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
+	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 
 	// We expect that the given CatalogConfigSource object already exists.
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(nil).Times(1)

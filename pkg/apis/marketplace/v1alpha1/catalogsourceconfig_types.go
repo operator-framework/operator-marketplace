@@ -5,13 +5,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const (
-	// ConfigMapPrefix is the prefix used for the ConfigMap created by the handler
-	ConfigMapPrefix = "csc-cm-"
-	// CatalogSourcePrefix is the prefix used for the CatalogSource created by the handler
-	CatalogSourcePrefix = "csc-cs-"
-)
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CatalogSourceConfigList contains a list of CatalogSourceConfig

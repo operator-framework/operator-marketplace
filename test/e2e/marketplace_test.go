@@ -96,7 +96,7 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 			Kind: operator.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-operators",
+			Name:      "test-operators",
 			Namespace: namespace,
 		},
 		Spec: operator.OperatorSourceSpec{
@@ -106,9 +106,9 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 		},
 	}
 
-	catalogSourceConfigName := "opsrc-global-operators"
-	configMapName := "csc-cm-opsrc-global-operators"
-	catalogSourceName := "csc-cs-opsrc-global-operators"
+	catalogSourceConfigName := "test-operators"
+	configMapName := "test-operators"
+	catalogSourceName := "test-operators"
 
 	// Create the operatorsource to download the manifests.
 	err = f.Client.Create(

@@ -68,7 +68,7 @@ func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error
 	}
 
 	// Delete the ConfigMap
-	name := v1alpha1.ConfigMapPrefix + in.Name
+	name := in.Name
 	configMap := new(ConfigMapBuilder).
 		WithMeta(name, cachedCSCSpec.TargetNamespace).
 		ConfigMap()
@@ -79,7 +79,7 @@ func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error
 	r.log.Infof("Deleted ConfigMap %s/%s", cachedCSCSpec.TargetNamespace, name)
 
 	// Delete the CatalogSource
-	name = v1alpha1.CatalogSourcePrefix + in.Name
+	name = in.Name
 	catalogSource := new(CatalogSourceBuilder).
 		WithMeta(name, cachedCSCSpec.TargetNamespace).
 		CatalogSource()

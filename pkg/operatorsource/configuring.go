@@ -2,8 +2,6 @@ package operatorsource
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -11,11 +9,6 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	// The prefix to a name we use to create CatalogSourceConfig object.
-	catalogSourceConfigPrefix = "opsrc"
 )
 
 // NewConfiguringReconciler returns a Reconciler that reconciles
@@ -65,7 +58,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	out = in
 
-	cscName := getCatalogSourceConfigName(in.Name)
+	cscName := in.Name
 	cscNamespacedName := types.NamespacedName{Name: cscName, Namespace: in.Namespace}
 	cscRetrievedInto := r.builder.WithMeta(in.Namespace, cscName).CatalogSourceConfig()
 
@@ -100,10 +93,4 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	r.logger.Info("The object has been successfully reconciled")
 
 	return
-}
-
-// Given a name of OperatorSource object, this function returns the name
-// of the corresponding CatalogSourceConfig type object.
-func getCatalogSourceConfigName(operatorsourceName string) string {
-	return fmt.Sprintf("%s-%s", catalogSourceConfigPrefix, operatorsourceName)
 }
