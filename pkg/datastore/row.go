@@ -1,9 +1,17 @@
 package datastore
 
 import (
+	"sync"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+func newOperatorSourceRowMap() *operatorSourceRowMap {
+	return &operatorSourceRowMap{
+		Sources: map[types.UID]*operatorSourceRow{},
+	}
+}
 
 // OperatorSourceKey is what datastore uses to relate to an OperatorSource
 // object.
@@ -59,13 +67,70 @@ func (r *operatorSourceRow) GetPackages() []string {
 // represented by operatorSourceRow.
 // The UID of an OperatorSource object is used as the key to uniquely identify
 // an operator source.
-type operatorSourceRowMap map[types.UID]*operatorSourceRow
+type operatorSourceRowMap struct {
+	lock sync.RWMutex
+
+	// Sources is a map of operatorSourceRow where UID of the given
+	// OperatorSource object is used as key.
+	Sources map[types.UID]*operatorSourceRow
+}
+
+// AddEmpty adds a new operator source to the map with an empty set of
+// registry metadata and operator manifest(s).
+func (m *operatorSourceRowMap) AddEmpty(opsrc *v1alpha1.OperatorSource) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.add(opsrc, map[string]*RegistryMetadata{}, map[string]*SingleOperatorManifest{})
+}
+
+// Add adds a new operator source to the map with an the specified set of
+// registry metadata and operator manifest(s).
+func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, metadata map[string]*RegistryMetadata, operators map[string]*SingleOperatorManifest) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.add(opsrc, metadata, operators)
+}
+
+func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, metadata map[string]*RegistryMetadata, operators map[string]*SingleOperatorManifest) {
+	m.Sources[opsrc.GetUID()] = &operatorSourceRow{
+		OperatorSourceKey: OperatorSourceKey{
+			UID: opsrc.GetUID(),
+			Name: types.NamespacedName{
+				Namespace: opsrc.GetNamespace(),
+				Name:      opsrc.GetName(),
+			},
+			Spec: &opsrc.Spec,
+		},
+		Operators: operators,
+		Metadata:  metadata,
+	}
+}
+
+func (m *operatorSourceRowMap) Remove(opsrcUID types.UID) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	delete(m.Sources, opsrcUID)
+}
+
+func (m *operatorSourceRowMap) GetRow(opsrcUID types.UID) (*operatorSourceRow, bool) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	row, ok := m.Sources[opsrcUID]
+	return row, ok
+}
 
 // GetAllPackages return a list of all package(s) available across all
 // operator source(s).
-func (m operatorSourceRowMap) GetAllPackages() []string {
+func (m *operatorSourceRowMap) GetAllPackages() []string {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	packages := make([]string, 0)
-	for _, row := range m {
+	for _, row := range m.Sources {
 		packages = append(packages, row.GetPackages()...)
 	}
 
@@ -75,8 +140,11 @@ func (m operatorSourceRowMap) GetAllPackages() []string {
 // GetAllPackagesMap returns a collection of all available package(s) across all
 // operator sources in a map. Package name is used as the key to this map.
 func (m operatorSourceRowMap) GetAllPackagesMap() map[string]*SingleOperatorManifest {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	packages := map[string]*SingleOperatorManifest{}
-	for _, row := range m {
+	for _, row := range m.Sources {
 		for packageID, manifest := range row.Operators {
 			packages[packageID] = manifest
 		}
