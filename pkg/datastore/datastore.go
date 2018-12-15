@@ -22,7 +22,7 @@ func init() {
 // New returns an instance of memoryDatastore.
 func New() *memoryDatastore {
 	return &memoryDatastore{
-		rows:    operatorSourceRowMap{},
+		rows:    newOperatorSourceRowMap(),
 		parser:  &manifestYAMLParser{},
 		walker:  &walker{},
 		bundler: &bundler{},
@@ -111,7 +111,7 @@ type Writer interface {
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	rows    operatorSourceRowMap
+	rows    *operatorSourceRowMap
 	parser  ManifestYAMLParser
 	walker  ManifestWalker
 	bundler Bundler
@@ -158,19 +158,7 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
 	}
 
-	row := &operatorSourceRow{
-		OperatorSourceKey: OperatorSourceKey{
-			Name: types.NamespacedName{
-				Namespace: opsrc.GetNamespace(),
-				Name:      opsrc.GetName(),
-			},
-			Spec: &opsrc.Spec,
-		},
-		Operators: operators,
-		Metadata:  metadata,
-	}
-
-	ds.rows[opsrc.GetUID()] = row
+	ds.rows.Add(opsrc, metadata, operators)
 
 	return nil
 }
@@ -181,7 +169,7 @@ func (ds *memoryDatastore) GetPackageIDs() string {
 }
 
 func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) string {
-	row, exists := ds.rows[opsrcUID]
+	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
 		return ""
 	}
@@ -191,24 +179,15 @@ func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) str
 }
 
 func (ds *memoryDatastore) AddOperatorSource(opsrc *v1alpha1.OperatorSource) {
-	ds.rows[opsrc.GetUID()] = &operatorSourceRow{
-		OperatorSourceKey: OperatorSourceKey{
-			Name: types.NamespacedName{
-				Namespace: opsrc.GetNamespace(),
-				Name:      opsrc.GetName(),
-			},
-			Spec: &opsrc.Spec,
-		},
-		Operators: map[string]*SingleOperatorManifest{},
-	}
+	ds.rows.AddEmpty(opsrc)
 }
 
 func (ds *memoryDatastore) RemoveOperatorSource(uid types.UID) {
-	delete(ds.rows, uid)
+	ds.rows.Remove(uid)
 }
 
 func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (*OperatorSourceKey, bool) {
-	row, exists := ds.rows[opsrcUID]
+	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
 		return nil, false
 	}
@@ -219,7 +198,7 @@ func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (*OperatorSourc
 func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error) {
 	// TODO: Return fine grained information that describes repository that
 	// was removed, added or has a new release.
-	row, exists := ds.rows[opsrcUID]
+	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
 		return false, fmt.Errorf("datastore has no record of the specified OperatorSource [%s]", opsrcUID)
 	}
