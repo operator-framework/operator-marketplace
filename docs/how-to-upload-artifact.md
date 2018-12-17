@@ -15,6 +15,8 @@ data:
   packages: |-
 ```
 
+An operator's CSV must contain the annotations mentioned [here](https://github.com/operator-framework/operator-marketplace/blob/master/docs/marketplace-required-csv-annotations.md) for it to be displayed properly within the Marketplace UI.
+
 ## Pre-Requisite
 
 You need to have an account with `quay.io`. If you don't have one you can sign up for it at [quay.io](https://quay.io).
