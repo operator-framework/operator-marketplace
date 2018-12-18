@@ -22,7 +22,7 @@ func init() {
 // New returns an instance of memoryDatastore.
 func New() *memoryDatastore {
 	return &memoryDatastore{
-		rows:    operatorSourceRowMap{},
+		rows:    newOperatorSourceRowMap(),
 		parser:  &manifestYAMLParser{},
 		walker:  &walker{},
 		bundler: &bundler{},
@@ -81,76 +81,37 @@ type Writer interface {
 	// datastore uses the UID of the given OperatorSource object to check if
 	// a Spec already exists. If no Spec is found then the function
 	// returns (nil, false).
-	GetOperatorSource(opsrcUID types.UID) (spec *v1alpha1.OperatorSourceSpec, ok bool)
-}
+	GetOperatorSource(opsrcUID types.UID) (key *OperatorSourceKey, ok bool)
 
-// operatorSourceRow is what gets stored in datastore after an OperatorSource CR
-// is reconciled.
-//
-// Every reconciled OperatorSource object has a corresponding operatorSourceRow
-// in datastore. The Writer interface accepts a raw operator manifest and
-// marshals it into this type before writing it to the underlying storage.
-type operatorSourceRow struct {
-	// We store the Spec associated with a given OperatorSource object. This is
-	// so that we can determine whether Spec for an existing operator source
-	// has been updated.
+	// OperatorSourceHasUpdate returns true if the operator source in remote
+	// registry specified in metadata has update(s) that need to be pulled.
 	//
-	// We compare the Spec of the received OperatorSource object to the one
-	// in datastore.
-	Spec *v1alpha1.OperatorSourceSpec
-
-	// Operators is the collection of all single-operator manifest(s) associated
-	// with the underlying operator source.
-	// The package name is used to uniquely identify the operator manifest(s).
-	Operators map[string]*SingleOperatorManifest
-}
-
-// GetPackages returns the list of available package(s) associated with an
-// operator source.
-// An empty list is returned if there are no package(s).
-func (r *operatorSourceRow) GetPackages() []string {
-	packages := make([]string, 0)
-	for packageID, _ := range r.Operators {
-		packages = append(packages, packageID)
-	}
-
-	return packages
-}
-
-// operatorSourceRowMap is a map that holds a collection of operator source(s)
-// represented by operatorSourceRow.
-// The UID of an OperatorSource object is used as the key to uniquely identify
-// an operator source.
-type operatorSourceRowMap map[types.UID]*operatorSourceRow
-
-// GetAllPackages return a list of all package(s) available across all
-// operator source(s).
-func (m operatorSourceRowMap) GetAllPackages() []string {
-	packages := make([]string, 0)
-	for _, row := range m {
-		packages = append(packages, row.GetPackages()...)
-	}
-
-	return packages
-}
-
-// GetAllPackagesMap returns a collection of all available package(s) across all
-// operator sources in a map. Package name is used as the key to this map.
-func (m operatorSourceRowMap) GetAllPackagesMap() map[string]*SingleOperatorManifest {
-	packages := map[string]*SingleOperatorManifest{}
-	for _, row := range m {
-		for packageID, manifest := range row.Operators {
-			packages[packageID] = manifest
-		}
-	}
-
-	return packages
+	// The function returns true if the remote registry has any update(s). The
+	// following event(s) indicate that a remote registry has been updated.
+	//   - New repositories have been added to the remote registry associated
+	//     with the operator source.
+	//   - Existing repositories have been removed from the remote registry
+	//     associated with the operator source.
+	//   - A new release for an existing repository has been pushed to
+	//     the registry.
+	//
+	// Right now we consider remote and local operator source to be same only
+	// when the following conditions are true:
+	//
+	// - Number of repositories in both local and remote are exactly the same.
+	// - Each repository in remote has a corresponding local repository with
+	//   exactly the same release.
+	//
+	// The current implementation does not return update information specific
+	// to each repository. The lack of granular (per repository) information
+	// will force us to reload the entire namespace.
+	OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error)
 }
 
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	rows    operatorSourceRowMap
+	rows    *operatorSourceRowMap
 	parser  ManifestYAMLParser
 	walker  ManifestWalker
 	bundler Bundler
@@ -175,6 +136,7 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		return errors.New("invalid argument")
 	}
 
+	metadata := map[string]*RegistryMetadata{}
 	operators := map[string]*SingleOperatorManifest{}
 	for _, rawManifest := range rawManifests {
 		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
@@ -191,14 +153,12 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		for i, operatorPackage := range packages {
 			operators[operatorPackage.GetPackageID()] = packages[i]
 		}
+
+		// For each repository store the associated registry metadata.
+		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
 	}
 
-	row := &operatorSourceRow{
-		Spec:      &opsrc.Spec,
-		Operators: operators,
-	}
-
-	ds.rows[opsrc.GetUID()] = row
+	ds.rows.Add(opsrc, metadata, operators)
 
 	return nil
 }
@@ -209,7 +169,7 @@ func (ds *memoryDatastore) GetPackageIDs() string {
 }
 
 func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) string {
-	row, exists := ds.rows[opsrcUID]
+	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
 		return ""
 	}
@@ -219,23 +179,50 @@ func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) str
 }
 
 func (ds *memoryDatastore) AddOperatorSource(opsrc *v1alpha1.OperatorSource) {
-	ds.rows[opsrc.GetUID()] = &operatorSourceRow{
-		Spec:      &opsrc.Spec,
-		Operators: map[string]*SingleOperatorManifest{},
-	}
+	ds.rows.AddEmpty(opsrc)
 }
 
 func (ds *memoryDatastore) RemoveOperatorSource(uid types.UID) {
-	delete(ds.rows, uid)
+	ds.rows.Remove(uid)
 }
 
-func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (opsrc *v1alpha1.OperatorSourceSpec, ok bool) {
-	row, exists := ds.rows[opsrcUID]
+func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (*OperatorSourceKey, bool) {
+	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
 		return nil, false
 	}
 
-	return row.Spec, true
+	return &row.OperatorSourceKey, true
+}
+
+func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error) {
+	// TODO: Return fine grained information that describes repository that
+	// was removed, added or has a new release.
+	row, exists := ds.rows.GetRow(opsrcUID)
+	if !exists {
+		return false, fmt.Errorf("datastore has no record of the specified OperatorSource [%s]", opsrcUID)
+	}
+
+	if len(row.Metadata) != len(metadata) {
+		return true, nil
+	}
+
+	for _, remote := range metadata {
+		if remote.Release == "" {
+			return false, fmt.Errorf("Release not specified for repository [%s]", remote.ID())
+		}
+
+		local, exists := row.Metadata[remote.Repository]
+		if !exists {
+			return true, nil
+		}
+
+		if local.Release != remote.Release {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // validate ensures that no package is mentioned more than once in the list.
