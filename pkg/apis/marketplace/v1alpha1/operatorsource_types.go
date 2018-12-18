@@ -7,6 +7,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	// Name for the finalizer to allow for deletion reconciliation
+	// when an OperatorSource is deleted.
+	Finalizer = "finalizer.operatorsources.marketplace.redhat.com"
+)
+
 // Only type definitions go into this file.
 // All other constructs (constants, variables, receiver functions and such)
 // related to OperatorSource type should be added to operatorsource.go file.
@@ -92,6 +98,39 @@ func (s *OperatorSourceSpec) IsEqual(other *OperatorSourceSpec) bool {
 		return true
 	}
 	return false
+}
+
+// RemoveFinalizer removes the operator source finalizer from the
+// OperatorSource ObjectMeta.
+func (s *OperatorSource) RemoveFinalizer() {
+	outFinalizers := make([]string, 0)
+	for _, finalizer := range s.ObjectMeta.Finalizers {
+		if finalizer == Finalizer {
+			continue
+		}
+		outFinalizers = append(outFinalizers, finalizer)
+	}
+
+	s.ObjectMeta.Finalizers = outFinalizers
+
+	return
+}
+
+// EnsureFinalizer ensures that the operator source finalizer is included
+// in the ObjectMeta Finalizers slice. If it already exists, no state change occurs.
+// If it doesn't, the finalizer is appended to the slice.
+func (s *OperatorSource) EnsureFinalizer() {
+	// First check if the opsrc finalizer is already included in the object.
+	for _, finalizer := range s.ObjectMeta.Finalizers {
+		if finalizer == Finalizer {
+			return
+		}
+	}
+
+	// If it doesn't exist, append the finalizer to the object meta.
+	s.ObjectMeta.Finalizers = append(s.ObjectMeta.Finalizers, Finalizer)
+
+	return
 }
 
 func init() {
