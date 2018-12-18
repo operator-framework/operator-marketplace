@@ -3,8 +3,8 @@ set -o nounset
 set -o pipefail
 
 MARKETPLACE_OPERATOR_ROOT=$(dirname "${BASH_SOURCE}")/..
-SDK_VERSION=v0.2.0
-KUBE_VERSION=v1.11.3
+SDK_VERSION=v0.3.0
+KUBE_VERSION=v1.12.3
 
 # Get operator-sdk binary.
 wget -O /tmp/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/${SDK_VERSION}/operator-sdk-${SDK_VERSION}-x86_64-linux-gnu && chmod +x /tmp/operator-sdk
