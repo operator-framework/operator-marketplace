@@ -77,15 +77,22 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	r.logger.Infof("Downloaded %d manifest(s) from the operator source endpoint", len(manifests))
 
-	err = r.datastore.Write(in, manifests)
+	count, err := r.datastore.Write(in, manifests)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
-		return
+		if count == 0 {
+			// No operator manifest was written, move to Failed phase.
+			nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+			return
+		}
+
+		r.logger.Infof("There were some faulty operator manifest(s), errors - %v", err)
+		err = nil
 	}
 
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
 	out.Status.Packages = packages
 
+	r.logger.Infof("Successfully stored %d operator manifest(s)", count)
 	r.logger.Info("Download complete, scheduling for configuration")
 
 	nextPhase = phase.GetNext(phase.Configuring)
