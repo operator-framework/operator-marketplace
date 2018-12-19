@@ -2,6 +2,7 @@ package operatorsource
 
 import (
 	"context"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -75,7 +76,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		return
 	}
 
-	manifests := r.datastore.GetPackageIDs()
+	manifests := r.datastore.GetPackageIDsByOperatorSource(in.GetUID())
 
 	csc := r.builder.WithMeta(in.Namespace, cscName).
 		WithSpec(in.Namespace, manifests).
