@@ -43,6 +43,14 @@ type phaseReconcilerFactory struct {
 func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1alpha1.OperatorSource) (Reconciler, error) {
 	currentPhase := opsrc.GetCurrentPhaseName()
 
+	// If the object has a deletion timestamp, it means it has been marked for
+	// deletion. Return a deleted reconciler to remove that opsrc data from
+	// the datastore, and remove the finalizer so the garbage collector can
+	// clean it up.
+	if !opsrc.ObjectMeta.DeletionTimestamp.IsZero() {
+		return NewDeletedReconciler(logger, s.datastore, s.client), nil
+	}
+
 	switch currentPhase {
 	case phase.Initial:
 		return NewInitialReconciler(logger, s.datastore), nil

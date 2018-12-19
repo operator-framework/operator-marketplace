@@ -47,6 +47,10 @@ func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 
 	out = in.DeepCopy()
 
+	// When an opsrc is created, make sure the opsrc finalizer is included
+	// in the object meta.
+	out.EnsureFinalizer()
+
 	// Make underlying datastore aware of the OperatorSource object that is
 	// being reconciled.
 	r.datastore.AddOperatorSource(in)
