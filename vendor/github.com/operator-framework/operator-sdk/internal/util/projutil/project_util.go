@@ -15,9 +15,16 @@
 package projutil
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/operator-framework/operator-sdk/internal/util/fileutil"
+	"github.com/operator-framework/operator-sdk/pkg/scaffold"
+	"github.com/operator-framework/operator-sdk/pkg/scaffold/ansible"
+	"github.com/operator-framework/operator-sdk/pkg/scaffold/helm"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -41,6 +48,10 @@ const (
 	OperatorTypeGo OperatorType = "go"
 	// OperatorTypeAnsible - ansible type of operator.
 	OperatorTypeAnsible OperatorType = "ansible"
+	// OperatorTypeHelm - helm type of operator.
+	OperatorTypeHelm OperatorType = "helm"
+	// OperatorTypeUnknown - unknown type of operator.
+	OperatorTypeUnknown OperatorType = "unknown"
 )
 
 // MustInProjectRoot checks if the current dir is the project root and returns the current repo's import path
@@ -90,11 +101,16 @@ func CheckAndGetProjectGoPkg() string {
 // e.g: "go", "ansible"
 func GetOperatorType() OperatorType {
 	// Assuming that if main.go exists then this is a Go operator
-	_, err := os.Stat(mainFile)
-	if err != nil && os.IsNotExist(err) {
+	if _, err := os.Stat(mainFile); err == nil {
+		return OperatorTypeGo
+	}
+	if stat, err := os.Stat(ansible.RolesDir); err == nil && stat.IsDir() {
 		return OperatorTypeAnsible
 	}
-	return OperatorTypeGo
+	if stat, err := os.Stat(helm.HelmChartsDir); err == nil && stat.IsDir() {
+		return OperatorTypeHelm
+	}
+	return OperatorTypeUnknown
 }
 
 // GetGopath gets GOPATH and makes sure it is set and non-empty.
@@ -127,4 +143,93 @@ func SetGopath(currentGopath string) string {
 		return ""
 	}
 	return newGopath
+}
+
+// CombineManifests combines a given manifest with a base manifest and adds yaml
+// style separation. Nothing is appended if the manifest is empty.
+func CombineManifests(base, manifest []byte) []byte {
+	if len(manifest) > 0 {
+		base = append(base, manifest...)
+		return append(base, []byte("\n---\n")...)
+	}
+	return base
+}
+
+// GenerateCombinedNamespacedManifest creates a temporary manifest yaml
+// containing all standard namespaced resource manifests combined into 1 file
+func GenerateCombinedNamespacedManifest() (*os.File, error) {
+	file, err := ioutil.TempFile("", "namespaced-manifest.yaml")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	sa, err := ioutil.ReadFile(filepath.Join(scaffold.DeployDir, scaffold.ServiceAccountYamlFile))
+	if err != nil {
+		log.Warnf("could not find the serviceaccount manifest: (%v)", err)
+	}
+	role, err := ioutil.ReadFile(filepath.Join(scaffold.DeployDir, scaffold.RoleYamlFile))
+	if err != nil {
+		log.Warnf("could not find role manifest: (%v)", err)
+	}
+	roleBinding, err := ioutil.ReadFile(filepath.Join(scaffold.DeployDir, scaffold.RoleBindingYamlFile))
+	if err != nil {
+		log.Warnf("could not find role_binding manifest: (%v)", err)
+	}
+	operator, err := ioutil.ReadFile(filepath.Join(scaffold.DeployDir, scaffold.OperatorYamlFile))
+	if err != nil {
+		return nil, fmt.Errorf("could not find operator manifest: (%v)", err)
+	}
+	combined := []byte{}
+	combined = CombineManifests(combined, sa)
+	combined = CombineManifests(combined, role)
+	combined = CombineManifests(combined, roleBinding)
+	combined = append(combined, operator...)
+
+	if err := file.Chmod(os.FileMode(fileutil.DefaultFileMode)); err != nil {
+		return nil, fmt.Errorf("could not chown temporary namespaced manifest file: (%v)", err)
+	}
+	if _, err := file.Write(combined); err != nil {
+		return nil, fmt.Errorf("could not create temporary namespaced manifest file: (%v)", err)
+	}
+	if err := file.Close(); err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+// GenerateCombinedGlobalManifest creates a temporary manifest yaml
+// containing all standard global resource manifests combined into 1 file
+func GenerateCombinedGlobalManifest() (*os.File, error) {
+	file, err := ioutil.TempFile("", "global-manifest.yaml")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	files, err := ioutil.ReadDir(scaffold.CrdsDir)
+	if err != nil {
+		return nil, fmt.Errorf("could not read deploy directory: (%v)", err)
+	}
+	combined := []byte{}
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), "crd.yaml") {
+			fileBytes, err := ioutil.ReadFile(filepath.Join(scaffold.CrdsDir, file.Name()))
+			if err != nil {
+				return nil, fmt.Errorf("could not read file %s: (%v)", filepath.Join(scaffold.CrdsDir, file.Name()), err)
+			}
+			combined = CombineManifests(combined, fileBytes)
+		}
+	}
+
+	if err := file.Chmod(os.FileMode(fileutil.DefaultFileMode)); err != nil {
+		return nil, fmt.Errorf("could not chown temporary global manifest file: (%v)", err)
+	}
+	if _, err := file.Write(combined); err != nil {
+		return nil, fmt.Errorf("could not create temporary global manifest file: (%v)", err)
+	}
+	if err := file.Close(); err != nil {
+		return nil, err
+	}
+	return file, nil
 }
