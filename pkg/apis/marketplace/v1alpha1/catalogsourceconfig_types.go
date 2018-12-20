@@ -5,6 +5,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	// Name for the finalizer to allow for deletion reconciliation
+	// when a CatalogSourceConfig is deleted.
+	CSCFinalizer = "finalizer.catalogsourceconfigs.marketplace.redhat.com"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CatalogSourceConfigList contains a list of CatalogSourceConfig
@@ -52,4 +58,16 @@ func (csc *CatalogSourceConfig) EnsureGVK() {
 		Kind:    CatalogSourceConfigKind,
 	}
 	csc.SetGroupVersionKind(gvk)
+}
+
+// RemoveFinalizer removes the operator source finalizer from the
+// CatatalogSourceConfig ObjectMeta.
+func (csc *CatalogSourceConfig) RemoveFinalizer() {
+	removeFinalizer(&csc.ObjectMeta, CSCFinalizer)
+}
+
+// EnsureFinalizer ensures that the CatatalogSourceConfig finalizer is included
+// in the ObjectMeta.
+func (csc *CatalogSourceConfig) EnsureFinalizer() {
+	ensureFinalizer(&csc.ObjectMeta, CSCFinalizer)
 }

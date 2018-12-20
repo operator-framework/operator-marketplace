@@ -45,6 +45,14 @@ func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, csc *v1al
 		return NewUpdateReconciler(log, f.client, f.cache, targetStale), nil
 	}
 
+	// If the object has a deletion timestamp, it means it has been marked for
+	// deletion. Return a deleted reconciler to remove that csc data from
+	// the cache, and remove the finalizer so the garbage collector can
+	// clean it up.
+	if !csc.ObjectMeta.DeletionTimestamp.IsZero() {
+		return NewDeletedReconciler(log, f.cache, f.client), nil
+	}
+
 	currentPhase := csc.Status.CurrentPhase.Name
 	switch currentPhase {
 	case phase.Initial:
