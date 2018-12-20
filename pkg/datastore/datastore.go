@@ -7,6 +7,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 var (
@@ -63,7 +64,16 @@ type Writer interface {
 	// opsrc represents the given OperatorSource object.
 	// rawManifests is the list of raw operator manifest(s) associated with
 	// a given operator source.
-	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) error
+	//
+	// On return, count is set to the number of operator manifest(s)
+	// successfully processed and stored in datastore.
+	// err will be set to nil if there was no error and all raw manifest(s) were
+	// processed and stored successfully.
+	// err will be set to an Aggregate error interface which will have a slice
+	// of errors encountered if faulty operator manifest(s) are specified.
+	// If count >= 1 and err is set then it implies that some of the specified
+	// manifest(s) were not stored due to errors.
+	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) (count int, err error)
 
 	// RemoveOperatorSource removes everything associated with a given operator
 	// source from the underlying datastore.
@@ -131,36 +141,45 @@ func (ds *memoryDatastore) Read(packageIDs []string) (*RawOperatorManifestData, 
 	return ds.parser.Marshal(multiOperatorManifest)
 }
 
-func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) error {
+func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) (count int, err error) {
 	if opsrc == nil || rawManifests == nil {
-		return errors.New("invalid argument")
+		err = errors.New("invalid argument")
+		return
 	}
 
 	metadata := map[string]*RegistryMetadata{}
 	operators := map[string]*SingleOperatorManifest{}
+	allErrors := []error{}
+
 	for _, rawManifest := range rawManifests {
+		// For each repository store the associated registry metadata.
+		// Even if we can't successfully parse and store an operator manifest
+		// we should save the metadata so that datastore is aware of it.
+		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
+
 		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
 		if err != nil {
-			return err
+			allErrors = append(allErrors, err)
+			continue
 		}
 
 		decomposer := newDecomposer()
 		if err := ds.walker.Walk(data, decomposer); err != nil {
-			return err
+			allErrors = append(allErrors, err)
+			continue
 		}
 
 		packages := decomposer.Packages()
 		for i, operatorPackage := range packages {
 			operators[operatorPackage.GetPackageID()] = packages[i]
 		}
-
-		// For each repository store the associated registry metadata.
-		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
 	}
 
 	ds.rows.Add(opsrc, metadata, operators)
 
-	return nil
+	count = len(operators)
+	err = utilerrors.NewAggregate(allErrors)
+	return
 }
 
 func (ds *memoryDatastore) GetPackageIDs() string {

@@ -39,8 +39,44 @@ func TestWriteWithRedHatOperatorsYAML(t *testing.T) {
 	}
 
 	ds := datastore.New()
-	err := ds.Write(opsrc, metadata)
+	count, err := ds.Write(opsrc, metadata)
 	require.NoError(t, err)
+	require.Equal(t, len(packagesWant), count)
+
+	list := ds.GetPackageIDs()
+	packagesGot := strings.Split(list, ",")
+	assert.ElementsMatch(t, packagesWant, packagesGot)
+}
+
+// In this test we specify faulty operator manifest(s). We expect datastore to
+// ignore the faulty package(s).
+func TestWriteWithFaultyOperatorsYAML(t *testing.T) {
+	// The following packages are defined in rh-operators.yaml and we expect
+	// datastore to return this list after it processes the manifest even though
+	// there are faulty manifest(s) in the same namespace.
+	packagesWant := []string{
+		"amq-streams",
+		"etcd",
+		"federationv2",
+		"prometheus",
+		"service-catalog",
+	}
+
+	opsrc := &v1alpha1.OperatorSource{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: types.UID("123456"),
+		},
+	}
+
+	metadata := []*datastore.OperatorMetadata{
+		helperLoadFromFile(t, "rh-operators.yaml"),
+		helperLoadFromFile(t, "source-3-faulty.yaml"),
+	}
+
+	ds := datastore.New()
+	countGot, errGot := ds.Write(opsrc, metadata)
+	assert.Error(t, errGot)
+	assert.Equal(t, len(packagesWant), countGot)
 
 	list := ds.GetPackageIDs()
 	packagesGot := strings.Split(list, ",")
@@ -62,7 +98,7 @@ func TestGetPackageIDsWithRedHatOperatorsYAML(t *testing.T) {
 	}
 
 	ds := datastore.New()
-	err := ds.Write(opsrc, metadata)
+	_, err := ds.Write(opsrc, metadata)
 	require.NoError(t, err)
 
 	dataGot, errGot := ds.Read([]string{"etcd", "prometheus"})
@@ -106,10 +142,10 @@ func TestGetPackageIDsWithMultipleOperatorSources(t *testing.T) {
 
 	ds := datastore.New()
 
-	errGot1 := ds.Write(opsrc1, []*datastore.OperatorMetadata{metadata1})
+	_, errGot1 := ds.Write(opsrc1, []*datastore.OperatorMetadata{metadata1})
 	require.NoError(t, errGot1)
 
-	errGot2 := ds.Write(opsrc2, []*datastore.OperatorMetadata{metadata2})
+	_, errGot2 := ds.Write(opsrc2, []*datastore.OperatorMetadata{metadata2})
 	require.NoError(t, errGot2)
 
 	value := ds.GetPackageIDs()

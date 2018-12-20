@@ -978,6 +978,7 @@
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/clock",
+    "k8s.io/apimachinery/pkg/util/errors",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/code-generator/cmd/client-gen",
