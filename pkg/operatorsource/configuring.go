@@ -61,9 +61,10 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	cscName := in.Name
 	cscNamespacedName := types.NamespacedName{Name: cscName, Namespace: in.Namespace}
-	cscRetrievedInto := r.builder.WithMeta(in.Namespace, cscName).CatalogSourceConfig()
+	cscRetrievedInto := &v1alpha1.CatalogSourceConfig{}
 
 	err = r.client.Get(ctx, cscNamespacedName, cscRetrievedInto)
+	cscRetrievedInto.EnsureGVK()
 
 	if err == nil {
 		r.logger.Infof("No action taken, CatalogSourceConfig [name=%s] already exists", cscName)

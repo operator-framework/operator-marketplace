@@ -39,7 +39,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
 
 	// We expect that the given CatalogConfigSource object does not exist.
-	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
+	cscGet := &v1alpha1.CatalogSourceConfig{}
 	kubeClientErr := k8s_errors.NewNotFound(schema.GroupResource{}, "CatalogSourceConfig not found")
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(kubeClientErr)
 
@@ -47,7 +47,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	datastore.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
 	trueVar := true
-	cscWant := cscGet.DeepCopy()
+	cscWant := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
 	cscWant.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
 		metav1.OwnerReference{
 			APIVersion: opsrcIn.APIVersion,
@@ -89,7 +89,7 @@ func TestReconcile_AlreadyConfigured_NoActionTaken(t *testing.T) {
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
-	cscGet := helperNewCatalogSourceConfig(opsrcIn.Namespace, opsrcIn.Name)
+	cscGet := &v1alpha1.CatalogSourceConfig{}
 
 	// We expect that the given CatalogConfigSource object already exists.
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, cscGet).Return(nil).Times(1)
