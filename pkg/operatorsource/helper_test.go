@@ -68,7 +68,23 @@ func helperNewCatalogSourceConfig(namespace, name string) *v1alpha1.CatalogSourc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    map[string]string{"opsrc-datastore": "true"},
 		},
 	}
+}
+
+func helperNewCatalogSourceConfigWithLabels(namespace, name string, opsrcLabels map[string]string) *v1alpha1.CatalogSourceConfig {
+	csc := helperNewCatalogSourceConfig(namespace, name)
+
+	// This is the default label that should get added to CatalogSourceConfig.
+	labels := map[string]string{
+		"opsrc-datastore": "true",
+	}
+
+	for key, value := range opsrcLabels {
+		labels[key] = value
+	}
+
+	csc.SetLabels(labels)
+
+	return csc
 }

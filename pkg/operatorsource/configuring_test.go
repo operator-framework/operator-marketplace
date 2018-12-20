@@ -36,6 +36,12 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
+
+	labelsWant := map[string]string{
+		"opsrc-group": "Community",
+	}
+	opsrcIn.SetLabels(labelsWant)
+
 	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
 
 	// We expect that the given CatalogConfigSource object does not exist.
@@ -47,7 +53,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	datastore.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
 	trueVar := true
-	cscWant := cscGet.DeepCopy()
+	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
 	cscWant.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
 		metav1.OwnerReference{
 			APIVersion: opsrcIn.APIVersion,
