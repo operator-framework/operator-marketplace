@@ -61,6 +61,10 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 	out = in
 
+	// Populate the cache before we reconcile to preserve previous data
+	// in case of a failure.
+	r.cache.Set(out)
+
 	err = r.reconcileCatalogSource(in)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
@@ -140,9 +144,6 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 		}
 		r.log.Infof("Created CatalogSource %s", catalogSource.Name)
 	}
-
-	// Populate the cache
-	r.cache.Set(csc)
 
 	return nil
 }
