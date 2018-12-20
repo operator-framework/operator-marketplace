@@ -34,6 +34,10 @@ func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogS
 
 	out = in.DeepCopy()
 
+	// When a csc is created, make sure the csc finalizer is included
+	// in the object meta.
+	out.EnsureFinalizer()
+
 	r.log.Info("Scheduling for configuring")
 
 	nextPhase = phase.GetNext(phase.Configuring)
