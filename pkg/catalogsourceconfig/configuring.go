@@ -3,8 +3,9 @@ package catalogsourceconfig
 import (
 	"context"
 	"fmt"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"strings"
+
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
