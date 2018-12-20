@@ -17,6 +17,10 @@ type Client interface {
 
 	// RetrieveOne retrieves a given package from the source
 	RetrieveOne(name, release string) (*datastore.OperatorMetadata, error)
+
+	// ListPackages returns metadata associated with each package in the
+	// specified namespace.
+	ListPackages(namespace string) ([]*datastore.RegistryMetadata, error)
 }
 
 type client struct {
@@ -38,6 +42,36 @@ func (c *client) RetrieveAll(namespace string) ([]*datastore.OperatorMetadata, e
 		}
 
 		list[i] = manifest
+	}
+
+	return list, nil
+}
+
+func (c *client) ListPackages(namespace string) ([]*datastore.RegistryMetadata, error) {
+	packages, err := c.adapter.ListPackages(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]*datastore.RegistryMetadata, len(packages))
+	for i, pkg := range packages {
+		namespace, repository, err := split(pkg.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		metadata := &datastore.RegistryMetadata{
+			Namespace:  namespace,
+			Repository: repository,
+
+			// 'Default' points to the latest release pushed.
+			Release: pkg.Default,
+
+			// Getting 'Digest' would require an additional call to the app
+			// registry, so it is being defaulted.
+		}
+
+		list[i] = metadata
 	}
 
 	return list, nil
