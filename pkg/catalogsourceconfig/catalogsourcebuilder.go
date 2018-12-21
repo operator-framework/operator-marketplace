@@ -37,14 +37,24 @@ func (b *CatalogSourceBuilder) WithMeta(name, namespace string) *CatalogSourceBu
 	return b
 }
 
-// WithOLMLabels adds "olm-visibility" and "openshift-marketplace" labels to ObjectMeta.
-func (b *CatalogSourceBuilder) WithOLMLabels() *CatalogSourceBuilder {
+// WithOLMLabels adds "olm-visibility", "openshift-marketplace" and and all
+// label(s) associated with the CatalogSource object specified in cscLabels.
+func (b *CatalogSourceBuilder) WithOLMLabels(cscLabels map[string]string) *CatalogSourceBuilder {
+	labels := map[string]string{
+		"olm-visibility":        "hidden",
+		"openshift-marketplace": "true",
+	}
+
+	for key, value := range cscLabels {
+		labels[key] = value
+	}
+
 	b.WithTypeMeta()
 	objectMeta := b.cs.GetObjectMeta()
 	if objectMeta == nil {
 		b.cs.ObjectMeta = metav1.ObjectMeta{}
 	}
-	b.cs.SetLabels(map[string]string{"olm-visibility": "hidden", "openshift-marketplace": "true"})
+	b.cs.SetLabels(labels)
 	return b
 }
 

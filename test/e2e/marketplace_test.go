@@ -20,6 +20,8 @@ import (
 const (
 	cleanupRetryInterval = time.Second * 1
 	cleanupTimeout       = time.Second * 5
+
+	GroupLabel string = "opsrc-group"
 )
 
 // Test marketplace is the root function that triggers the set of e2e tests
@@ -91,6 +93,7 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 
+	groupWant := "Community"
 	testOperatorSource := &operator.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind: operator.OperatorSourceKind,
@@ -98,6 +101,9 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-operators",
 			Namespace: namespace,
+			Labels: map[string]string{
+				GroupLabel: groupWant,
+			},
 		},
 		Spec: operator.OperatorSourceSpec{
 			Type:              "appregistry",
@@ -150,6 +156,19 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 			"The created catalogsource %s was not properly associated with the created configmap %s",
 			resultCatalogSource.Name,
 			resultConfigMap.Name,
+		)
+	}
+
+	labels := resultCatalogSource.GetLabels()
+	groupGot, ok := labels[GroupLabel]
+
+	if !ok || groupGot != groupWant {
+		t.Errorf(
+			"The created catalogsource %s does not have the right label[%s] - want=%s got=%s",
+			resultCatalogSource.Name,
+			GroupLabel,
+			groupWant,
+			groupGot,
 		)
 	}
 

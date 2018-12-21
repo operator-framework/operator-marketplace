@@ -57,7 +57,9 @@ func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	r.datastore.RemoveOperatorSource(in.GetUID())
 
 	builder := &CatalogSourceConfigBuilder{}
-	csc := builder.WithMeta(in.Namespace, in.Name).CatalogSourceConfig()
+	csc := builder.WithTypeMeta().
+		WithNamespacedName(in.Namespace, in.Name).
+		CatalogSourceConfig()
 
 	if err = r.client.Delete(ctx, csc); err != nil && !k8s_errors.IsNotFound(err) {
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())

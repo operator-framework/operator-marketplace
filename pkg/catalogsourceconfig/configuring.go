@@ -219,9 +219,11 @@ func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *
 	// is not visible in the OLM Packages UI. In addition we will set the
 	// "openshift-marketplace" label which will be used by the Marketplace UI
 	// to filter out global CatalogSources.
-	datastoreLabel, found := csc.ObjectMeta.GetLabels()[operatorsource.DatastoreLabel]
+	cscLabels := csc.ObjectMeta.GetLabels()
+	datastoreLabel, found := cscLabels[operatorsource.DatastoreLabel]
 	if found && strings.ToLower(datastoreLabel) == "true" {
-		builder.WithOLMLabels()
+		builder.WithOLMLabels(cscLabels)
 	}
+
 	return builder.CatalogSource()
 }

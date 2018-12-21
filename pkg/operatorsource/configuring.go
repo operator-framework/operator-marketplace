@@ -61,7 +61,9 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	cscName := in.Name
 	cscNamespacedName := types.NamespacedName{Name: cscName, Namespace: in.Namespace}
-	cscRetrievedInto := r.builder.WithMeta(in.Namespace, cscName).CatalogSourceConfig()
+	cscRetrievedInto := r.builder.WithTypeMeta().
+		WithNamespacedName(in.Namespace, cscName).
+		CatalogSourceConfig()
 
 	err = r.client.Get(ctx, cscNamespacedName, cscRetrievedInto)
 
@@ -78,7 +80,9 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	manifests := r.datastore.GetPackageIDsByOperatorSource(in.GetUID())
 
-	csc := r.builder.WithMeta(in.Namespace, cscName).
+	csc := r.builder.WithTypeMeta().
+		WithNamespacedName(in.Namespace, cscName).
+		WithLabels(in.GetLabels()).
 		WithSpec(in.Namespace, manifests).
 		WithOwner(in).
 		CatalogSourceConfig()

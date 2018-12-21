@@ -22,19 +22,38 @@ func (b *CatalogSourceConfigBuilder) CatalogSourceConfig() *v1alpha1.CatalogSour
 	return &b.object
 }
 
-// WithMeta sets TypeMeta and ObjectMeta accordingly.
-func (b *CatalogSourceConfigBuilder) WithMeta(namespace, name string) *CatalogSourceConfigBuilder {
+// WithTypeMeta sets TypeMeta of the CatalogSourceConfig object.
+func (b *CatalogSourceConfigBuilder) WithTypeMeta() *CatalogSourceConfigBuilder {
 	b.object.TypeMeta = metav1.TypeMeta{
 		APIVersion: fmt.Sprintf("%s/%s",
 			v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version),
 		Kind: v1alpha1.CatalogSourceConfigKind,
 	}
 
-	b.object.ObjectMeta = metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
-		Labels:    map[string]string{DatastoreLabel: "true"},
+	return b
+}
+
+// WithNamespacedName sets name and namespace of the CatalogSourceConfig object.
+func (b *CatalogSourceConfigBuilder) WithNamespacedName(namespace, name string) *CatalogSourceConfigBuilder {
+	b.object.SetNamespace(namespace)
+	b.object.SetName(name)
+
+	return b
+}
+
+// WithLabels sets appropriate labels for the CatalogSourceConfig object. It
+// applies all labels associated with an OperatorSource object specified in
+// opsrcLabels.
+func (b *CatalogSourceConfigBuilder) WithLabels(opsrcLabels map[string]string) *CatalogSourceConfigBuilder {
+	labels := map[string]string{
+		DatastoreLabel: "true",
 	}
+
+	for key, value := range opsrcLabels {
+		labels[key] = value
+	}
+
+	b.object.SetLabels(labels)
 
 	return b
 }
