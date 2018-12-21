@@ -59,38 +59,53 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	out = in
 
-	cscName := in.Name
-	cscNamespacedName := types.NamespacedName{Name: cscName, Namespace: in.Namespace}
-	cscRetrievedInto := r.builder.WithTypeMeta().
-		WithNamespacedName(in.Namespace, cscName).
-		CatalogSourceConfig()
-
-	err = r.client.Get(ctx, cscNamespacedName, cscRetrievedInto)
-
-	if err == nil {
-		r.logger.Infof("No action taken, CatalogSourceConfig [name=%s] already exists", cscName)
-		nextPhase = phase.GetNext(phase.Succeeded)
-		return
-	}
-
-	if !k8s_errors.IsNotFound(err) {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
-		return
-	}
-
 	manifests := r.datastore.GetPackageIDsByOperatorSource(in.GetUID())
 
-	csc := r.builder.WithTypeMeta().
-		WithNamespacedName(in.Namespace, cscName).
+	cscCreate := new(CatalogSourceConfigBuilder).WithTypeMeta().
+		WithNamespacedName(in.Namespace, in.Name).
 		WithLabels(in.GetLabels()).
 		WithSpec(in.Namespace, manifests).
 		WithOwner(in).
 		CatalogSourceConfig()
 
-	err = r.client.Create(ctx, csc)
-	if err != nil {
-		r.logger.Infof("Unexpected error: %s", err.Error())
+	err = r.client.Create(ctx, cscCreate)
+	if err != nil && !k8s_errors.IsAlreadyExists(err) {
+		r.logger.Errorf("Unexpected error while creating CatalogSourceConfig: %s", err.Error())
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+
+		return
+	}
+
+	if err == nil {
+		nextPhase = phase.GetNext(phase.Succeeded)
+		r.logger.Info("The object has been successfully reconciled")
+
+		return
+	}
+
+	// If we are here, the given CatalogSourceConfig object already exists.
+	cscNamespacedName := types.NamespacedName{Name: in.Name, Namespace: in.Namespace}
+	cscExisting := v1alpha1.CatalogSourceConfig{}
+	err = r.client.Get(ctx, cscNamespacedName, &cscExisting)
+	if err != nil {
+		r.logger.Errorf("Unexpected error while getting CatalogSourceConfig: %s", err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+
+		return
+	}
+
+	cscExisting.EnsureGVK()
+	builder := CatalogSourceConfigBuilder{object: cscExisting}
+	cscUpdate := builder.WithSpec(in.Namespace, manifests).
+		WithLabels(in.GetLabels()).
+		WithOwner(in).
+		CatalogSourceConfig()
+
+	err = r.client.Update(ctx, cscUpdate)
+	if err != nil {
+		r.logger.Errorf("Unexpected error while updating CatalogSourceConfig: %s", err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+
 		return
 	}
 
