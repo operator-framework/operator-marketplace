@@ -24,7 +24,7 @@ spec:
             name: healthz
           command:
           - marketplace-operator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
               path: /healthz
