@@ -54,6 +54,7 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Opera
 	// Validate that operator source endpoint is a valid URL.
 	_, err = url.ParseRequestURI(in.Spec.Endpoint)
 	if err != nil {
+		// This needs manual intervention. So flag it as 'Failed'.
 		nextPhase = phase.GetNextWithMessage(phase.Failed,
 			fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
 		return

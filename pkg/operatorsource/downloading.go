@@ -59,18 +59,23 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	registry, err := r.factory.New(in.Spec.Type, in.Spec.Endpoint)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.OperatorSourceDownloading, err.Error())
 		return
 	}
 
 	manifests, err := registry.RetrieveAll(in.Spec.RegistryNamespace)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.OperatorSourceDownloading, err.Error())
 		return
 	}
 
 	if len(manifests) == 0 {
 		err = errors.New("The operator source endpoint returned an empty manifest list")
+
+		// Moving it to 'Failed' phase since human intervention is required to
+		// resolve this situation. As soon as the user pushes new operator
+		// manifest(s) registry sync will detect a new release and will trigger
+		// a new reconciliation.
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
 	}
