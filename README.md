@@ -26,39 +26,32 @@ $ export REGISTRY=<SOME_REGISTRY> \
 
 ### Description
 
-The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "openshift-operators"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "openshift-marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
 
 The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
 
 ### Deploying the Marketplace Operator with OKD
-It is important to note that the order in which you apply the deployment files matters, do not execute the `oc apply` commands featured in this section out of order.
+The Marketplace Operator is deployed by default with OKD and no further steps are required.
+
+### Deploying the Marketplace Operator with Kubernetes
+It is important to note that the order in which you apply the deployment files matters, do not execute the `kubectl apply` commands featured in this section out of order.
 
 #### Deploying the Marketplace Operator
 ```bash
-$ oc apply -f deploy/marketplace.ns.yaml
-$ oc project openshift-operators
-$ oc apply -f deploy/crds/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/crds/operatorsource.crd.yaml
-$ oc apply -f deploy/service_account.yaml
-$ oc apply -f deploy/role.yaml
-$ oc apply -f deploy/role_binding.yaml
-$ oc apply -f deploy/operator.yaml
+$ kubectl apply -f deploy/marketplace.ns.yaml
+$ kubectl apply -f deploy/crds/catalogsourceconfig.crd.yaml
+$ kubectl apply -f deploy/crds/operatorsource.crd.yaml
+$ kubectl apply -f deploy/service_account.yaml
+$ kubectl apply -f deploy/role.yaml
+$ kubectl apply -f deploy/role_binding.yaml
+$ kubectl apply -f deploy/operator.yaml
 ```
 
 #### Deploying the Marketplace Operator with OLM
+Execute the above commands, except for `kubectl apply -f deploy/operator.yaml`. In place of that, execute:
 ```bash
-$ oc apply -f deploy/marketplace.ns.yaml
-$ oc project openshift-operators
-$ oc apply -f deploy/crds/catalogsourceconfig.crd.yaml
-$ oc apply -f deploy/crds/operatorsource.crd.yaml
-$ oc apply -f deploy/service_account.yaml
-$ oc apply -f deploy/role.yaml
-$ oc apply -f deploy/role_binding.yaml
-$ oc apply -f deploy/marketplace.v0.0.1.clusterserviceversion.yaml
+$ kubectl apply -f deploy/marketplace.v0.0.1.clusterserviceversion.yaml
 ```
-
-### Deploying the Marketplace Operator with Kubernetes
-Execute the commands found in the [OKD section](#deploying-the-marketplace-operator-with-okd) in the same order subsituting `kubectl` for `oc`.
 
 Note that a Kubernetes cluster does not have OLM deployed by default.
 
