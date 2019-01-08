@@ -2,7 +2,7 @@ apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "OperatorSource"
 metadata:
   name: "global-operators"
-  namespace: "openshift-operators"
+  namespace: "openshift-marketplace"
 spec:
   type: appregistry
   endpoint: "https://quay.io/cnr"
