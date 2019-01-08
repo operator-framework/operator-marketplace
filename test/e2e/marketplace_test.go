@@ -70,15 +70,11 @@ func TestMarketplace(t *testing.T) {
 func MarketplaceCluster(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
-	err := ctx.InitializeClusterResources(&test.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
-	if err != nil {
-		t.Fatalf("failed to initialize cluster resources: %v", err)
-	}
-	t.Log("Initialized cluster resources")
+
 	// get global framework variables
 	f := test.Global
 
-	if err = defaultCreateTest(t, f, ctx); err != nil {
+	if err := defaultCreateTest(t, f, ctx); err != nil {
 		t.Fatal(err)
 	}
 }
