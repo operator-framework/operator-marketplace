@@ -207,11 +207,22 @@ func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *co
 
 // newCatalogSource returns a CatalogSource object.
 func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
+	// Set default display name when one is not set to Custom.
+	displayName := "Custom"
+	if csc.Spec.DisplayName != "" {
+		displayName = csc.Spec.DisplayName
+	}
+
+	// Set default publisher when one is not set to Red Hat.
+	publisher := "Red Hat"
+	if csc.Spec.Publisher != "" {
+		publisher = csc.Spec.Publisher
+	}
+
 	builder := new(CatalogSourceBuilder).
 		WithOwner(csc).
 		WithMeta(csc.Name, csc.Spec.TargetNamespace).
-		// TBD: where do we get display name and publisher from?
-		WithSpec("internal", configMapName, "Marketplace Operators", "Red Hat")
+		WithSpec("internal", configMapName, displayName, publisher)
 
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint

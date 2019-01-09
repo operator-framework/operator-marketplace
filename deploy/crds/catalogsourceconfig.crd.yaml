@@ -29,6 +29,14 @@ spec:
     type: string
     description: Current status of the CatalogSourceConfig
     JSONPath: .status.currentPhase.phase.name
+  - name: DisplayName
+    type: string
+    description: Display Name for resulting CatalogSource
+    JSONPath: .spec.csDisplayName
+  - name: Publisher
+    type: string
+    description: Publisher for resulting CatalogSource
+    JSONPath: .spec.csPublisher
   - name: Message
     type: string
     description: Message associated with the current status

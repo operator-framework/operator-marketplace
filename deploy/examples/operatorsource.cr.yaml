@@ -7,3 +7,5 @@ spec:
   type: appregistry
   endpoint: "https://quay.io/cnr"
   registryNamespace: "operators"
+  displayName: "Marketplace Operators"
+  csPublisher: "Red Hat"

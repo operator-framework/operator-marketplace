@@ -49,6 +49,15 @@ type OperatorSourceSpec struct {
 	// manifests under this namespace will be visible.
 	// Please note that this is not a k8s namespace.
 	RegistryNamespace string `json:"registryNamespace,omitempty"`
+
+	// DisplayName is passed along to the CatalogSourceConfig to be used
+	// by the resulting CatalogSource to be used as a pretty name.
+	DisplayName string `json:"displayName,omitempty"`
+
+	// Publisher is passed along to the CatalogSourceConfig to be used
+	// by the resulting CatalogSource that defines what entity published
+	// the artifacts from the OperatorSource.
+	Publisher string `json:"csPublisher,omitempty"`
 }
 
 // OperatorSourceStatus defines the observed state of OperatorSource

@@ -35,6 +35,14 @@ type CatalogSourceConfig struct {
 type CatalogSourceConfigSpec struct {
 	TargetNamespace string `json:"targetNamespace"`
 	Packages        string `json:"packages"`
+
+	// DisplayName is passed along to the CatalogSource to be used
+	// as a pretty name.
+	DisplayName string `json:"csDisplayName,omitempty"`
+
+	// Publisher is passed along to the CatalogSource to be used
+	// to define what entity published the artifacts from the OperatorSource.
+	Publisher string `json:"csPublisher,omitempty"`
 }
 
 // CatalogSourceConfigStatus defines the observed state of CatalogSourceConfig
