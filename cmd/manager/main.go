@@ -9,6 +9,7 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
+	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -17,6 +18,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+)
+
+const (
+	// TODO: resyncInterval is hardcoded to 1 hour now, it would have to be
+	// configurable on a per OperatorSource level.
+	resyncInterval = time.Duration(60) * time.Minute
+
+	initialWait                = time.Duration(10) * time.Minute
+	updateNotificationSendWait = time.Duration(10) * time.Minute
 )
 
 func printVersion() {
@@ -72,12 +82,11 @@ func main() {
 	log.Print("Starting the Cmd.")
 	stopCh := signals.SetupSignalHandler()
 
-	// TODO: resyncInterval is hardcoded to 1 hour now, it would have to be
-	// configurable on a per OperatorSource level.
-	initialWait, resyncInterval := time.Duration(10), time.Duration(60)
-	syncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval)
+	catalogSyncer := catalogsourceconfig.NewCatalogSyncer(mgr.GetClient(), initialWait)
+	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogSyncer)
 
-	go syncer.Sync(stopCh)
+	go registrySyncer.Sync(stopCh)
+	go catalogSyncer.Sync(stopCh)
 
 	// Start the Cmd
 	log.Fatal(mgr.Start(stopCh))

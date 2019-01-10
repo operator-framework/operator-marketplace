@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -90,4 +92,9 @@ func (csc *CatalogSourceConfig) EnsurePublisher() {
 	if csc.Spec.Publisher == "" {
 		csc.Spec.Publisher = "Custom"
 	}
+}
+
+// GetPackageIDs returns the list of package(s) specified.
+func (csc *CatalogSourceConfig) GetPackageIDs() []string {
+	return strings.Split(csc.Spec.Packages, ",")
 }

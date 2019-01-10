@@ -19,6 +19,20 @@ type OperatorMetadata struct {
 	RawYAML []byte
 }
 
+// Repository holds metadata associated with a repository in remote registry and
+// the list of operator package name(s) associated with the repository.
+//
+// We need this object to relate operator package(s) that user subscribes to a
+// given repository in remote registry.
+type Repository struct {
+	// Metadata that uniquely identifies the given operator manifest in registry.
+	Metadata RegistryMetadata
+
+	// Packages is the list of operator package name(s) associated with the
+	// given repository.
+	Packages []string
+}
+
 // RegistryMetadata encapsulates metadata that uniquely describes the source of
 // the given operator manifest in registry.
 type RegistryMetadata struct {
