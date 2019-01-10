@@ -75,10 +75,12 @@ func (b *CatalogSourceConfigBuilder) WithOwner(owner *v1alpha1.OperatorSource) *
 }
 
 // WithSpec sets Spec accordingly.
-func (b *CatalogSourceConfigBuilder) WithSpec(targetNamespace string, packages string) *CatalogSourceConfigBuilder {
+func (b *CatalogSourceConfigBuilder) WithSpec(targetNamespace, packages, displayName, publisher string) *CatalogSourceConfigBuilder {
 	b.object.Spec = v1alpha1.CatalogSourceConfigSpec{
 		TargetNamespace: targetNamespace,
 		Packages:        packages,
+		DisplayName:     displayName,
+		Publisher:       publisher,
 	}
 
 	return b

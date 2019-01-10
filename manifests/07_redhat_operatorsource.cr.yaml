@@ -1,11 +1,13 @@
 apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "OperatorSource"
 metadata:
-  name: "global-operators"
+  name: "redhat-operators"
   namespace: "openshift-marketplace"
+  labels:
+    opsrc-provider: redhat
 spec:
   type: appregistry
   endpoint: "https://quay.io/cnr"
-  registryNamespace: "operators"
-  displayName: "Marketplace Operators"
+  registryNamespace: "redhat-operators"
+  displayName: "Red Hat Operators"
   publisher: "Red Hat"

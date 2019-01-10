@@ -35,6 +35,14 @@ type CatalogSourceConfig struct {
 type CatalogSourceConfigSpec struct {
 	TargetNamespace string `json:"targetNamespace"`
 	Packages        string `json:"packages"`
+
+	// DisplayName is passed along to the CatalogSource to be used
+	// as a pretty name.
+	DisplayName string `json:"csDisplayName,omitempty"`
+
+	// Publisher is passed along to the CatalogSource to be used
+	// to define what entity published the artifacts from the OperatorSource.
+	Publisher string `json:"csPublisher,omitempty"`
 }
 
 // CatalogSourceConfigStatus defines the observed state of CatalogSourceConfig
@@ -70,4 +78,16 @@ func (csc *CatalogSourceConfig) RemoveFinalizer() {
 // in the ObjectMeta.
 func (csc *CatalogSourceConfig) EnsureFinalizer() {
 	ensureFinalizer(&csc.ObjectMeta, CSCFinalizer)
+}
+
+func (csc *CatalogSourceConfig) EnsureDisplayName() {
+	if csc.Spec.DisplayName == "" {
+		csc.Spec.DisplayName = "Custom"
+	}
+}
+
+func (csc *CatalogSourceConfig) EnsurePublisher() {
+	if csc.Spec.Publisher == "" {
+		csc.Spec.Publisher = "Custom"
+	}
 }

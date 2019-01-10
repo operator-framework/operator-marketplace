@@ -64,7 +64,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	cscCreate := new(CatalogSourceConfigBuilder).WithTypeMeta().
 		WithNamespacedName(in.Namespace, in.Name).
 		WithLabels(in.GetLabels()).
-		WithSpec(in.Namespace, manifests).
+		WithSpec(in.Namespace, manifests, in.Spec.DisplayName, in.Spec.Publisher).
 		WithOwner(in).
 		CatalogSourceConfig()
 
@@ -96,7 +96,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	cscExisting.EnsureGVK()
 	builder := CatalogSourceConfigBuilder{object: cscExisting}
-	cscUpdate := builder.WithSpec(in.Namespace, manifests).
+	cscUpdate := builder.WithSpec(in.Namespace, manifests, in.Spec.DisplayName, in.Spec.Publisher).
 		WithLabels(in.GetLabels()).
 		WithOwner(in).
 		CatalogSourceConfig()

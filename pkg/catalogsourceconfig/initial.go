@@ -38,6 +38,11 @@ func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogS
 	// in the object meta.
 	out.EnsureFinalizer()
 
+	// Ensure that displayname and publisher are set to default values
+	// if not defined in the spec.
+	out.EnsureDisplayName()
+	out.EnsurePublisher()
+
 	r.log.Info("Scheduling for configuring")
 
 	nextPhase = phase.GetNext(phase.Configuring)

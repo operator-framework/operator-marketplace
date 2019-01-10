@@ -211,7 +211,7 @@ func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *
 		WithOwner(csc).
 		WithMeta(csc.Name, csc.Spec.TargetNamespace).
 		// TBD: where do we get display name and publisher from?
-		WithSpec("internal", configMapName, "Marketplace Operators", "Red Hat")
+		WithSpec("internal", configMapName, csc.Spec.DisplayName, csc.Spec.Publisher)
 
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint
