@@ -71,7 +71,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	err = r.client.Create(ctx, cscCreate)
 	if err != nil && !k8s_errors.IsAlreadyExists(err) {
 		r.logger.Errorf("Unexpected error while creating CatalogSourceConfig: %s", err.Error())
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 
 		return
 	}
@@ -89,7 +89,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	err = r.client.Get(ctx, cscNamespacedName, &cscExisting)
 	if err != nil {
 		r.logger.Errorf("Unexpected error while getting CatalogSourceConfig: %s", err.Error())
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 
 		return
 	}
@@ -104,7 +104,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	err = r.client.Update(ctx, cscUpdate)
 	if err != nil {
 		r.logger.Errorf("Unexpected error while updating CatalogSourceConfig: %s", err.Error())
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 
 		return
 	}

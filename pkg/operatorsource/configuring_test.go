@@ -141,7 +141,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 
 	updateError := k8s_errors.NewServerTimeout(schema.GroupResource{}, "operation", 1)
 	nextPhaseWant := &v1alpha1.Phase{
-		Name:    phase.Failed,
+		Name:    phase.Configuring,
 		Message: updateError.Error(),
 	}
 
