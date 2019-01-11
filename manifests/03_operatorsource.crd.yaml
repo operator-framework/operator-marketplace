@@ -29,6 +29,14 @@ spec:
     type: string
     description: App registry namespace
     JSONPath: .spec.registryNamespace
+  - name: DisplayName
+    type: string
+    description: Display (pretty) name to indicate the OperatorSource's name
+    JSONPath: .spec.displayName
+  - name: Publisher
+    type: string
+    description: Publisher of the OperatorSource
+    JSONPath: .spec.publisher
   - name: Status
     type: string
     description: Current status of the OperatorSource
