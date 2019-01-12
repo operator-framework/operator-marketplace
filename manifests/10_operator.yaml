@@ -14,6 +14,10 @@ spec:
         name: marketplace-operator
     spec:
       serviceAccountName: marketplace-operator
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
       containers:
         - name: marketplace-operator
           image: quay.io/openshift/origin-operator-marketplace:latest
