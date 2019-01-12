@@ -40,7 +40,8 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSo
 		// Delete the objects in the old TargetNamespace
 		err = r.deleteObjects(in)
 		if err != nil {
-			nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+			// Next retry should resume from the current phase.
+			nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
 			return
 		}
 	}

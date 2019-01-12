@@ -67,7 +67,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 	err = r.reconcileCatalogSource(in)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return
 	}
 
