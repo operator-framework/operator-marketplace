@@ -2,6 +2,7 @@ package operatorsource
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -11,9 +12,10 @@ import (
 )
 
 // NewPoller returns a new instance of Poller interface.
-func NewPoller(client client.Client) Poller {
+func NewPoller(client client.Client, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender) Poller {
 	poller := &poller{
 		datastore: datastore.Cache,
+		sender:    sender,
 		helper: &pollHelper{
 			factory:      appregistry.NewClientFactory(),
 			datastore:    datastore.Cache,
@@ -43,30 +45,51 @@ type Poller interface {
 
 // poller implements the Poller interface.
 type poller struct {
-	helper    PollHelper
-	datastore datastore.Writer
+	helper                     PollHelper
+	datastore                  datastore.Writer
+	sender                     PackageUpdateNotificationSender
+	updateNotificationSendWait time.Duration
 }
 
 func (p *poller) Poll() {
 	sources := p.datastore.GetAllOperatorSources()
 
+	aggregator := datastore.NewPackageUpdateAggregator()
+
 	for _, source := range sources {
-		if err := p.pollSource(source); err != nil {
+		result, err := p.helper.HasUpdate(source)
+		if err != nil {
+			log.Errorf("[sync] error checking for updates [%s] - %v", source.Name, err)
+			continue
+		}
+
+		if !result.RegistryHasUpdate {
+			continue
+		}
+
+		log.Infof("operator source[%s] has updates: %s", source.Name, result)
+		aggregator.Add(result)
+
+		if err := p.trigger(source, result); err != nil {
 			log.Errorf("%v", err)
 		}
 	}
+
+	// We have a list of operator(s) that have either been removed or have new
+	// version(s). We should kick off CatalogSourceConfig reconciliation.
+	if !aggregator.IsUpdatedOrRemoved() {
+		return
+	}
+
+	// TODO: This is a stop gap measure. We should not need this any longer when
+	// CatalogSourceConfig has the version stored.
+	<-time.After(p.updateNotificationSendWait)
+
+	log.Infof("[sync] sending package update notification - %s", aggregator)
+	p.sender.Send(aggregator)
 }
 
-func (p *poller) pollSource(source *datastore.OperatorSourceKey) error {
-	updated, err := p.helper.HasUpdate(source)
-	if err != nil {
-		return fmt.Errorf("[sync] error checking for updates [%s] - %v", source.Name, err)
-	}
-
-	if !updated {
-		return nil
-	}
-
+func (p *poller) trigger(source *datastore.OperatorSourceKey, result *datastore.UpdateResult) error {
 	log.Infof("[sync] remote registry has update(s) - purging OperatorSource [%s]", source.Name)
 	deleted, err := p.helper.TriggerPurge(source)
 	if err != nil {

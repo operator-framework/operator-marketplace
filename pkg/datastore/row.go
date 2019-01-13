@@ -46,9 +46,9 @@ type operatorSourceRow struct {
 	// The package name is used to uniquely identify the operator manifest(s).
 	Operators map[string]*SingleOperatorManifest
 
-	// Metadata is the metadata associated with each repository under the given
+	// Repositories is the metadata associated with each repository under the given
 	// namespace.
-	Metadata map[string]*RegistryMetadata
+	Repositories map[string]*Repository
 }
 
 // GetPackages returns the list of available package(s) associated with an
@@ -81,19 +81,19 @@ func (m *operatorSourceRowMap) AddEmpty(opsrc *v1alpha1.OperatorSource) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.add(opsrc, map[string]*RegistryMetadata{}, map[string]*SingleOperatorManifest{})
+	m.add(opsrc, map[string]*Repository{}, map[string]*SingleOperatorManifest{})
 }
 
 // Add adds a new operator source to the map with an the specified set of
 // registry metadata and operator manifest(s).
-func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, metadata map[string]*RegistryMetadata, operators map[string]*SingleOperatorManifest) {
+func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository, operators map[string]*SingleOperatorManifest) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.add(opsrc, metadata, operators)
+	m.add(opsrc, repositories, operators)
 }
 
-func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, metadata map[string]*RegistryMetadata, operators map[string]*SingleOperatorManifest) {
+func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository, operators map[string]*SingleOperatorManifest) {
 	m.Sources[opsrc.GetUID()] = &operatorSourceRow{
 		OperatorSourceKey: OperatorSourceKey{
 			UID: opsrc.GetUID(),
@@ -103,8 +103,8 @@ func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, metadata map[
 			},
 			Spec: &opsrc.Spec,
 		},
-		Operators: operators,
-		Metadata:  metadata,
+		Operators:    operators,
+		Repositories: repositories,
 	}
 }
 

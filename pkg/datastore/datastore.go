@@ -115,7 +115,7 @@ type Writer interface {
 	// The current implementation does not return update information specific
 	// to each repository. The lack of granular (per repository) information
 	// will force us to reload the entire namespace.
-	OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error)
+	OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (result *UpdateResult, err error)
 
 	// GetAllOperatorSources returns a list of all OperatorSource objecs(s) that
 	// datastore is aware of.
@@ -151,7 +151,7 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		return
 	}
 
-	metadata := map[string]*RegistryMetadata{}
+	repositories := map[string]*Repository{}
 	operators := map[string]*SingleOperatorManifest{}
 	allErrors := []error{}
 
@@ -159,7 +159,10 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		// For each repository store the associated registry metadata.
 		// Even if we can't successfully parse and store an operator manifest
 		// we should save the metadata so that datastore is aware of it.
-		metadata[rawManifest.RegistryMetadata.Repository] = &rawManifest.RegistryMetadata
+		repository := &Repository{
+			Metadata: rawManifest.RegistryMetadata,
+		}
+		repositories[rawManifest.RegistryMetadata.Repository] = repository
 
 		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
 		if err != nil {
@@ -174,12 +177,15 @@ func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []
 		}
 
 		packages := decomposer.Packages()
+
 		for i, operatorPackage := range packages {
-			operators[operatorPackage.GetPackageID()] = packages[i]
+			packageID := operatorPackage.GetPackageID()
+			operators[packageID] = packages[i]
+			repository.Packages = append(repository.Packages, packageID)
 		}
 	}
 
-	ds.rows.Add(opsrc, metadata, operators)
+	ds.rows.Add(opsrc, repositories, operators)
 
 	count = len(operators)
 	err = utilerrors.NewAggregate(allErrors)
@@ -218,34 +224,57 @@ func (ds *memoryDatastore) GetOperatorSource(opsrcUID types.UID) (*OperatorSourc
 	return &row.OperatorSourceKey, true
 }
 
-func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (bool, error) {
-	// TODO: Return fine grained information that describes repository that
-	// was removed, added or has a new release.
+func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata []*RegistryMetadata) (result *UpdateResult, err error) {
 	row, exists := ds.rows.GetRow(opsrcUID)
 	if !exists {
-		return false, fmt.Errorf("datastore has no record of the specified OperatorSource [%s]", opsrcUID)
+		err = fmt.Errorf("datastore has no record of the specified OperatorSource [%s]", opsrcUID)
+		return
 	}
 
-	if len(row.Metadata) != len(metadata) {
-		return true, nil
-	}
+	result = newUpdateResult()
 
 	for _, remote := range metadata {
 		if remote.Release == "" {
-			return false, fmt.Errorf("Release not specified for repository [%s]", remote.ID())
+			err = fmt.Errorf("Release not specified for repository [%s]", remote.ID())
+			return
 		}
 
-		local, exists := row.Metadata[remote.Repository]
+		local, exists := row.Repositories[remote.Repository]
 		if !exists {
-			return true, nil
+			// This is a new repository that has been pushed. We do not know the
+			// package(s) associated with it yet. The best we can do is indicate
+			// that we have an update for the operator source.
+			result.RegistryHasUpdate = true
+			continue
 		}
 
-		if local.Release != remote.Release {
-			return true, nil
+		if local.Metadata.Release != remote.Release {
+			// Since the repository has gone through an update we consider that
+			// all package(s) associated with it have a new version.
+			// The version/release value specified here refers to the version of
+			// the repository, not the actual version of an operator.
+			result.Updated = append(result.Updated, row.GetPackages()...)
 		}
 	}
 
-	return false, nil
+	remoteMap := map[string]*RegistryMetadata{}
+	for _, remote := range metadata {
+		remoteMap[remote.Repository] = remote
+	}
+
+	for repositoryName, local := range row.Repositories {
+		_, exists := remoteMap[repositoryName]
+		if !exists {
+			// This repository has been removed from the remote registry.
+			result.Removed = append(result.Removed, local.Packages...)
+		}
+	}
+
+	if len(result.Removed) > 0 || len(result.Updated) > 0 {
+		result.RegistryHasUpdate = true
+	}
+
+	return
 }
 
 func (ds *memoryDatastore) GetAllOperatorSources() []*OperatorSourceKey {

@@ -21,8 +21,8 @@ type PollHelper interface {
 	//
 	// It returns true if the remote registry has update(s), otherwise it
 	// returns false.
-	// If the function encounters any error then it returns (false, err).
-	HasUpdate(source *datastore.OperatorSourceKey) (bool, error)
+	// If the function encounters any error then it returns (nil, err).
+	HasUpdate(source *datastore.OperatorSourceKey) (*datastore.UpdateResult, error)
 
 	// TriggerPurge triggers a rebuild of the cache associated with the
 	// specified OperatorSource object.
@@ -45,29 +45,25 @@ type pollHelper struct {
 	transitioner phase.Transitioner
 }
 
-func (h *pollHelper) HasUpdate(source *datastore.OperatorSourceKey) (bool, error) {
+func (h *pollHelper) HasUpdate(source *datastore.OperatorSourceKey) (*datastore.UpdateResult, error) {
 	// Get the latest version of the operator source from underlying datastore.
 	source, exists := h.datastore.GetOperatorSource(source.UID)
 	if !exists {
-		return false, errors.New("The given OperatorSource object does not exist in datastore")
+		return nil, errors.New("The given OperatorSource object does not exist in datastore")
 	}
 
 	registry, err := h.factory.New(source.Spec.Type, source.Spec.Endpoint)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	metadata, err := registry.ListPackages(source.Spec.RegistryNamespace)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	updated, err := h.datastore.OperatorSourceHasUpdate(source.UID, metadata)
-	if err != nil {
-		return false, err
-	}
-
-	return updated, nil
+	result, err := h.datastore.OperatorSourceHasUpdate(source.UID, metadata)
+	return result, nil
 }
 
 func (h *pollHelper) TriggerPurge(source *datastore.OperatorSourceKey) (deleted bool, updateErr error) {
