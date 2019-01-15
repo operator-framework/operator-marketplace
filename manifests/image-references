@@ -2,7 +2,7 @@ kind: ImageStream
 apiVersion: image.openshift.io/v1
 spec:
   tags:
-  - name: operator-marketplace
+  - name: marketplace-operator
     from:
       kind: DockerImage
       name:  quay.io/openshift/origin-operator-marketplace:latest
