@@ -15,7 +15,7 @@ data:
   packages: |-
 ```
 
-An operator's CSV must contain the annotations mentioned [here](https://github.com/operator-framework/operator-marketplace/blob/master/docs/marketplace-required-csv-annotations.md) for it to be displayed properly within the Marketplace UI.
+An operator's CSV must contain the annotations mentioned [here](https://github.com/operator-framework/community-operators/blob/master/docs/marketplace-required-csv-annotations.md) for it to be displayed properly within the Marketplace UI.
 
 ## Pre-Requisite
 
