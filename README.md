@@ -26,12 +26,12 @@ $ export REGISTRY=<SOME_REGISTRY> \
 
 ### Description
 
-The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "openshift-marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "openshift-marketplace"), the operator will download bundles stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
 
-The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
+The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the Operator Hub in the [console UI](https://github.com/openshift/console/).
 
 ### Deploying the Marketplace Operator with OKD
-The Marketplace Operator is deployed by default with OKD and no further steps are required.
+The Marketplace Operator is deployed by default with OKD 4.0 clusters and no further steps are required. Previous versions of OKD are not currently supported.
 
 ### Deploying the Marketplace Operator with Kubernetes
 It is important to note that the order in which you apply the deployment files matters, do not execute the `kubectl apply` commands featured in this section out of order.
@@ -57,11 +57,11 @@ Note that a Kubernetes cluster does not have OLM deployed by default.
 
 ## Populating your own App Registry OperatorSource
 
-Follow the steps [here](./docs/how-to-upload-artifact.md) to upload an operator artifact to `quay.io`.
+Follow the steps [here](./docs/how-to-upload-bundle.md) to upload an operator bundle to `quay.io`.
 
-Once your operator artifact is pushed to `quay.io` you can use an `OperatorSource` to add your operator offering to Marketplace. An example `OperatorSource` is provided [here](deploy/examples/operatorsource.cr.yaml).
+Once your operator bundle is pushed to `quay.io` you can use an `OperatorSource` to add your operator offering to Marketplace. An example `OperatorSource` is provided [here](deploy/examples/operatorsource.cr.yaml).
 
-An `OperatorSource` must specify the `registryNamespace` the operator artifact was pushed to, and set the `name` and `namespace` for creating the `OperatorSource` on your cluster.
+An `OperatorSource` must specify the `registryNamespace` the operator bundle was pushed to, and set the `name` and `namespace` for creating the `OperatorSource` on your cluster.
 
 Add your `OperatorSource` to your cluster:
 
@@ -69,7 +69,7 @@ Add your `OperatorSource` to your cluster:
 $ oc create -f your-operator-source.yaml
 ```
 
-Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
+Once created, the Marketplace operator will use the `OperatorSource` to download your operator bundle from the app registry and display your operator offering in the Marketplace UI.
 
 ## Running End to End (e2e) Tests
 

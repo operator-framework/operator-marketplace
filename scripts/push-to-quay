@@ -2,7 +2,7 @@
 
 set -e
 
-echo -n "Relative path to your operator artifact file: "
+echo -n "Relative path to your operator bundle file: "
 read FILE
 FILENAME=${FILE%.*}
 echo -n "Namespace in quay.io: "
