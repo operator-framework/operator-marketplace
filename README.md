@@ -1,11 +1,12 @@
 # Marketplace Operator
+Marketplace is a conduit to bring off-cluster operators to your cluster.
 
 ## Project Status: pre-alpha
 The project is currently pre-alpha and it is expected that breaking changes to the API will be made in the upcoming releases.
 
 ## Prerequisites
 In order to deploy the Marketplace Operator, you must:
-1. Have an OKD or a Kubernetes cluster with Operator Lifecycle Manager [installed](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md).
+1. Have an OKD or a Kubernetes cluster with Operator Lifecycle Manager (OLM) [installed](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md).
 2. Be logged in as a user with Cluster Admin role.
    * This is a stop gap measure until the RBAC permissions are defined
 
@@ -25,10 +26,15 @@ $ export REGISTRY=<SOME_REGISTRY> \
 ## Using the Marketplace Operator
 
 ### Description
+The operator manages two CRDs: [OperatorSource](./deploy/crds/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crds/catalogsourceconfig.crd.yaml).
 
-The marketplace operator manages two CRDs: [OperatorSource](./deploy/crd/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crd/catalogsourceconfig.crd.yaml). When an OperatorSource CR is created in the same namespace as where the marketplace operator is running (we recommend the namespace be called "openshift-marketplace"), the operator will download artifacts stored in the registry specified in this OperatorSource CR (for now, please see documentation about using [quay](https://quay.io)'s appregistry API). For an example of this OperatorSource CR please see the [examples](./deploy/examples/) folder.
+`OperatorSource` is used to define the external datastore we are using to store operator bundles. At the moment we only support Quay's app-registry as our external datastore. Please see [here](deploy/examples/operatorsource.cr.yaml) for an example `OperatorSource`. The `endpoint` in the `spec` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry. The `registryNamespace` is the name of your app-registry namespace. `displayName` and `publisher` are optional and only needed for UI purposes.
+On adding an `OperatorSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace) in the OKD console. There is no equivalent UI in the Kubernetes console.
 
-The operator will then create a CatalogSourceConfig CR which will, for the time being, trigger the marketplace operator to create a ConfigMap CR and CatalogSource CR. The package-server, managed by [OLM](https://github.com/operator-framework/operator-lifecycle-manager), will then respond to the creation of these CRs and allow the external operators to be visible in the [marketplace UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace).
+`CatalogSourceConfig` is used to install an operator present in the `OperatorSource` to your cluster. Behind the scenes, it will configure an OLM `CatalogSource` so that the operator can then be managed by OLM. Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
+The `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated. `packages` is a comma separated list of operators. `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays. Once a `CatalogSourceConfig` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
+
+Please note that the Marketplace operator uses `CatalogSourceConfigs` and `CatalogSources` internally and you will find them present in the namespace where the Marketplace operator is running. These resources can be ignored and should not be modified or used.
 
 ### Deploying the Marketplace Operator with OKD
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
@@ -54,6 +60,46 @@ $ kubectl apply -f deploy/marketplace.v0.0.1.clusterserviceversion.yaml
 ```
 
 Note that a Kubernetes cluster does not have OLM deployed by default.
+
+#### Installing an operator using Marketplace
+The following section assumes that Marketplace was installed in the `openshift-marketplace` namespace. For Marketplace to function you need to have at least one `OperatorSource` CR present on the cluster. To get started you can use the [community](deploy/examples/operatorsource.cr.yaml) OperatorSource. If you are on an OKD cluster, you can skip this step as it is installed by default.
+```bash
+$ kubectl apply -f deploy/examples/operatorsource.cr.yaml
+```
+Once the `OperatorSource` has been successfully deployed, you can discover the operators available using the following command:
+```bash
+$ kubectl get opsrc community-operators -o=custom-columns=NAME:.metadata.name,PACKAGES:.status.packages -n openshift-marketplace
+NAME                  PACKAGES
+community-operators   federationv2,svcat,metering,etcd,prometheus,automationbroker,templateservicebroker,cluster-logging,jaeger,descheduler
+```
+
+Now if you want to install the `descheduler` and `jaeger` operators, create a `CatalogSourceConfig` CR as shown below:
+```
+apiVersion: marketplace.redhat.com/v1alpha1
+kind: CatalogSourceConfig
+metadata:
+  name: installed-community-operators
+  namespace: openshift-marketplace
+spec:
+  targetNamespace: openshift-operators
+  packages: descheduler,jaeger
+  csDisplayName: "Community Operators"
+  csPublisher: "Red Hat"
+```
+Note, that in the example above, `openshift-operators` is a namespace that OLM is watching. Deployment of this CR will cause a `CatalogSource` called `installed-community-operators` to be created in the `openshift-operators` namespace. This can be confirmed by `oc get catalogsource installed-community-operators -n openshift-operators`. Note that you can reuse the same `CatalogSourceConfig` for adding more operators.
+
+Now you can create an OLM `Subscriptions` for `desheduler` and `jaeger`.
+```
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: descheduler
+  namespace: openshift-operators
+spec:
+  channel: alpha
+  name: descheduler
+  source: installed-community-operators
+```
 
 ## Populating your own App Registry OperatorSource
 
