@@ -1,0 +1,130 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:service-catalog:aggregate-to-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+- apiGroups:
+  - "servicecatalog.k8s.io"
+  attributeRestrictions: null
+  resources:
+  - servicebrokers
+  - serviceclasses
+  - serviceplans
+  - serviceinstances
+  - servicebindings
+  verbs:
+  - create
+  - update
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:service-catalog:aggregate-to-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+- apiGroups:
+  - "servicecatalog.k8s.io"
+  attributeRestrictions: null
+  resources:
+  - servicebrokers
+  - serviceclasses
+  - serviceplans
+  - serviceinstances
+  - servicebindings
+  verbs:
+  - create
+  - update
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:service-catalog:aggregate-to-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups:
+  - "servicecatalog.k8s.io"
+  attributeRestrictions: null
+  resources:
+  - servicebrokers
+  - serviceclasses
+  - serviceplans
+  - serviceinstances
+  - servicebindings
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: servicecatalog-serviceclass-viewer
+rules:
+- apiGroups:
+  - servicecatalog.k8s.io
+  resources:
+  - clusterserviceclasses
+  - clusterserviceplans
+  verbs:
+  - list
+  - watch
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: servicecatalog-serviceclass-viewer-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: servicecatalog-serviceclass-viewer
+subjects:
+- kind: Group
+  name: system:authenticated
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:auth-delegator-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: service-catalog-apiserver
+  namespace: openshift-operators
+apiVersion: rbac.authorization.k8s.io/v1
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: controller-manager
+  namespace: openshift-operators
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: svcat-controllermanager-ssl
+    prometheus.io/scrape: "true"
+    prometheus.io/scheme: https
+spec:
+  type: ClusterIP
+  selector:
+    app: svcat-controller-manager
+  ports:
+  - name: secure
+    protocol: TCP
+    port: 443
+    targetPort: 8444
