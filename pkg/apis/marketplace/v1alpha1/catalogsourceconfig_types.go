@@ -5,6 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -97,4 +98,20 @@ func (csc *CatalogSourceConfig) EnsurePublisher() {
 // GetPackageIDs returns the list of package(s) specified.
 func (csc *CatalogSourceConfig) GetPackageIDs() []string {
 	return strings.Split(csc.Spec.Packages, ",")
+}
+
+// RemoveOwner removes the owner specified in ownerUID from OwnerReference of
+// the CatalogSourceConfig object.
+func (csc *CatalogSourceConfig) RemoveOwner(ownerUID types.UID) {
+	owners := make([]metav1.OwnerReference, 0)
+
+	for _, owner := range csc.GetOwnerReferences() {
+		if owner.UID == ownerUID {
+			continue
+		}
+
+		owners = append(owners, owner)
+	}
+
+	csc.SetOwnerReferences(owners)
 }
