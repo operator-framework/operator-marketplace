@@ -40,26 +40,12 @@ Please note that the Marketplace operator uses `CatalogSourceConfigs` and `Catal
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
 
 ### Deploying the Marketplace Operator with Kubernetes
-It is important to note that the order in which you apply the deployment files matters, do not execute the `kubectl apply` commands featured in this section out of order.
+First ensure that the [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md#install-the-latest-released-version-of-olm-for-upstream-kubernetes) is installed on your cluster.
 
 #### Deploying the Marketplace Operator
 ```bash
-$ kubectl apply -f deploy/marketplace.ns.yaml
-$ kubectl apply -f deploy/crds/catalogsourceconfig.crd.yaml
-$ kubectl apply -f deploy/crds/operatorsource.crd.yaml
-$ kubectl apply -f deploy/service_account.yaml
-$ kubectl apply -f deploy/role.yaml
-$ kubectl apply -f deploy/role_binding.yaml
-$ kubectl apply -f deploy/operator.yaml
+$ kubectl apply -f deploy/upstream
 ```
-
-#### Deploying the Marketplace Operator with OLM
-Execute the above commands, except for `kubectl apply -f deploy/operator.yaml`. In place of that, execute:
-```bash
-$ kubectl apply -f deploy/marketplace.v0.0.1.clusterserviceversion.yaml
-```
-
-Note that a Kubernetes cluster does not have OLM deployed by default.
 
 #### Installing an operator using Marketplace
 The following section assumes that Marketplace was installed in the `openshift-marketplace` namespace. For Marketplace to function you need to have at least one `OperatorSource` CR present on the cluster. To get started you can use the [community](deploy/examples/operatorsource.cr.yaml) OperatorSource. If you are on an OKD cluster, you can skip this step as it is installed by default.
