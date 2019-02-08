@@ -23,3 +23,12 @@ rules:
   - catalogsources
   verbs:
   - "*"
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusteroperators
+  - clusteroperators/status
+  verbs:
+  - create
+  - get
+  - update

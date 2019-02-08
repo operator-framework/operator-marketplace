@@ -12,6 +12,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -56,21 +57,23 @@ func main() {
 		log.Fatal(err)
 	}
 
+	status := status.New(cfg, mgr, namespace)
+
 	log.Print("Registering Components.")
 
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Fatal(err)
+		fatal(err, status)
 	}
 
 	// Add external resource to scheme
 	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Fatal(err)
+		fatal(err, status)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Fatal(err)
+		fatal(err, status)
 	}
 
 	// Serve a health check.
@@ -88,6 +91,12 @@ func main() {
 	go registrySyncer.Sync(stopCh)
 	go catalogSyncer.Sync(stopCh)
 
+	status.SetAvailable("Operator running")
 	// Start the Cmd
 	log.Fatal(mgr.Start(stopCh))
+}
+
+func fatal(err error, status status.Status) {
+	status.SetFailing(err.Error())
+	log.Fatal(err)
 }
