@@ -13,15 +13,8 @@ const (
 	CSCFinalizer = "finalizer.catalogsourceconfigs.marketplace.redhat.com"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// CatalogSourceConfigList contains a list of CatalogSourceConfig
-type CatalogSourceConfigList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []CatalogSourceConfig `json:"items"`
-}
-
+// +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CatalogSourceConfig is the Schema for the catalogsourceconfigs API
@@ -31,6 +24,15 @@ type CatalogSourceConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              CatalogSourceConfigSpec   `json:"spec,omitempty"`
 	Status            CatalogSourceConfigStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// CatalogSourceConfigList contains a list of CatalogSourceConfig
+type CatalogSourceConfigList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []CatalogSourceConfig `json:"items"`
 }
 
 // CatalogSourceConfigSpec defines the desired state of CatalogSourceConfig
