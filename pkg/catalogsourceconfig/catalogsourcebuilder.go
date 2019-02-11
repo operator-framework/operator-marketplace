@@ -68,10 +68,10 @@ func (b *CatalogSourceBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *C
 }
 
 // WithSpec sets Spec with input data.
-func (b *CatalogSourceBuilder) WithSpec(csType, cmName, displayName, publisher string) *CatalogSourceBuilder {
+func (b *CatalogSourceBuilder) WithSpec(csType olm.SourceType, address, displayName, publisher string) *CatalogSourceBuilder {
 	b.cs.Spec = olm.CatalogSourceSpec{
 		SourceType:  csType,
-		ConfigMap:   cmName,
+		Address:     address,
 		DisplayName: displayName,
 		Publisher:   publisher,
 	}

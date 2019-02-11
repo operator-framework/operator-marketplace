@@ -38,6 +38,10 @@ func printVersion() {
 
 func main() {
 	printVersion()
+
+	// Parse the command line arguments for the registry server image
+	flag.StringVar(&catalogsourceconfig.RegistryServerImage, "registryServerImage",
+		catalogsourceconfig.DefaultRegistryServerImage, "the image to use for creating the operator registry pod")
 	flag.Parse()
 
 	namespace, err := k8sutil.GetWatchNamespace()

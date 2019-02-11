@@ -14,12 +14,40 @@ rules:
   - ""
   resources:
   - services
-  - configmaps
+  - serviceaccounts
   verbs:
-  - "*"
+  - get
+  - create
+  - delete
+  - update
 - apiGroups:
   - operators.coreos.com
   resources:
   - catalogsources
   verbs:
   - "*"
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - create
+  - delete
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - create
+  - delete
+  - update

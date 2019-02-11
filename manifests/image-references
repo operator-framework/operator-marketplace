@@ -6,3 +6,7 @@ spec:
     from:
       kind: DockerImage
       name:  quay.io/openshift/origin-operator-marketplace:latest
+  - name: operator-registry
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-operator-registry
