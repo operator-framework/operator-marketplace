@@ -36,15 +36,9 @@ type OperatorSourceKey struct {
 // is reconciled.
 //
 // Every reconciled OperatorSource object has a corresponding operatorSourceRow
-// in datastore. The Writer interface accepts a raw operator manifest and
-// marshals it into this type before writing it to the underlying storage.
+// in datastore.
 type operatorSourceRow struct {
 	OperatorSourceKey
-
-	// Operators is the collection of all single-operator manifest(s) associated
-	// with the underlying operator source.
-	// The package name is used to uniquely identify the operator manifest(s).
-	Operators map[string]*SingleOperatorManifest
 
 	// Repositories is the metadata associated with each repository under the given
 	// namespace.
@@ -56,8 +50,8 @@ type operatorSourceRow struct {
 // An empty list is returned if there are no package(s).
 func (r *operatorSourceRow) GetPackages() []string {
 	packages := make([]string, 0)
-	for packageID, _ := range r.Operators {
-		packages = append(packages, packageID)
+	for _, repository := range r.Repositories {
+		packages = append(packages, repository.Package)
 	}
 
 	return packages
@@ -76,24 +70,24 @@ type operatorSourceRowMap struct {
 }
 
 // AddEmpty adds a new operator source to the map with an empty set of
-// registry metadata and operator manifest(s).
+// registry metadata.
 func (m *operatorSourceRowMap) AddEmpty(opsrc *v1alpha1.OperatorSource) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.add(opsrc, map[string]*Repository{}, map[string]*SingleOperatorManifest{})
+	m.add(opsrc, map[string]*Repository{})
 }
 
 // Add adds a new operator source to the map with an the specified set of
-// registry metadata and operator manifest(s).
-func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository, operators map[string]*SingleOperatorManifest) {
+// registry metadata.
+func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.add(opsrc, repositories, operators)
+	m.add(opsrc, repositories)
 }
 
-func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository, operators map[string]*SingleOperatorManifest) {
+func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository) {
 	m.Sources[opsrc.GetUID()] = &operatorSourceRow{
 		OperatorSourceKey: OperatorSourceKey{
 			UID: opsrc.GetUID(),
@@ -103,7 +97,6 @@ func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, repositories 
 			},
 			Spec: &opsrc.Spec,
 		},
-		Operators:    operators,
 		Repositories: repositories,
 	}
 }
@@ -135,6 +128,24 @@ func (m *operatorSourceRowMap) GetAllRows() []*OperatorSourceKey {
 	return keys
 }
 
+// GetAllRepositories return a list of all repositories available across all
+// operator sources.
+func (m *operatorSourceRowMap) GetAllRepositories() []*Repository {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	repositories := make([]*Repository, 0)
+	for _, row := range m.Sources {
+		opsrcRepositories := make([]*Repository, 0)
+		for _, repository := range row.Repositories {
+			opsrcRepositories = append(opsrcRepositories, repository)
+		}
+		repositories = append(repositories, opsrcRepositories...)
+	}
+
+	return repositories
+}
+
 // GetAllPackages return a list of all package(s) available across all
 // operator source(s).
 func (m *operatorSourceRowMap) GetAllPackages() []string {
@@ -144,22 +155,6 @@ func (m *operatorSourceRowMap) GetAllPackages() []string {
 	packages := make([]string, 0)
 	for _, row := range m.Sources {
 		packages = append(packages, row.GetPackages()...)
-	}
-
-	return packages
-}
-
-// GetAllPackagesMap returns a collection of all available package(s) across all
-// operator sources in a map. Package name is used as the key to this map.
-func (m operatorSourceRowMap) GetAllPackagesMap() map[string]*SingleOperatorManifest {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	packages := map[string]*SingleOperatorManifest{}
-	for _, row := range m.Sources {
-		for packageID, manifest := range row.Operators {
-			packages[packageID] = manifest
-		}
 	}
 
 	return packages

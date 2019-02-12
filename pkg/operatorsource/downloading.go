@@ -31,7 +31,7 @@ type downloadingReconciler struct {
 
 // Reconcile reconciles an OperatorSource object that is in "Downloading" phase.
 // It connects to the corresponding operator manifest registry, downloads all
-// manifest(s) available and saves the manifest(s) to the underlying datastore.
+// manifest metadata available and saves the metadata to the underlying datastore.
 //
 // in represents the original OperatorSource object received from the sdk
 // and before reconciliation has started.
@@ -63,7 +63,7 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		return
 	}
 
-	manifests, err := registry.RetrieveAll(in.Spec.RegistryNamespace)
+	manifests, err := registry.ListPackages(in.Spec.RegistryNamespace)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.OperatorSourceDownloading, err.Error())
 		return
