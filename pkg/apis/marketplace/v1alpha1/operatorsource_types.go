@@ -13,6 +13,19 @@ const (
 	OpSrcFinalizer = "finalizer.operatorsources.marketplace.redhat.com"
 )
 
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// OperatorSource is the Schema for the operatorsources API
+// +k8s:openapi-gen=true
+type OperatorSource struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              OperatorSourceSpec   `json:"spec,omitempty"`
+	Status            OperatorSourceStatus `json:"status,omitempty"`
+}
+
 // Only type definitions go into this file.
 // All other constructs (constants, variables, receiver functions and such)
 // related to OperatorSource type should be added to operatorsource.go file.
@@ -24,16 +37,6 @@ type OperatorSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OperatorSource `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// OperatorSource is the Schema for the operatorsources API
-// +k8s:openapi-gen=true
-type OperatorSource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              OperatorSourceSpec   `json:"spec,omitempty"`
-	Status            OperatorSourceStatus `json:"status,omitempty"`
 }
 
 // OperatorSourceSpec defines the desired state of OperatorSource
