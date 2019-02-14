@@ -52,7 +52,12 @@ func (h *pollHelper) HasUpdate(source *datastore.OperatorSourceKey) (*datastore.
 		return nil, errors.New("The given OperatorSource object does not exist in datastore")
 	}
 
-	registry, err := h.factory.New(source.Spec.Type, source.Spec.Endpoint)
+	options, err := SetupRegistryOptions(h.client, source.Spec)
+	if err != nil {
+		return nil, err
+	}
+
+	registry, err := h.factory.New(options)
 	if err != nil {
 		return nil, err
 	}

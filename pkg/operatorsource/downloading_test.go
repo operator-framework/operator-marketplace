@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -29,8 +30,9 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
+	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -39,7 +41,9 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	opsrcWant.Status.Packages = "etcd,prometheus,amqp"
 
 	registryClient := mocks.NewAppRegistryClient(controller)
-	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
+
+	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
+	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
 
 	// We expect the remote registry to return a non-empty list of manifest(s).
 	manifestExpected := []*datastore.OperatorMetadata{
@@ -81,8 +85,9 @@ func TestReconcile_HaveFaultyPackages_Success(t *testing.T) {
 
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
+	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -91,7 +96,9 @@ func TestReconcile_HaveFaultyPackages_Success(t *testing.T) {
 	opsrcWant.Status.Packages = "etcd,prometheus,amqp"
 
 	registryClient := mocks.NewAppRegistryClient(controller)
-	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
+
+	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
+	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
 
 	// We expect the remote registry to return a non-empty list of manifest(s).
 	manifestExpected := []*datastore.OperatorMetadata{
@@ -128,14 +135,17 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
+	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
 
 	registryClient := mocks.NewAppRegistryClient(controller)
-	factory.EXPECT().New(opsrcIn.Spec.Type, opsrcIn.Spec.Endpoint).Return(registryClient, nil).Times(1)
+
+	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
+	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
 
 	// We expect the registry to return an empty manifest list.
 	manifests := []*datastore.OperatorMetadata{}
