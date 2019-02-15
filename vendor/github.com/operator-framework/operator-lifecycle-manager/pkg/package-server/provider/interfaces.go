@@ -5,6 +5,6 @@ import (
 )
 
 type PackageManifestProvider interface {
-	ListPackageManifests(namespace string) (*v1alpha1.PackageManifestList, error)
-	GetPackageManifest(namespace, name string) (*v1alpha1.PackageManifest, error)
+	Get(name, namespace string) (*v1alpha1.PackageManifest, error)
+	List(namespace string) (*v1alpha1.PackageManifestList, error)
 }

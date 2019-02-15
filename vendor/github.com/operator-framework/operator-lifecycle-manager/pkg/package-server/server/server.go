@@ -14,11 +14,9 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/informers/externalversions"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/queueinformer"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apiserver"
 	genericpackagemanifests "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apiserver/generic"
@@ -62,10 +60,12 @@ type PackageServerOptions struct {
 	Authorization  *genericoptions.DelegatingAuthorizationOptions
 	Features       *genericoptions.FeatureOptions
 
-	WakeupInterval    time.Duration
+	GlobalNamespace   string
 	WatchedNamespaces []string
+	WakeupInterval    time.Duration
 
-	Kubeconfig string
+	Kubeconfig   string
+	RegistryAddr string
 
 	// Only to be used to for testing
 	DisableAuthForTesting bool
@@ -89,7 +89,8 @@ func NewPackageServerOptions(out, errOut io.Writer) *PackageServerOptions {
 		WatchedNamespaces: []string{v1.NamespaceAll},
 		WakeupInterval:    5 * time.Minute,
 
-		Debug: false,
+		DisableAuthForTesting: false,
+		Debug:                 false,
 
 		StdOut: out,
 		StdErr: errOut,
@@ -128,7 +129,6 @@ func (o *PackageServerOptions) Config() (*apiserver.Config, error) {
 }
 
 func (o *PackageServerOptions) Run(stopCh <-chan struct{}) error {
-	// set debug log level if enabled
 	if o.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -154,36 +154,22 @@ func (o *PackageServerOptions) Run(stopCh <-chan struct{}) error {
 		return fmt.Errorf("unable to construct lister client config: %v", err)
 	}
 
-	// set up the informers
 	kubeClient, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
 		return fmt.Errorf("unable to construct lister client: %v", err)
 	}
 
-	// create a new client for OLM types (CRs)
 	crClient, err := client.NewClient(o.Kubeconfig)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("package-server configured to watch namespaces %v", o.WatchedNamespaces)
-
-	// Create an informer for each catalog namespace
-	catsrcSharedIndexInformers := []cache.SharedIndexInformer{}
-	for _, namespace := range o.WatchedNamespaces {
-		nsInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(crClient, o.WakeupInterval, externalversions.WithNamespace(namespace))
-		catsrcSharedIndexInformers = append(catsrcSharedIndexInformers, nsInformerFactory.Operators().V1alpha1().CatalogSources().Informer())
-	}
-
-	// Create a new queueinformer-based operator.
-	queueOperator, err := queueinformer.NewOperator(o.Kubeconfig)
+	queueOperator, err := queueinformer.NewOperator(o.Kubeconfig, log.New())
 	if err != nil {
 		return err
 	}
 
-	sourceProvider := provider.NewInMemoryProvider(catsrcSharedIndexInformers, queueOperator)
-
-	// inject the providers into the config
+	sourceProvider := provider.NewRegistryProvider(crClient, queueOperator, o.WakeupInterval, o.WatchedNamespaces, o.GlobalNamespace)
 	config.ProviderConfig.Provider = sourceProvider
 
 	// we should never need to resync, since we're not worried about missing events,
@@ -191,15 +177,20 @@ func (o *PackageServerOptions) Run(stopCh <-chan struct{}) error {
 	// so set the default resync interval to 0
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 
-	// complete the config to get an API server
 	server, err := config.Complete(informerFactory).New()
 	if err != nil {
 		return err
 	}
 
-	// run the source provider's informers
-	go sourceProvider.Run(stopCh)
+	// Ensure that provider stops after the apiserver gracefully shuts down
+	provCh := make(chan struct{})
+	ready, done := sourceProvider.Run(provCh)
+	<-ready
 
-	// run the apiserver
-	return server.GenericAPIServer.PrepareRun().Run(stopCh)
+	err = server.GenericAPIServer.PrepareRun().Run(stopCh)
+	go func() { provCh <- struct{}{} }()
+
+	<-done
+
+	return err
 }

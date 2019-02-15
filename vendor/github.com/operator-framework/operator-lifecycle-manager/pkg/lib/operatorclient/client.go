@@ -1,9 +1,9 @@
 package operatorclient
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistration "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
@@ -19,10 +20,15 @@ type ClientInterface interface {
 	KubernetesInterface() kubernetes.Interface
 	ApiextensionsV1beta1Interface() apiextensions.Interface
 	ApiregistrationV1Interface() apiregistration.Interface
+	APIServiceClient
 	CustomResourceClient
+	SecretClient
+	ServiceClient
 	ServiceAccountClient
 	RoleClient
 	RoleBindingClient
+	ClusterRoleBindingClient
+	ClusterRoleClient
 	DeploymentClient
 }
 
@@ -39,6 +45,30 @@ type CustomResourceClient interface {
 	DeleteCustomResource(apiGroup, version, namespace, resourceKind, resourceName string) error
 	AtomicModifyCustomResource(apiGroup, version, namespace, resourceKind, resourceName string, f CustomResourceModifier, data interface{}) error
 	ListCustomResource(apiGroup, version, namespace, resourceKind string) (*CustomResourceList, error)
+}
+
+// APIServiceClient contains methods for manipulating APIServiceBindings.
+type APIServiceClient interface {
+	CreateAPIService(*apiregistrationv1.APIService) (*apiregistrationv1.APIService, error)
+	GetAPIService(name string) (*apiregistrationv1.APIService, error)
+	UpdateAPIService(modified *apiregistrationv1.APIService) (*apiregistrationv1.APIService, error)
+	DeleteAPIService(name string, options *metav1.DeleteOptions) error
+}
+
+// SecretClient contains methods for manipulating Secrets
+type SecretClient interface {
+	CreateSecret(*v1.Secret) (*v1.Secret, error)
+	GetSecret(namespace, name string) (*v1.Secret, error)
+	UpdateSecret(modified *v1.Secret) (*v1.Secret, error)
+	DeleteSecret(namespace, name string, options *metav1.DeleteOptions) error
+}
+
+// ServiceClient contains methods for manipulating Services
+type ServiceClient interface {
+	CreateService(*v1.Service) (*v1.Service, error)
+	GetService(namespace, name string) (*v1.Service, error)
+	UpdateService(modified *v1.Service) (*v1.Service, error)
+	DeleteService(namespace, name string, options *metav1.DeleteOptions) error
 }
 
 // ServiceAccountClient contains methods for manipulating ServiceAccounts.
@@ -63,6 +93,22 @@ type RoleBindingClient interface {
 	GetRoleBinding(namespace, name string) (*rbacv1.RoleBinding, error)
 	UpdateRoleBinding(modified *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error)
 	DeleteRoleBinding(namespace, name string, options *metav1.DeleteOptions) error
+}
+
+// ClusterRoleClient contains methods for manipulating ClusterRoleBindings.
+type ClusterRoleClient interface {
+	CreateClusterRole(*rbacv1.ClusterRole) (*rbacv1.ClusterRole, error)
+	GetClusterRole(name string) (*rbacv1.ClusterRole, error)
+	UpdateClusterRole(modified *rbacv1.ClusterRole) (*rbacv1.ClusterRole, error)
+	DeleteClusterRole(name string, options *metav1.DeleteOptions) error
+}
+
+// ClusterRoleBindingClient contains methods for manipulating ClusterRoleBindings.
+type ClusterRoleBindingClient interface {
+	CreateClusterRoleBinding(*rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error)
+	GetClusterRoleBinding(name string) (*rbacv1.ClusterRoleBinding, error)
+	UpdateClusterRoleBinding(modified *rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error)
+	DeleteClusterRoleBinding(name string, options *metav1.DeleteOptions) error
 }
 
 // DeploymentClient contains methods for the Deployment resource.
@@ -91,20 +137,20 @@ type Client struct {
 }
 
 // NewClient creates a kubernetes client or bails out on on failures.
-func NewClientFromConfig(kubeconfig string) ClientInterface {
+func NewClientFromConfig(kubeconfig string, logger *logrus.Logger) ClientInterface {
 	var config *rest.Config
 	var err error
 
 	if kubeconfig != "" {
-		log.Infof("Loading kube client config from path %q", kubeconfig)
+		logger.Infof("Loading kube client config from path %q", kubeconfig)
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	} else {
-		log.Infof("Using in-cluster kube client config")
+		logger.Infof("Using in-cluster kube client config")
 		config, err = rest.InClusterConfig()
 	}
 
 	if err != nil {
-		log.Fatalf("Cannot load config for REST client: %v", err)
+		logger.Fatalf("Cannot load config for REST client: %v", err)
 	}
 
 	return &Client{kubernetes.NewForConfigOrDie(config), apiextensions.NewForConfigOrDie(config), apiregistration.NewForConfigOrDie(config)}
