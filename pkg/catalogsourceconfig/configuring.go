@@ -2,7 +2,6 @@ package catalogsourceconfig
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -12,19 +11,18 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Copied from https://github.com/operator-framework/operator-lifecycle-manager/blob/master/pkg/controller/registry/configmap_loader.go#L18
-// TBD: Vendor in the folder once we require more than just these constants from
-// the OLM registry code.
-const (
-	ConfigMapCRDName     = "customResourceDefinitions"
-	ConfigMapCSVName     = "clusterServiceVersions"
-	ConfigMapPackageName = "packages"
-)
+// DefaultRegistryServerImage is the registry image to be used in the absence of
+// the command line parameter.
+const DefaultRegistryServerImage = "quay.io/openshift/origin-operator-registry"
+
+// RegistryServerImage is the image used for creating the operator registry pod.
+// This gets set in the cmd/manager/main.go.
+var RegistryServerImage string
 
 // NewConfiguringReconciler returns a Reconciler that reconciles a
 // CatalogSourceConfig object in the "Configuring" phase.
@@ -77,37 +75,18 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 	return
 }
 
-// createCatalogData constructs the ConfigMap data by reading the manifest
-// information of all packages from the datasource.
-func (r *configuringReconciler) createCatalogData(csc *v1alpha1.CatalogSourceConfig) (map[string]string, error) {
-	packageIDs := GetPackageIDs(csc.Spec.Packages)
-	data := make(map[string]string)
-	if len(packageIDs) < 1 {
-		return data, fmt.Errorf("No packages specified in CatalogSourceConfig %s/%s", csc.Namespace, csc.Name)
-	}
-
-	manifest, err := r.reader.Read(packageIDs)
-	if err != nil {
-		r.log.Errorf("Error \"%v\" getting manifest", err)
-		return nil, err
-	}
-
-	r.log.Infof("The following package(s) have been added: [%s]", packageIDs)
-
-	// TBD: Do we create a CatalogSource per package?
-	// TODO: Add more error checking
-	data[ConfigMapCRDName] = manifest.CustomResourceDefinitions
-	data[ConfigMapCSVName] = manifest.ClusterServiceVersions
-	data[ConfigMapPackageName] = manifest.Packages
-
-	return data, nil
-}
-
 // reconcileCatalogSource ensures a CatalogSource exists with all the
 // resources it requires.
 func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
-	// Reconcile the ConfigMap required for the CatalogSource
-	err := r.reconcileConfigMap(csc)
+	// Ensure that at least one package in the spec is available in the datastore
+	err := r.checkPackages(csc)
+	if err != nil {
+		return err
+	}
+
+	// Ensure that a registry deployment is available
+	registry := NewRegistry(r.log, r.client, r.reader, csc, RegistryServerImage)
+	err = registry.Ensure()
 	if err != nil {
 		return err
 	}
@@ -121,21 +100,18 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 	err = r.client.Get(context.TODO(), key, catalogSourceGet)
 
 	// Update the CatalogSource if it exists else create one.
-	configMapName := csc.Name
 	if err == nil {
-		if catalogSourceGet.Spec.ConfigMap != configMapName {
-			catalogSourceGet.Spec.ConfigMap = configMapName
-			r.log.Infof("Updating CatalogSource %s", catalogSourceGet.Name)
-			err = r.client.Update(context.TODO(), catalogSourceGet)
-			if err != nil {
-				r.log.Errorf("Failed to update CatalogSource : %v", err)
-				return err
-			}
-			r.log.Infof("Updated CatalogSource %s", catalogSourceGet.Name)
+		catalogSourceGet.Spec.Address = registry.GetAddress()
+		r.log.Infof("Updating CatalogSource %s", catalogSourceGet.Name)
+		err = r.client.Update(context.TODO(), catalogSourceGet)
+		if err != nil {
+			r.log.Errorf("Failed to update CatalogSource : %v", err)
+			return err
 		}
+		r.log.Infof("Updated CatalogSource %s", catalogSourceGet.Name)
 	} else {
 		// Create the CatalogSource structure
-		catalogSource := newCatalogSource(csc, configMapName)
+		catalogSource := newCatalogSource(csc, registry.GetAddress())
 		r.log.Infof("Creating CatalogSource %s", catalogSource.Name)
 		err = r.client.Create(context.TODO(), catalogSource)
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -148,45 +124,22 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 	return nil
 }
 
-// reconcileConfigMap ensures a ConfigMap exists with all the Operator artifacts
-// in its Data section
-func (r *configuringReconciler) reconcileConfigMap(csc *v1alpha1.CatalogSourceConfig) error {
-	// Construct the operator artifact data to be placed in the ConfigMap data
-	// section.
-	data, err := r.createCatalogData(csc)
-	if err != nil {
-		return err
+// checkPackages returns an error if there no valid packages present in the
+// datastore.
+func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig) error {
+	atLeastOneFound := false
+	errors := []error{}
+	packageIDs := GetPackageIDs(csc.Spec.Packages)
+	for _, packageID := range packageIDs {
+		if _, err := r.reader.Read(packageID); err != nil {
+			errors = append(errors, err)
+			continue
+		}
+		atLeastOneFound = true
 	}
 
-	// Check if the ConfigMap already exists
-	configMapName := csc.Name
-	configMapGet := new(ConfigMapBuilder).WithTypeMeta().ConfigMap()
-	key := client.ObjectKey{
-		Name:      configMapName,
-		Namespace: csc.Spec.TargetNamespace,
-	}
-	err = r.client.Get(context.TODO(), key, configMapGet)
-
-	// Update the ConfigMap if it exists else create one.
-	if err == nil {
-		r.log.Infof("Updating ConfigMap %s", configMapGet.Name)
-		configMapGet.Data = data
-		err = r.client.Update(context.TODO(), configMapGet)
-		if err != nil {
-			r.log.Errorf("Failed to update ConfigMap : %v", err)
-			return err
-		}
-		r.log.Infof("Updated ConfigMap %s", configMapGet.Name)
-	} else {
-		// Create the ConfigMap structure that will be used by the CatalogSource.
-		catalogConfigMap := newConfigMap(csc, data)
-		r.log.Infof("Creating ConfigMap %s", catalogConfigMap.Name)
-		err = r.client.Create(context.TODO(), catalogConfigMap)
-		if err != nil && !errors.IsAlreadyExists(err) {
-			r.log.Errorf("Failed to create ConfigMap : %v", err)
-			return err
-		}
-		r.log.Infof("Created ConfigMap %s", catalogConfigMap.Name)
+	if atLeastOneFound == false {
+		return utilerrors.NewAggregate(errors)
 	}
 	return nil
 }
@@ -196,22 +149,12 @@ func GetPackageIDs(csIDs string) []string {
 	return strings.Split(csIDs, ",")
 }
 
-// newConfigMap returns a new ConfigMap object.
-func newConfigMap(csc *v1alpha1.CatalogSourceConfig, data map[string]string) *corev1.ConfigMap {
-	return new(ConfigMapBuilder).
-		WithMeta(csc.Name, csc.Spec.TargetNamespace).
-		WithOwner(csc).
-		WithData(data).
-		ConfigMap()
-}
-
 // newCatalogSource returns a CatalogSource object.
-func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, configMapName string) *olm.CatalogSource {
+func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, address string) *olm.CatalogSource {
 	builder := new(CatalogSourceBuilder).
 		WithOwner(csc).
 		WithMeta(csc.Name, csc.Spec.TargetNamespace).
-		// TBD: where do we get display name and publisher from?
-		WithSpec("internal", configMapName, csc.Spec.DisplayName, csc.Spec.Publisher)
+		WithSpec(olm.SourceTypeGrpc, address, csc.Spec.DisplayName, csc.Spec.Publisher)
 
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint

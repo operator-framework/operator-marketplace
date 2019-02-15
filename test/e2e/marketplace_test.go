@@ -13,6 +13,7 @@ import (
 
 	"github.com/operator-framework/operator-sdk/pkg/test"
 
+	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -82,7 +83,7 @@ func MarketplaceCluster(t *testing.T) {
 // This function runs a basic happy case end to end workflow for marketplace
 // First create an operatorsource which points to external app registry on quay
 // Check that the catalogsourceconfig was created
-// Then check the configmap and catalogsource were created from the catalogsourceconfig
+// Then check the service and deployment were created and are ready
 func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error {
 	namespace, err := ctx.GetNamespace()
 	if err != nil {
@@ -109,8 +110,9 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 	}
 
 	catalogSourceConfigName := "test-operators"
-	configMapName := "test-operators"
 	catalogSourceName := "test-operators"
+	serviceName := "test-operators"
+	deploymentName := "test-operators"
 
 	// Create the operatorsource to download the manifests.
 	err = f.Client.Create(
@@ -132,13 +134,6 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 		return err
 	}
 
-	// Check for the config map created from the catalogsourceconfig.
-	resultConfigMap := &corev1.ConfigMap{}
-	err = WaitForResult(t, f, resultConfigMap, namespace, configMapName)
-	if err != nil {
-		return err
-	}
-
 	// Then check for the catalog source.
 	resultCatalogSource := &olm.CatalogSource{}
 	err = WaitForResult(t, f, resultCatalogSource, namespace, catalogSourceName)
@@ -146,13 +141,24 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 		return err
 	}
 
-	// Assert that the catalogsource spec properly references the configmap.
-	if resultCatalogSource.Spec.ConfigMap != resultConfigMap.Name {
-		t.Errorf(
-			"The created catalogsource %s was not properly associated with the created configmap %s",
-			resultCatalogSource.Name,
-			resultConfigMap.Name,
-		)
+	// Then check that the service was created.
+	resultService := &corev1.Service{}
+	err = WaitForResult(t, f, resultService, namespace, serviceName)
+	if err != nil {
+		return err
+	}
+
+	// Then check that the deployment was created.
+	resultDeployment := &apps.Deployment{}
+	err = WaitForResult(t, f, resultDeployment, namespace, deploymentName)
+	if err != nil {
+		return err
+	}
+
+	// Now check that the deployment is ready.
+	err = WaitForSuccessfulDeployment(t, f, *resultDeployment)
+	if err != nil {
+		return err
 	}
 
 	labels := resultCatalogSource.GetLabels()

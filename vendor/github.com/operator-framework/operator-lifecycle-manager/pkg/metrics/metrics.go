@@ -1,43 +1,46 @@
 package metrics
 
 import (
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/operatorclient"
 	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
+	v1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/listers/operators/v1alpha1"
 )
 
+// TODO(alecmerdler): Can we use this to emit Kubernetes events?
 type MetricsProvider interface {
 	HandleMetrics() error
 }
 
 type metricsCSV struct {
-	opClient operatorclient.ClientInterface
+	lister v1alpha1.ClusterServiceVersionLister
 }
 
-func NewMetricsCSV(opClient operatorclient.ClientInterface) MetricsProvider {
-	return &metricsCSV{opClient}
+func NewMetricsCSV(lister v1alpha1.ClusterServiceVersionLister) MetricsProvider {
+	return &metricsCSV{lister}
 }
 
 func (m *metricsCSV) HandleMetrics() error {
-	cList, err := m.opClient.ListCustomResource(v1alpha1.GroupName, v1alpha1.GroupVersion, metav1.NamespaceAll, v1alpha1.ClusterServiceVersionKind)
+	cList, err := m.lister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
-	csvCount.Set(float64(len(cList.Items)))
+	csvCount.Set(float64(len(cList)))
 	return nil
 }
 
 type metricsInstallPlan struct {
-	opClient operatorclient.ClientInterface
+	client versioned.Interface
 }
 
-func NewMetricsInstallPlan(opClient operatorclient.ClientInterface) MetricsProvider {
-	return &metricsInstallPlan{opClient}
+func NewMetricsInstallPlan(client versioned.Interface) MetricsProvider {
+	return &metricsInstallPlan{client}
 }
 
 func (m *metricsInstallPlan) HandleMetrics() error {
-	cList, err := m.opClient.ListCustomResource(v1alpha1.GroupName, v1alpha1.GroupVersion, metav1.NamespaceAll, v1alpha1.InstallPlanKind)
+	cList, err := m.client.OperatorsV1alpha1().InstallPlans(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -46,15 +49,15 @@ func (m *metricsInstallPlan) HandleMetrics() error {
 }
 
 type metricsSubscription struct {
-	opClient operatorclient.ClientInterface
+	client versioned.Interface
 }
 
-func NewMetricsSubscription(opClient operatorclient.ClientInterface) MetricsProvider {
-	return &metricsSubscription{opClient}
+func NewMetricsSubscription(client versioned.Interface) MetricsProvider {
+	return &metricsSubscription{client}
 }
 
 func (m *metricsSubscription) HandleMetrics() error {
-	cList, err := m.opClient.ListCustomResource(v1alpha1.GroupName, v1alpha1.GroupVersion, metav1.NamespaceAll, v1alpha1.SubscriptionKind)
+	cList, err := m.client.OperatorsV1alpha1().Subscriptions(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -63,16 +66,16 @@ func (m *metricsSubscription) HandleMetrics() error {
 }
 
 type metricsCatalogSource struct {
-	opClient operatorclient.ClientInterface
+	client versioned.Interface
 }
 
-func NewMetricsCatalogSource(opClient operatorclient.ClientInterface) MetricsProvider {
-	return &metricsCatalogSource{opClient}
+func NewMetricsCatalogSource(client versioned.Interface) MetricsProvider {
+	return &metricsCatalogSource{client}
 
 }
 
 func (m *metricsCatalogSource) HandleMetrics() error {
-	cList, err := m.opClient.ListCustomResource(v1alpha1.GroupName, v1alpha1.GroupVersion, metav1.NamespaceAll, v1alpha1.CatalogSourceKind)
+	cList, err := m.client.OperatorsV1alpha1().CatalogSources(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -126,15 +129,18 @@ var (
 	CSVUpgradeCount = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "csv_upgrade_count",
-			Help: "Monotonic count of catalog sources",
+			Help: "Monotonic count of CSV upgrades",
 		},
 	)
 )
 
-func Register() {
+func RegisterOLM() {
 	prometheus.MustRegister(csvCount)
+	prometheus.MustRegister(CSVUpgradeCount)
+}
+
+func RegisterCatalog() {
 	prometheus.MustRegister(installPlanCount)
 	prometheus.MustRegister(subscriptionCount)
 	prometheus.MustRegister(catalogSourceCount)
-	prometheus.MustRegister(CSVUpgradeCount)
 }

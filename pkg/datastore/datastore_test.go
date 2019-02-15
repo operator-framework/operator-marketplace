@@ -1,12 +1,9 @@
 package datastore_test
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/ghodss/yaml"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/stretchr/testify/assert"
@@ -15,11 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// In this test we make sure that datastore can successfully process the
-// rh-operators.yaml manifest file.
-func TestWriteWithRedHatOperatorsYAML(t *testing.T) {
-	// The following packages are defined in rh-operators.yaml and we expect
-	// datastore to return this list after it processes the manifest.
+// In this test we make sure that datastore can successfully process
+// registrymetadata passed to it.
+func TestWrite(t *testing.T) {
 	packagesWant := []string{
 		"amq-streams",
 		"etcd",
@@ -34,8 +29,22 @@ func TestWriteWithRedHatOperatorsYAML(t *testing.T) {
 		},
 	}
 
-	metadata := []*datastore.OperatorMetadata{
-		helperLoadFromFile(t, "rh-operators.yaml"),
+	metadata := []*datastore.RegistryMetadata{
+		&datastore.RegistryMetadata{
+			Repository: "amq-streams",
+		},
+		&datastore.RegistryMetadata{
+			Repository: "etcd",
+		},
+		&datastore.RegistryMetadata{
+			Repository: "federationv2",
+		},
+		&datastore.RegistryMetadata{
+			Repository: "prometheus",
+		},
+		&datastore.RegistryMetadata{
+			Repository: "service-catalog",
+		},
 	}
 
 	ds := datastore.New()
@@ -48,125 +57,100 @@ func TestWriteWithRedHatOperatorsYAML(t *testing.T) {
 	assert.ElementsMatch(t, packagesWant, packagesGot)
 }
 
-// In this test we specify faulty operator manifest(s). We expect datastore to
-// ignore the faulty package(s).
-func TestWriteWithFaultyOperatorsYAML(t *testing.T) {
-	// The following packages are defined in rh-operators.yaml and we expect
-	// datastore to return this list after it processes the manifest even though
-	// there are faulty manifest(s) in the same namespace.
-	packagesWant := []string{
-		"amq-streams",
-		"etcd",
-		"federationv2",
-		"prometheus",
-		"service-catalog",
-	}
-
+// In this test we make sure that, if we write an opsrc to the datastore,
+// when we do a read the metadata that associates the repository to the opsrc
+// is maintained.
+func TestReadOpsrcMeta(t *testing.T) {
 	opsrc := &v1alpha1.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID("123456"),
+			UID:       types.UID("123456"),
+			Name:      "operators-opsrc",
+			Namespace: "operators",
 		},
 	}
 
-	metadata := []*datastore.OperatorMetadata{
-		helperLoadFromFile(t, "rh-operators.yaml"),
-		helperLoadFromFile(t, "source-3-faulty.yaml"),
-	}
-
-	ds := datastore.New()
-	countGot, errGot := ds.Write(opsrc, metadata)
-	assert.Error(t, errGot)
-	assert.Equal(t, len(packagesWant), countGot)
-
-	list := ds.GetPackageIDs()
-	packagesGot := strings.Split(list, ",")
-	assert.ElementsMatch(t, packagesWant, packagesGot)
-}
-
-// Given a list of package ID(s), we expect datastore to return the correspnding
-// manifest YAML that is complete and includes all the package(s) CRD(s)
-// and CSV(s) that are required.
-func TestGetPackageIDsWithRedHatOperatorsYAML(t *testing.T) {
-	opsrc := &v1alpha1.OperatorSource{
-		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID("123456"),
+	metadata := []*datastore.RegistryMetadata{
+		&datastore.RegistryMetadata{
+			Repository: "amq-streams",
+			Namespace:  "operators",
 		},
-	}
-
-	metadata := []*datastore.OperatorMetadata{
-		helperLoadFromFile(t, "rh-operators.yaml"),
+		&datastore.RegistryMetadata{
+			Repository: "etcd",
+			Namespace:  "operators",
+		},
 	}
 
 	ds := datastore.New()
 	_, err := ds.Write(opsrc, metadata)
 	require.NoError(t, err)
 
-	dataGot, errGot := ds.Read([]string{"etcd", "prometheus"})
-	assert.NoError(t, errGot)
+	opsrcmeta, err := ds.Read("amq-streams")
+	require.NoError(t, err)
+	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
+	assert.Equal(t, "operators", opsrcmeta.Namespace)
 
-	_, packageParseErrGot := yaml.YAMLToJSON([]byte(dataGot.Packages))
-	assert.NoError(t, packageParseErrGot)
-
-	_, crdParseErrGot := yaml.YAMLToJSON([]byte(dataGot.CustomResourceDefinitions))
-	assert.NoError(t, crdParseErrGot)
-
-	_, csvParseErrGot := yaml.YAMLToJSON([]byte(dataGot.ClusterServiceVersions))
-	assert.NoError(t, csvParseErrGot)
+	opsrcmeta, err = ds.Read("etcd")
+	require.NoError(t, err)
+	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
+	assert.Equal(t, "operators", opsrcmeta.Namespace)
 }
 
-func TestGetPackageIDsWithMultipleOperatorSources(t *testing.T) {
-	opsrc1 := &v1alpha1.OperatorSource{
+// In this test we make sure that we properly relate multiple opsrcs
+// to the correct repositories.
+func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
+	opsrc := &v1alpha1.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID("123456"),
-		},
-	}
-	opsrc2 := &v1alpha1.OperatorSource{
-		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID("987654"),
+			UID:       types.UID("123456"),
+			Name:      "operators-opsrc",
+			Namespace: "operators",
 		},
 	}
 
-	// Both 'source-1.yaml' and 'source-2.yaml' have the following packages
-	// combined.
-	packagesWant := []string{
-		"foo-source-1",
-		"foo-source-2",
-		"bar-source-1",
-		"bar-source-2",
-		"baz-source-1",
-		"baz-source-2",
+	metadata := []*datastore.RegistryMetadata{
+		&datastore.RegistryMetadata{
+			Repository: "amq-streams",
+			Namespace:  "operators",
+		},
+		&datastore.RegistryMetadata{
+			Repository: "etcd",
+			Namespace:  "operators",
+		},
 	}
-
-	metadata1 := helperLoadFromFile(t, "source-1.yaml")
-	metadata2 := helperLoadFromFile(t, "source-2.yaml")
 
 	ds := datastore.New()
+	_, err := ds.Write(opsrc, metadata)
+	require.NoError(t, err)
 
-	_, errGot1 := ds.Write(opsrc1, []*datastore.OperatorMetadata{metadata1})
-	require.NoError(t, errGot1)
-
-	_, errGot2 := ds.Write(opsrc2, []*datastore.OperatorMetadata{metadata2})
-	require.NoError(t, errGot2)
-
-	value := ds.GetPackageIDs()
-	packagesGot := strings.Split(value, ",")
-
-	assert.ElementsMatch(t, packagesWant, packagesGot)
-}
-
-func helperLoadFromFile(t *testing.T, filename string) *datastore.OperatorMetadata {
-	path := filepath.Join("testdata", filename)
-
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return &datastore.OperatorMetadata{
-		RegistryMetadata: datastore.RegistryMetadata{
-			Namespace:  "operators",
-			Repository: "redhat",
+	opsrc2 := &v1alpha1.OperatorSource{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       types.UID("456789"),
+			Name:      "operators-different",
+			Namespace: "operators",
 		},
-		RawYAML: bytes,
 	}
+
+	metadata = []*datastore.RegistryMetadata{
+		&datastore.RegistryMetadata{
+			Repository: "federationv2",
+			Namespace:  "operators",
+		},
+	}
+
+	_, err = ds.Write(opsrc2, metadata)
+	require.NoError(t, err)
+
+	opsrcmeta, err := ds.Read("amq-streams")
+	require.NoError(t, err)
+	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
+	assert.Equal(t, "operators", opsrcmeta.Namespace)
+
+	opsrcmeta, err = ds.Read("etcd")
+	require.NoError(t, err)
+	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
+	assert.Equal(t, "operators", opsrcmeta.Namespace)
+
+	opsrcmeta, err = ds.Read("federationv2")
+	require.NoError(t, err)
+	assert.Equal(t, "operators-different", opsrcmeta.Name)
+	assert.Equal(t, "operators", opsrcmeta.Namespace)
 }

@@ -102,6 +102,12 @@ func (csc *CatalogSourceConfig) GetPackageIDs() []string {
 	return strings.Split(csc.Spec.Packages, ",")
 }
 
+// GetTargetNamespace returns the TargetNamespace where the OLM resources will
+// be created.
+func (csc *CatalogSourceConfig) GetTargetNamespace() string {
+	return csc.Spec.TargetNamespace
+}
+
 // RemoveOwner removes the owner specified in ownerUID from OwnerReference of
 // the CatalogSourceConfig object.
 func (csc *CatalogSourceConfig) RemoveOwner(ownerUID types.UID) {

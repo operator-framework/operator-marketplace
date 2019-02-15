@@ -7,7 +7,6 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 var (
@@ -23,24 +22,17 @@ func init() {
 // New returns an instance of memoryDatastore.
 func New() *memoryDatastore {
 	return &memoryDatastore{
-		rows:    newOperatorSourceRowMap(),
-		parser:  &manifestYAMLParser{},
-		walker:  &walker{},
-		bundler: &bundler{},
+		rows: newOperatorSourceRowMap(),
 	}
 }
 
 // Reader is the interface that wraps the Read method.
-//
-// Read prepares an operator manifest for a given set of package(s)
-// uniquely represeneted by the package ID(s) specified in packageIDs. It
-// returns an instance of RawOperatorManifestData that has the required set of
-// CRD(s), CSV(s) and package(s).
-//
-// The manifest returned can be used by the caller to create a ConfigMap object
-// for a catalog source (CatalogSource) in OLM.
 type Reader interface {
-	Read(packageIDs []string) (marshaled *RawOperatorManifestData, err error)
+	// Read takes a package identifier and returns metadata defined in the opsrc
+	// spec to associate that package to a specific opsrc in the marketplace.
+	// The OpsrcRef returned can be used to determine how to download manifests
+	// for a specific operator package.
+	Read(packageID string) (opsrcMeta *OpsrcRef, err error)
 }
 
 // Writer is an interface that is used to manage the underlying datastore
@@ -59,21 +51,17 @@ type Writer interface {
 	GetPackageIDsByOperatorSource(opsrcUID types.UID) string
 
 	// Write saves the Spec associated with a given OperatorSource object and
-	// the downloaded operator manifest(s) into datastore.
+	// the downloaded registry metadata into datastore.
 	//
 	// opsrc represents the given OperatorSource object.
-	// rawManifests is the list of raw operator manifest(s) associated with
+	// rawManifests is the list of registry metadata associated with
 	// a given operator source.
 	//
-	// On return, count is set to the number of operator manifest(s)
+	// On return, count is set to the number of registry metadata blobs
 	// successfully processed and stored in datastore.
-	// err will be set to nil if there was no error and all raw manifest(s) were
+	// err will be set to nil if there was no error and all manifests were
 	// processed and stored successfully.
-	// err will be set to an Aggregate error interface which will have a slice
-	// of errors encountered if faulty operator manifest(s) are specified.
-	// If count >= 1 and err is set then it implies that some of the specified
-	// manifest(s) were not stored due to errors.
-	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) (count int, err error)
+	Write(opsrc *v1alpha1.OperatorSource, rawManifests []*RegistryMetadata) (count int, err error)
 
 	// RemoveOperatorSource removes everything associated with a given operator
 	// source from the underlying datastore.
@@ -125,70 +113,63 @@ type Writer interface {
 // memoryDatastore is an in-memory implementation of operator manifest datastore.
 // TODO: In future, it will be replaced by an indexable persistent datastore.
 type memoryDatastore struct {
-	rows    *operatorSourceRowMap
-	parser  ManifestYAMLParser
-	walker  ManifestWalker
-	bundler Bundler
+	rows *operatorSourceRowMap
 }
 
-func (ds *memoryDatastore) Read(packageIDs []string) (*RawOperatorManifestData, error) {
-	singleOperatorManifests, err := ds.validate(packageIDs)
+func (ds *memoryDatastore) Read(packageID string) (opsrcMeta *OpsrcRef, err error) {
+	repository, err := ds.GetRepositoryByPackageName(packageID)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	multiOperatorManifest, err := ds.bundler.Bundle(singleOperatorManifests)
-	if err != nil {
-		return nil, fmt.Errorf("error while bundling package(s) into  manifest - %s", err)
-	}
+	opsrcMeta = repository.Opsrc
 
-	return ds.parser.Marshal(multiOperatorManifest)
+	return
 }
 
-func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, rawManifests []*OperatorMetadata) (count int, err error) {
-	if opsrc == nil || rawManifests == nil {
+func (ds *memoryDatastore) Write(opsrc *v1alpha1.OperatorSource, registryMetas []*RegistryMetadata) (count int, err error) {
+	if opsrc == nil || registryMetas == nil {
 		err = errors.New("invalid argument")
 		return
 	}
 
 	repositories := map[string]*Repository{}
-	operators := map[string]*SingleOperatorManifest{}
-	allErrors := []error{}
 
-	for _, rawManifest := range rawManifests {
+	for _, metadata := range registryMetas {
 		// For each repository store the associated registry metadata.
-		// Even if we can't successfully parse and store an operator manifest
-		// we should save the metadata so that datastore is aware of it.
 		repository := &Repository{
-			Metadata: rawManifest.RegistryMetadata,
+			Metadata: *metadata,
+			Package:  metadata.Repository,
+			Opsrc: &OpsrcRef{
+				Name:      opsrc.Name,
+				Namespace: opsrc.Namespace,
+			},
 		}
-		repositories[rawManifest.RegistryMetadata.Repository] = repository
-
-		data, err := ds.parser.Unmarshal(rawManifest.RawYAML)
-		if err != nil {
-			allErrors = append(allErrors, err)
-			continue
-		}
-
-		decomposer := newDecomposer()
-		if err := ds.walker.Walk(data, decomposer); err != nil {
-			allErrors = append(allErrors, err)
-			continue
-		}
-
-		packages := decomposer.Packages()
-
-		for i, operatorPackage := range packages {
-			packageID := operatorPackage.GetPackageID()
-			operators[packageID] = packages[i]
-			repository.Packages = append(repository.Packages, packageID)
-		}
+		repositories[metadata.Repository] = repository
 	}
 
-	ds.rows.Add(opsrc, repositories, operators)
+	ds.rows.Add(opsrc, repositories)
 
-	count = len(operators)
-	err = utilerrors.NewAggregate(allErrors)
+	count = len(registryMetas)
+	return
+}
+
+func (ds *memoryDatastore) GetRepositoryByPackageName(pkg string) (repository *Repository, err error) {
+	repositories := ds.rows.GetAllRepositories()
+
+	if len(repositories) == 0 {
+		err = fmt.Errorf("Datastore is empty. No package metadata to return.")
+		return
+	}
+
+	for _, repo := range repositories {
+		if repo.Package == pkg {
+			repository = repo
+		}
+	}
+	if repository == nil {
+		err = fmt.Errorf("datastore has no record of the specified package [%s]", pkg)
+	}
 	return
 }
 
@@ -266,7 +247,7 @@ func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata 
 		_, exists := remoteMap[repositoryName]
 		if !exists {
 			// This repository has been removed from the remote registry.
-			result.Removed = append(result.Removed, local.Packages...)
+			result.Removed = append(result.Removed, local.Package)
 		}
 	}
 
@@ -279,32 +260,4 @@ func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata 
 
 func (ds *memoryDatastore) GetAllOperatorSources() []*OperatorSourceKey {
 	return ds.rows.GetAllRows()
-}
-
-// validate ensures that no package is mentioned more than once in the list.
-// It also ensures that the package(s) specified in the list has a corresponding
-// manifest in the underlying datastore.
-func (ds *memoryDatastore) validate(packageIDs []string) ([]*SingleOperatorManifest, error) {
-	packages := make([]*SingleOperatorManifest, 0)
-	packageMap := map[string]*SingleOperatorManifest{}
-
-	// Get a list of all available package(s) across all operator source(s)
-	// in a map.
-	existing := ds.rows.GetAllPackagesMap()
-
-	for _, packageID := range packageIDs {
-		operatorPackage, exists := existing[packageID]
-		if !exists {
-			return nil, fmt.Errorf("package [%s] not found", packageID)
-		}
-
-		if _, exists := packageMap[packageID]; exists {
-			return nil, fmt.Errorf("package [%s] has been specified more than once", packageID)
-		}
-
-		packageMap[packageID] = operatorPackage
-		packages = append(packages, operatorPackage)
-	}
-
-	return packages, nil
 }

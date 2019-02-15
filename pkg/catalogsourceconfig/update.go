@@ -68,24 +68,12 @@ func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error
 		return fmt.Errorf("Unexpected cache miss")
 	}
 
-	// Delete the ConfigMap
-	name := in.Name
-	configMap := new(ConfigMapBuilder).
-		WithMeta(name, cachedCSCSpec.TargetNamespace).
-		ConfigMap()
-	err := r.client.Delete(context.TODO(), configMap)
-	if err != nil {
-		r.log.Errorf("Error %v deleting ConfigMap %s/%s", err, cachedCSCSpec.TargetNamespace, name)
-	}
-	r.log.Infof("Deleted ConfigMap %s/%s", cachedCSCSpec.TargetNamespace, name)
-
 	// Delete the CatalogSource
-	name = in.Name
+	name := in.Name
 	catalogSource := new(CatalogSourceBuilder).
 		WithMeta(name, cachedCSCSpec.TargetNamespace).
 		CatalogSource()
-	err = r.client.Delete(context.TODO(), catalogSource)
-	if err != nil {
+	if err := r.client.Delete(context.TODO(), catalogSource); err != nil {
 		r.log.Errorf("Error %v deleting CatalogSource %s/%s", err, cachedCSCSpec.TargetNamespace, name)
 	}
 	r.log.Infof("Deleted CatalogSource %s/%s", cachedCSCSpec.TargetNamespace, name)

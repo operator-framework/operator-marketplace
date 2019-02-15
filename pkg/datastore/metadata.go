@@ -20,17 +20,31 @@ type OperatorMetadata struct {
 }
 
 // Repository holds metadata associated with a repository in remote registry and
-// the list of operator package name(s) associated with the repository.
+// the operator package name associated with the repository.
 //
-// We need this object to relate operator package(s) that user subscribes to a
+// We need this object to relate the operator package that user subscribes to a
 // given repository in remote registry.
 type Repository struct {
 	// Metadata that uniquely identifies the given operator manifest in registry.
 	Metadata RegistryMetadata
 
-	// Packages is the list of operator package name(s) associated with the
+	// Package is the operator package name associated with the
 	// given repository.
-	Packages []string
+	Package string
+
+	// Since we enforce that each package repository can only be in one datasource, we can link opsrc here
+	// This is the metadata that uniquely identifies the Operator Source for this repository
+	Opsrc *OpsrcRef
+}
+
+// OpsrcRef defines the name and namespace for a given Operator Source. It is used
+// to define the 1:1 relationship between opsrc and repository name.
+type OpsrcRef struct {
+	// Name of the OperatorSource
+	Name string
+
+	// Namespace of the OperatorSource
+	Namespace string
 }
 
 // RegistryMetadata encapsulates metadata that uniquely describes the source of

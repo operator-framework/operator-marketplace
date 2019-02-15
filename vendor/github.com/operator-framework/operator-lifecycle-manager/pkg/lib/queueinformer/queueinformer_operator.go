@@ -3,40 +3,45 @@ package queueinformer
 import (
 	"fmt"
 
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/operatorclient"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/operatorclient"
 )
 
 // An Operator is a collection of QueueInformers
 // OpClient is used to establish the connection to kubernetes
 type Operator struct {
 	queueInformers []*QueueInformer
+	informers      []cache.SharedIndexInformer
 	OpClient       operatorclient.ClientInterface
+	Log            *logrus.Logger
 }
 
 // NewOperator creates a new Operator configured to manage the cluster defined in kubeconfig.
-func NewOperator(kubeconfig string, queueInformers ...*QueueInformer) (*Operator, error) {
-	opClient := operatorclient.NewClientFromConfig(kubeconfig)
+func NewOperator(kubeconfig string, logger *logrus.Logger, queueInformers ...*QueueInformer) (*Operator, error) {
+	opClient := operatorclient.NewClientFromConfig(kubeconfig, logger)
 	if queueInformers == nil {
 		queueInformers = []*QueueInformer{}
 	}
 	operator := &Operator{
 		OpClient:       opClient,
 		queueInformers: queueInformers,
+		Log:            logger,
 	}
 	return operator, nil
 }
 
-func NewOperatorFromClient(opClient operatorclient.ClientInterface, queueInformers ...*QueueInformer) (*Operator, error) {
+func NewOperatorFromClient(opClient operatorclient.ClientInterface, logger *logrus.Logger, queueInformers ...*QueueInformer) (*Operator, error) {
 	if queueInformers == nil {
 		queueInformers = []*QueueInformer{}
 	}
 	operator := &Operator{
 		OpClient:       opClient,
 		queueInformers: queueInformers,
+		Log:            logger,
 	}
 	return operator, nil
 }
@@ -49,54 +54,83 @@ func (o *Operator) RegisterQueueInformer(queueInformer *QueueInformer) {
 	o.queueInformers = append(o.queueInformers, queueInformer)
 }
 
-// Run starts the operator's control loops
-func (o *Operator) Run(stopc <-chan struct{}) error {
-	for _, queueInformer := range o.queueInformers {
-		defer queueInformer.queue.ShutDown()
+// RegisterInformer adds an Informer to this operator
+func (o *Operator) RegisterInformer(informer cache.SharedIndexInformer) {
+	if o.informers == nil {
+		o.informers = []cache.SharedIndexInformer{}
 	}
+	o.informers = append(o.informers, informer)
+}
 
-	errChan := make(chan error)
+// Run starts the operator's control loops
+func (o *Operator) Run(stopc <-chan struct{}) (ready, done chan struct{}) {
+	ready = make(chan struct{})
+	done = make(chan struct{})
+
 	go func() {
-		v, err := o.OpClient.KubernetesInterface().Discovery().ServerVersion()
-		if err != nil {
-			errChan <- errors.Wrap(err, "communicating with server failed")
+		defer func() {
+			close(ready)
+			close(done)
+		}()
+
+		for _, queueInformer := range o.queueInformers {
+			defer queueInformer.queue.ShutDown()
+		}
+
+		errChan := make(chan error)
+		go func() {
+			v, err := o.OpClient.KubernetesInterface().Discovery().ServerVersion()
+			if err != nil {
+				errChan <- errors.Wrap(err, "communicating with server failed")
+				return
+			}
+			o.Log.Infof("connection established. cluster-version: %v", v)
+			errChan <- nil
+		}()
+
+		var hasSyncedCheckFns []cache.InformerSynced
+		for _, queueInformer := range o.queueInformers {
+			hasSyncedCheckFns = append(hasSyncedCheckFns, queueInformer.informer.HasSynced)
+		}
+		for _, informer := range o.informers {
+			hasSyncedCheckFns = append(hasSyncedCheckFns, informer.HasSynced)
+		}
+
+		select {
+		case err := <-errChan:
+			if err != nil {
+				o.Log.Infof("operator not ready: %s", err.Error())
+				return
+			}
+			o.Log.Info("operator ready")
+		case <-stopc:
 			return
 		}
-		log.Infof("connection established. cluster-version: %v", v)
-		errChan <- nil
+
+		o.Log.Info("starting informers...")
+		for _, queueInformer := range o.queueInformers {
+			go queueInformer.informer.Run(stopc)
+		}
+
+		for _, informer := range o.informers {
+			go informer.Run(stopc)
+		}
+
+		o.Log.Info("waiting for caches to sync...")
+		if ok := cache.WaitForCacheSync(stopc, hasSyncedCheckFns...); !ok {
+			o.Log.Info("failed to wait for caches to sync")
+			return
+		}
+
+		o.Log.Info("starting workers...")
+		for _, queueInformer := range o.queueInformers {
+			go o.worker(queueInformer)
+		}
+		ready <- struct{}{}
+		<-stopc
 	}()
 
-	var hasSyncedCheckFns []cache.InformerSynced
-	for _, queueInformer := range o.queueInformers {
-		hasSyncedCheckFns = append(hasSyncedCheckFns, queueInformer.informer.HasSynced)
-	}
-
-	select {
-	case err := <-errChan:
-		if err != nil {
-			return err
-		}
-		log.Info("Operator ready")
-	case <-stopc:
-		return nil
-	}
-
-	log.Info("starting informers...")
-	for _, queueInformer := range o.queueInformers {
-		go queueInformer.informer.Run(stopc)
-	}
-
-	log.Info("waiting for caches to sync...")
-	if ok := cache.WaitForCacheSync(stopc, hasSyncedCheckFns...); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
-
-	log.Info("starting workers...")
-	for _, queueInformer := range o.queueInformers {
-		go o.worker(queueInformer)
-	}
-	<-stopc
-	return nil
+	return
 }
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
@@ -117,21 +151,20 @@ func (o *Operator) processNextWorkItem(loop *QueueInformer) bool {
 
 	// requeue five times on error
 	if err := o.sync(loop, key.(string)); err != nil && queue.NumRequeues(key.(string)) < 5 {
-		log.Infof("retrying %s", key)
+		o.Log.Infof("retrying %s", key)
 		utilruntime.HandleError(errors.Wrap(err, fmt.Sprintf("Sync %q failed", key)))
 		queue.AddRateLimited(key)
 		return true
 	}
 	queue.Forget(key)
 	if err := loop.HandleMetrics(); err != nil {
-		log.Error(err)
+		o.Log.Error(err)
 	}
 	return true
 }
 
 func (o *Operator) sync(loop *QueueInformer, key string) error {
-	logger := log.WithField("queue", loop.name).WithField("key", key)
-	logger.Info("getting from queue")
+	logger := o.Log.WithField("queue", loop.name).WithField("key", key)
 	obj, exists, err := loop.informer.GetIndexer().GetByKey(key)
 	if err != nil {
 		return err

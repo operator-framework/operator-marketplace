@@ -460,15 +460,14 @@
   revision = "f2aef88446f2a736fcb18db8ae57d708c52fdad0"
 
 [[projects]]
-  digest = "1:5d271f395b484ec1c134f87f588ca7efdeaa8d81ef57ba9625061067275692f5"
+  digest = "1:e5cf9bf3290e7d29c2487607dea04d98856e8850e26bae0d0d5a77e50fc77bf3"
   name = "github.com/operator-framework/operator-lifecycle-manager"
   packages = [
     "pkg/api/apis/operators",
     "pkg/api/apis/operators/v1alpha1",
   ]
   pruneopts = "NT"
-  revision = "8799f39ef342dc1ff7430eba7a88c1c3c70cbdcc"
-  version = "0.7.1"
+  revision = "e40d4f4f2ae47d20af1dd07572245b91dd4a5d50"
 
 [[projects]]
   digest = "1:25c007d9329a7240b7011d3f733dbfb5ec797af09c21a89a159439b0497e8e21"
@@ -1130,7 +1129,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/ghodss/yaml",
     "github.com/go-openapi/runtime",
     "github.com/go-openapi/runtime/client",
     "github.com/go-openapi/strfmt",
@@ -1150,19 +1148,26 @@
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
+    "k8s.io/api/rbac/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
-    "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
-    "k8s.io/apimachinery/pkg/api/meta",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/clock",
     "k8s.io/apimachinery/pkg/util/errors",
+    "k8s.io/apimachinery/pkg/util/intstr",
+    "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/apimachinery/pkg/watch",
+    "k8s.io/client-go/discovery",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+    "k8s.io/client-go/rest",
+    "k8s.io/client-go/util/flowcontrol",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",

@@ -2,10 +2,12 @@ package packagemanifest
 
 import (
 	"context"
+	"fmt"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,7 +29,7 @@ var _ rest.Getter = &PackageManifestStorage{}
 var _ rest.Lister = &PackageManifestStorage{}
 var _ rest.Scoper = &PackageManifestStorage{}
 
-// NewStorage returns an in-memory implementation of storage.Interface.
+// NewStorage returns a struct that implements methods needed for Kubernetes to satisfy API requests for the `PackageManifest` resource
 func NewStorage(groupResource schema.GroupResource, prov provider.PackageManifestProvider) *PackageManifestStorage {
 	return &PackageManifestStorage{
 		groupResource: groupResource,
@@ -52,24 +54,26 @@ func (m *PackageManifestStorage) NewList() runtime.Object {
 
 // Lister interface
 func (m *PackageManifestStorage) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	// get namespace
 	namespace := genericapirequest.NamespaceValue(ctx)
 
-	// get selectors
 	labelSelector := labels.Everything()
 	if options != nil && options.LabelSelector != nil {
 		labelSelector = options.LabelSelector
 	}
 
-	res, err := m.prov.ListPackageManifests(namespace)
+	name, err := nameFor(options.FieldSelector)
 	if err != nil {
-		return &v1alpha1.PackageManifestList{}, err
+		return nil, err
 	}
 
-	// filter results by label
+	res, err := m.prov.List(namespace)
+	if err != nil {
+		return nil, k8serrors.NewInternalError(err)
+	}
+
 	filtered := []v1alpha1.PackageManifest{}
 	for _, manifest := range res.Items {
-		if labelSelector.Matches(labels.Set(manifest.GetLabels())) {
+		if matches(manifest, name, labelSelector) {
 			filtered = append(filtered, manifest)
 		}
 	}
@@ -81,22 +85,35 @@ func (m *PackageManifestStorage) List(ctx context.Context, options *metainternal
 // Getter interface
 func (m *PackageManifestStorage) Get(ctx context.Context, name string, opts *metav1.GetOptions) (runtime.Object, error) {
 	namespace := genericapirequest.NamespaceValue(ctx)
-	manifest := v1alpha1.PackageManifest{}
-
-	pm, err := m.prov.GetPackageManifest(namespace, name)
-	if err != nil {
-		return nil, err
-	}
-	if pm != nil {
-		manifest = *pm
-	} else {
+	pm, err := m.prov.Get(namespace, name)
+	if err != nil || pm == nil {
 		return nil, k8serrors.NewNotFound(m.groupResource, name)
 	}
 
-	return &manifest, nil
+	return pm, nil
 }
 
 // Scoper interface
 func (m *PackageManifestStorage) NamespaceScoped() bool {
 	return true
+}
+
+func nameFor(fs fields.Selector) (string, error) {
+	if fs == nil {
+		fs = fields.Everything()
+	}
+	name := ""
+	if value, found := fs.RequiresExactMatch("metadata.name"); found {
+		name = value
+	} else if !fs.Empty() {
+		return "", fmt.Errorf("field label not supported: %s", fs.Requirements()[0].Field)
+	}
+	return name, nil
+}
+
+func matches(m v1alpha1.PackageManifest, name string, ls labels.Selector) bool {
+	if name == "" {
+		name = m.GetName()
+	}
+	return ls.Matches(labels.Set(m.GetLabels())) && m.GetName() == name
 }
