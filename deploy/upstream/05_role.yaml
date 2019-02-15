@@ -25,7 +25,10 @@ rules:
   resources:
   - catalogsources
   verbs:
-  - "*"
+  - get
+  - create
+  - delete
+  - update
 - apiGroups:
   - apps
   resources:
