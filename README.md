@@ -28,7 +28,7 @@ $ export REGISTRY=<SOME_REGISTRY> \
 ### Description
 The operator manages two CRDs: [OperatorSource](./deploy/crds/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crds/catalogsourceconfig.crd.yaml).
 
-`OperatorSource` is used to define the external datastore we are using to store operator bundles. At the moment we only support Quay's app-registry as our external datastore. Please see [here](deploy/examples/operatorsource.cr.yaml) for an example `OperatorSource`. The `endpoint` in the `spec` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry. The `registryNamespace` is the name of your app-registry namespace. `displayName` and `publisher` are optional and only needed for UI purposes. If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-auhenticate-private-repositories.md) documentation.
+`OperatorSource` is used to define the external datastore we are using to store operator bundles. At the moment we only support Quay's app-registry as our external datastore. Please see [here](deploy/examples/operatorsource.cr.yaml) for an example `OperatorSource`. The `endpoint` in the `spec` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry. The `registryNamespace` is the name of your app-registry namespace. `displayName` and `publisher` are optional and only needed for UI purposes. If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
 On adding an `OperatorSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/marketplace) in the OKD console. There is no equivalent UI in the Kubernetes console.
 
 `CatalogSourceConfig` is used to install an operator present in the `OperatorSource` to your cluster. Behind the scenes, it will configure an OLM `CatalogSource` so that the operator can then be managed by OLM. Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
@@ -107,7 +107,7 @@ Once created, the Marketplace operator will use the `OperatorSource` to download
 
 To run the e2e tests defined in test/e2e that were created using the operator-sdk, first ensure that you have the following additional prerequisites:
 
-1. The operator-sdk binary installed on your environment. You can get it by either downloading a released binary on the sdk release page here (https://github.com/operator-framework/operator-sdk/releases/) or by pulling down the source and compiling it locally (https://github.com/operator-framework/operator-sdk).
+1. The operator-sdk binary installed on your environment. You can get it by either downloading a released binary on the sdk release page [here](https://github.com/operator-framework/operator-sdk/releases/) or by pulling down the source and compiling it [locally](https://github.com/operator-framework/operator-sdk).
 2. A namespace on your cluster to run the tests on, e.g.
 ```bash
     $ oc create namespace test-namespace
