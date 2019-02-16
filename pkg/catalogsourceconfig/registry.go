@@ -361,10 +361,11 @@ func getCommand(packages string, sources string) []string {
 	return []string{"appregistry-server", "-s", sources, "-o", packages}
 }
 
-// getRules returns the PolicyRule needed to access the given operatorSources
+// getRules returns the PolicyRule needed to access the given operatorSources and secrets
 // from the registry pod
 func getRules(operatorSources []string) []rbac.PolicyRule {
 	return []rbac.PolicyRule{
 		NewRule([]string{"get"}, []string{"marketplace.redhat.com"}, []string{"operatorsources"}, operatorSources),
+		NewRule([]string{"get"}, []string{""}, []string{"secrets"}, nil),
 	}
 }
