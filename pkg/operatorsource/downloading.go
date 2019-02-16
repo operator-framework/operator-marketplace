@@ -9,15 +9,17 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewDownloadingReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Downloading" phase.
-func NewDownloadingReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer) Reconciler {
+func NewDownloadingReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, client client.Client) Reconciler {
 	return &downloadingReconciler{
 		logger:    logger,
 		factory:   factory,
 		datastore: datastore,
+		client:    client,
 	}
 }
 
@@ -27,6 +29,7 @@ type downloadingReconciler struct {
 	logger    *log.Entry
 	factory   appregistry.ClientFactory
 	datastore datastore.Writer
+	client    client.Client
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Downloading" phase.
@@ -57,7 +60,13 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	r.logger.Infof("Downloading from [%s]", in.Spec.Endpoint)
 
-	registry, err := r.factory.New(in.Spec.Type, in.Spec.Endpoint)
+	options, err := SetupAppRegistryOptions(r.client, &in.Spec, in.Namespace)
+	if err != nil {
+		nextPhase = phase.GetNextWithMessage(phase.OperatorSourceDownloading, err.Error())
+		return
+	}
+
+	registry, err := r.factory.New(options)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.OperatorSourceDownloading, err.Error())
 		return
