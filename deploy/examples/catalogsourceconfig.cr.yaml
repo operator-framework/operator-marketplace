@@ -1,9 +1,9 @@
 apiVersion: "marketplace.redhat.com/v1alpha1"
 kind: "CatalogSourceConfig"
 metadata:
-  name: "installed-community-operators"
-  namespace: "openshift-marketplace"
+  name: "installed-upstream-community-operators"
+  namespace: "marketplace"
 spec:
-  targetNamespace: openshift-operators
-  packages: descheduler,jaeger
+  targetNamespace: local-operators
+  packages: jaeger
 
