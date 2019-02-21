@@ -2,6 +2,7 @@ package catalogsourceconfig
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -12,7 +13,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -78,7 +78,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 // reconcileCatalogSource ensures a CatalogSource exists with all the
 // resources it requires.
 func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
-	// Ensure that at least one package in the spec is available in the datastore
+	// Ensure that the packages in the spec are available in the datastore
 	err := r.checkPackages(csc)
 	if err != nil {
 		return err
@@ -124,22 +124,23 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 	return nil
 }
 
-// checkPackages returns an error if there no valid packages present in the
-// datastore.
+// checkPackages returns an error if there are packages missing from the
+// datastore but listed in the spec.
 func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig) error {
-	atLeastOneFound := false
-	errors := []error{}
+	missingPackages := []string{}
 	packageIDs := GetPackageIDs(csc.Spec.Packages)
 	for _, packageID := range packageIDs {
 		if _, err := r.reader.Read(packageID); err != nil {
-			errors = append(errors, err)
+			missingPackages = append(missingPackages, packageID)
 			continue
 		}
-		atLeastOneFound = true
 	}
 
-	if atLeastOneFound == false {
-		return utilerrors.NewAggregate(errors)
+	if len(missingPackages) > 0 {
+		return fmt.Errorf(
+			"Still resolving package(s) - %s. Please make sure these are valid packages.",
+			strings.Join(missingPackages, ","),
+		)
 	}
 	return nil
 }
