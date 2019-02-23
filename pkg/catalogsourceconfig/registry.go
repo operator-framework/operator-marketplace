@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -91,8 +93,8 @@ func (r *registry) GetAddress() string {
 	return r.address
 }
 
-// ensureDeployment ensures that registry Deployment is present that for serving
-// a database consisting of the packages from the given operatorSources
+// ensureDeployment ensures that registry Deployment is present for serving
+// the the grpc interface for the packages from the given operatorSources
 func (r *registry) ensureDeployment(operatorSources string) error {
 	registryCommand := getCommand(r.csc.Spec.Packages, operatorSources)
 	deployment := new(DeploymentBuilder).WithTypeMeta().Deployment()
@@ -105,10 +107,27 @@ func (r *registry) ensureDeployment(operatorSources string) error {
 		}
 		r.log.Infof("Created Deployment %s with registry command: %s", deployment.GetName(), registryCommand)
 	} else {
-		// Update the pod specification
+		// Scale down the deployment. This is required so that we get updates
+		// from Quay during the sync cycle when packages have not been added or
+		// removed from the spec.
+		var replicas int32
+		deployment.Spec.Replicas = &replicas
+		if err = r.client.Update(context.TODO(), deployment); err != nil {
+			r.log.Errorf("Failed to update Deployment %s for scale down: %v", deployment.GetName(), err)
+			return err
+		}
+
+		// Wait for the deployment to scale down. We need to get the latest version of the object after
+		// the update, so we use the object returned here for scaling up.
+		if deployment, err = r.waitForDeploymentScaleDown(2*time.Second, 1*time.Minute); err != nil {
+			r.log.Errorf("Failed to scale down Deployment %s : %v", deployment.GetName(), err)
+			return err
+		}
+
+		replicas = 1
+		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Template = r.newPodTemplateSpec(registryCommand)
-		err = r.client.Update(context.TODO(), deployment)
-		if err != nil {
+		if err = r.client.Update(context.TODO(), deployment); err != nil {
 			r.log.Errorf("Failed to update Deployment %s : %v", deployment.GetName(), err)
 			return err
 		}
@@ -354,6 +373,31 @@ func (r *registry) newServiceSpec() core.ServiceSpec {
 		},
 		Selector: r.getLabel(),
 	}
+}
+
+// waitForDeploymentScaleDown waits for the deployment to scale down to zero within the timeout duration.
+func (r *registry) waitForDeploymentScaleDown(retryInterval, timeout time.Duration) (*apps.Deployment, error) {
+	deployment := apps.Deployment{}
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		err = r.client.Get(context.TODO(), r.csc.key(), &deployment)
+		if err != nil {
+			r.log.Errorf("Deployment %s not found: %v", deployment.GetName(), err)
+			return false, err
+		}
+
+		if deployment.Status.AvailableReplicas == 0 {
+			return true, nil
+		}
+		r.log.Infof("Waiting for scale down of Deployment %s (%d/0)\n",
+			deployment.GetName(), deployment.Status.AvailableReplicas)
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	r.log.Infof("Deployment %s has scaled down (%d/%d)",
+		deployment.GetName(), deployment.Status.AvailableReplicas, *deployment.Spec.Replicas)
+	return &deployment, nil
 }
 
 // getCommand returns the command used to launch the registry server
