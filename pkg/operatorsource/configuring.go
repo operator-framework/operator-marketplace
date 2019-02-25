@@ -78,7 +78,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	if err == nil {
 		nextPhase = phase.GetNext(phase.Succeeded)
-		r.logger.Info("The object has been successfully reconciled")
+		r.logger.Info("CatalogSourceConfig object has been created successfully")
 
 		return
 	}
@@ -115,8 +115,8 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		return
 	}
 
-	nextPhase = phase.GetNext(phase.Succeeded)
-	r.logger.Info("The object has been successfully reconciled")
+	r.logger.Info("CatalogSourceConfig object has been updated successfully")
 
+	nextPhase = phase.GetNext(phase.Succeeded)
 	return
 }

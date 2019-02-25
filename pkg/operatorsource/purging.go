@@ -7,7 +7,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,19 +51,12 @@ func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 
 	out = in.DeepCopy()
 
-	r.logger.Info("Purging all resource(s)")
+	// We will purge the datastore and leave the CatalogSourceConfig object
+	// alone. It will be updated accordingly by the reconciliation loop.
 
 	r.datastore.RemoveOperatorSource(in.GetUID())
 
-	builder := &CatalogSourceConfigBuilder{}
-	csc := builder.WithTypeMeta().
-		WithNamespacedName(in.Namespace, in.Name).
-		CatalogSourceConfig()
-
-	if err = r.client.Delete(ctx, csc); err != nil && !k8s_errors.IsNotFound(err) {
-		nextPhase = phase.GetNextWithMessage(phase.OperatorSourcePurging, err.Error())
-		return
-	}
+	r.logger.Info("Purged datastore. No change(s) were made to corresponding CatalogSourceConfig")
 
 	// Since all observable states stored in the Status resource might already
 	// be stale, we should Reset everything in Status except for 'Current Phase'
