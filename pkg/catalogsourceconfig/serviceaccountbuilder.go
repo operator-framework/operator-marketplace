@@ -36,11 +36,17 @@ func (b *ServiceAccountBuilder) WithMeta(name, namespace string) *ServiceAccount
 	return b
 }
 
-// WithOwner sets the owner of the ServiceAccount object to the given owner.
-func (b *ServiceAccountBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *ServiceAccountBuilder {
-	b.sa.SetOwnerReferences(append(b.sa.GetOwnerReferences(),
-		[]meta.OwnerReference{
-			*meta.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the ServiceAccount object to the given owner.
+func (b *ServiceAccountBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *ServiceAccountBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.sa.GetLabels() {
+		labels[key] = value
+	}
+
+	b.sa.SetLabels(labels)
 	return b
 }

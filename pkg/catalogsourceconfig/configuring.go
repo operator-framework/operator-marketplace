@@ -153,7 +153,7 @@ func GetPackageIDs(csIDs string) []string {
 // newCatalogSource returns a CatalogSource object.
 func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, address string) *olm.CatalogSource {
 	builder := new(CatalogSourceBuilder).
-		WithOwner(csc).
+		WithOwnerLabel(csc).
 		WithMeta(csc.Name, csc.Spec.TargetNamespace).
 		WithSpec(olm.SourceTypeGrpc, address, csc.Spec.DisplayName, csc.Spec.Publisher)
 

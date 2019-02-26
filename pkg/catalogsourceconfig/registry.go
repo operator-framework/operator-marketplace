@@ -273,7 +273,7 @@ func (r *registry) getSubjects() []rbac.Subject {
 func (r *registry) newDeployment(registryCommand []string) *apps.Deployment {
 	return new(DeploymentBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwner(r.csc.CatalogSourceConfig).
+		WithOwnerLabel(r.csc.CatalogSourceConfig).
 		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand)).
 		Deployment()
 }
@@ -329,7 +329,7 @@ func (r *registry) newPodTemplateSpec(registryCommand []string) core.PodTemplate
 func (r *registry) newRole(operatorSources []string) *rbac.Role {
 	return new(RoleBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwner(r.csc.CatalogSourceConfig).
+		WithOwnerLabel(r.csc.CatalogSourceConfig).
 		WithRules(getRules(operatorSources)).
 		Role()
 }
@@ -338,7 +338,7 @@ func (r *registry) newRole(operatorSources []string) *rbac.Role {
 func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
 	return new(RoleBindingBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwner(r.csc.CatalogSourceConfig).
+		WithOwnerLabel(r.csc.CatalogSourceConfig).
 		WithSubjects(r.getSubjects()).
 		WithRoleRef(roleName).
 		RoleBinding()
@@ -348,7 +348,7 @@ func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
 func (r *registry) newService() *core.Service {
 	return new(ServiceBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwner(r.csc.CatalogSourceConfig).
+		WithOwnerLabel(r.csc.CatalogSourceConfig).
 		WithSpec(r.newServiceSpec()).
 		Service()
 }
@@ -357,7 +357,7 @@ func (r *registry) newService() *core.Service {
 func (r *registry) newServiceAccount() *core.ServiceAccount {
 	return new(ServiceAccountBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwner(r.csc.CatalogSourceConfig).
+		WithOwnerLabel(r.csc.CatalogSourceConfig).
 		ServiceAccount()
 }
 

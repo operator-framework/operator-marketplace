@@ -36,12 +36,18 @@ func (b *RoleBuilder) WithMeta(name, namespace string) *RoleBuilder {
 	return b
 }
 
-// WithOwner sets the owner of the Role object to the given owner.
-func (b *RoleBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *RoleBuilder {
-	b.role.SetOwnerReferences(append(b.role.GetOwnerReferences(),
-		[]meta.OwnerReference{
-			*meta.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the Role object to the given owner.
+func (b *RoleBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *RoleBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.role.GetLabels() {
+		labels[key] = value
+	}
+
+	b.role.SetLabels(labels)
 	return b
 }
 

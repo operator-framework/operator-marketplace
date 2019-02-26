@@ -37,12 +37,18 @@ func (b *DeploymentBuilder) WithMeta(name, namespace string) *DeploymentBuilder 
 	return b
 }
 
-// WithOwner sets the owner of the Deployment object to the given owner.
-func (b *DeploymentBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *DeploymentBuilder {
-	b.deployment.SetOwnerReferences(append(b.deployment.GetOwnerReferences(),
-		[]meta.OwnerReference{
-			*meta.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the Deployment object to the given owner.
+func (b *DeploymentBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *DeploymentBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.deployment.GetLabels() {
+		labels[key] = value
+	}
+
+	b.deployment.SetLabels(labels)
 	return b
 }
 

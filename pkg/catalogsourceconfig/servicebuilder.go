@@ -35,12 +35,18 @@ func (b *ServiceBuilder) WithMeta(name, namespace string) *ServiceBuilder {
 	return b
 }
 
-// WithOwner sets the owner of the CatalogSource object to the given owner.
-func (b *ServiceBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *ServiceBuilder {
-	b.service.SetOwnerReferences(append(b.service.GetOwnerReferences(),
-		[]metav1.OwnerReference{
-			*metav1.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *ServiceBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *ServiceBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.service.GetLabels() {
+		labels[key] = value
+	}
+
+	b.service.SetLabels(labels)
 	return b
 }
 

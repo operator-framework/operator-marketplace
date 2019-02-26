@@ -6,6 +6,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// OpsrcOwnerNameLabel is the label used to mark ownership over resources
+// that are owned by the CatalogSourceConfig. When this label is set, the reconciler
+// should handle these resources when the CatalogSourceConfig is deleted.
+const CscOwnerNameLabel string = "csc-owner-name"
+
+// OpsrcOwnerNamespaceLabel is the label used to mark ownership over resources
+// that are owned by the CatalogSourceConfig. When this label is set, the reconciler
+// should handle these resources when the CatalogSourceConfig is deleted.
+const CscOwnerNamespaceLabel string = "csc-owner-namespace"
+
 // CatalogSourceBuilder builds a new CatalogSource object.
 type CatalogSourceBuilder struct {
 	cs olm.CatalogSource
@@ -49,6 +59,10 @@ func (b *CatalogSourceBuilder) WithOLMLabels(cscLabels map[string]string) *Catal
 		labels[key] = value
 	}
 
+	for key, value := range b.cs.GetLabels() {
+		labels[key] = value
+	}
+
 	b.WithTypeMeta()
 	objectMeta := b.cs.GetObjectMeta()
 	if objectMeta == nil {
@@ -58,12 +72,18 @@ func (b *CatalogSourceBuilder) WithOLMLabels(cscLabels map[string]string) *Catal
 	return b
 }
 
-// WithOwner sets the owner of the CatalogSource object to the given owner.
-func (b *CatalogSourceBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *CatalogSourceBuilder {
-	b.cs.SetOwnerReferences(append(b.cs.GetOwnerReferences(),
-		[]metav1.OwnerReference{
-			*metav1.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *CatalogSourceBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *CatalogSourceBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.cs.GetLabels() {
+		labels[key] = value
+	}
+
+	b.cs.SetLabels(labels)
 	return b
 }
 
