@@ -25,12 +25,18 @@ func (b *PodTemplateBuilder) WithObjectMeta(name, namespace string) *PodTemplate
 	return b
 }
 
-// WithOwner sets the owner of the PodTemplate object to the given owner.
-func (b *PodTemplateBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *PodTemplateBuilder {
-	b.pt.SetOwnerReferences(append(b.pt.GetOwnerReferences(),
-		[]meta.OwnerReference{
-			*meta.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the PodTemplate object to the given owner.
+func (b *PodTemplateBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *PodTemplateBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.pt.GetLabels() {
+		labels[key] = value
+	}
+
+	b.pt.SetLabels(labels)
 	return b
 }
 

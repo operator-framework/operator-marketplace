@@ -6,6 +6,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,6 +49,12 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	// Delete the operator source manifests.
 	r.datastore.RemoveOperatorSource(out.UID)
 
+	// Delete the owned CatalogSourceConfig
+	err = r.deleteCreatedResources(ctx, in.Name, in.Namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Remove the opsrc finalizer from the object.
 	out.RemoveFinalizer()
 
@@ -61,4 +68,31 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 
 	return out, nil, nil
+}
+
+// Delete all resources owned by the operator source
+func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, namespace string) (err error) {
+	labelMap := map[string]string{
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	labelSelector := labels.SelectorFromSet(labelMap)
+	options := &client.ListOptions{LabelSelector: labelSelector}
+
+	// Delete Catalog Source Configs
+	catalogSourceConfigs := &v1alpha1.CatalogSourceConfigList{}
+	err = r.client.List(ctx, options, catalogSourceConfigs)
+	if err != nil {
+		return err
+	}
+
+	for _, catalogSourceConfig := range catalogSourceConfigs.Items {
+		r.logger.Infof("Removing catalogSourceConfig %s from namespace %s", catalogSourceConfig.Name, catalogSourceConfig.Namespace)
+		err = r.client.Delete(ctx, &catalogSourceConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	return
 }

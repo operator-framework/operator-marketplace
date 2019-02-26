@@ -36,12 +36,18 @@ func (b *RoleBindingBuilder) WithMeta(name, namespace string) *RoleBindingBuilde
 	return b
 }
 
-// WithOwner sets the owner of the RoleBinding object to the given owner.
-func (b *RoleBindingBuilder) WithOwner(owner *v1alpha1.CatalogSourceConfig) *RoleBindingBuilder {
-	b.rb.SetOwnerReferences(append(b.rb.GetOwnerReferences(),
-		[]meta.OwnerReference{
-			*meta.NewControllerRef(owner, owner.GroupVersionKind()),
-		}[0]))
+// WithOwnerLabel sets the owner label of the RoleBinding object to the given owner.
+func (b *RoleBindingBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *RoleBindingBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      owner.Name,
+		CscOwnerNamespaceLabel: owner.Namespace,
+	}
+
+	for key, value := range b.rb.GetLabels() {
+		labels[key] = value
+	}
+
+	b.rb.SetLabels(labels)
 	return b
 }
 

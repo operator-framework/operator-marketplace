@@ -12,6 +12,16 @@ import (
 // if it is set to "true".
 const DatastoreLabel string = "opsrc-datastore"
 
+// OpsrcOwnerNameLabel is the label used to mark ownership over resources
+// that are owned by the OperatorSource. When this label is set, the reconciler
+// should handle these resources when the OperatorSource is deleted.
+const OpsrcOwnerNameLabel string = "opsrc-owner-name"
+
+// OpsrcOwnerNamespaceLabel is the label used to mark ownership over resources
+// that are owned by the OperatorSource. When this label is set, the reconciler
+// should handle these resources when the OperatorSource is deleted.
+const OpsrcOwnerNamespaceLabel string = "opsrc-owner-namespace"
+
 // CatalogSourceConfigBuilder builds a new CatalogSourceConfig type object.
 type CatalogSourceConfigBuilder struct {
 	object v1alpha1.CatalogSourceConfig
@@ -53,24 +63,27 @@ func (b *CatalogSourceConfigBuilder) WithLabels(opsrcLabels map[string]string) *
 		labels[key] = value
 	}
 
+	for key, value := range b.object.GetLabels() {
+		labels[key] = value
+	}
+
 	b.object.SetLabels(labels)
 
 	return b
 }
 
-// WithOwner sets the owner of the CatalogSourceConfig object to the given owner.
-func (b *CatalogSourceConfigBuilder) WithOwner(owner *v1alpha1.OperatorSource) *CatalogSourceConfigBuilder {
-	trueVar := true
-	ownerReference := metav1.OwnerReference{
-		APIVersion: owner.APIVersion,
-		Kind:       owner.Kind,
-		Name:       owner.Name,
-		UID:        owner.UID,
-		Controller: &trueVar,
+// WithOwnerLabel sets the owner label of the CatalogSourceConfig object to the given owner.
+func (b *CatalogSourceConfigBuilder) WithOwnerLabel(owner *v1alpha1.OperatorSource) *CatalogSourceConfigBuilder {
+	labels := map[string]string{
+		OpsrcOwnerNameLabel:      owner.Name,
+		OpsrcOwnerNamespaceLabel: owner.Namespace,
 	}
-	ownerReferences := append(b.object.GetOwnerReferences(), ownerReference)
-	b.object.SetOwnerReferences(ownerReferences)
 
+	for key, value := range b.object.GetLabels() {
+		labels[key] = value
+	}
+
+	b.object.SetLabels(labels)
 	return b
 }
 

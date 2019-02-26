@@ -13,7 +13,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -38,24 +37,16 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 
 	labelsWant := map[string]string{
-		"opsrc-group": "Community",
+		"opsrc-group":                           "Community",
+		operatorsource.OpsrcOwnerNameLabel:      "foo",
+		operatorsource.OpsrcOwnerNamespaceLabel: "marketplace",
 	}
 	opsrcIn.SetLabels(labelsWant)
 
 	packages := "a,b,c"
 	datastore.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
-	trueVar := true
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
-	cscWant.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-		metav1.OwnerReference{
-			APIVersion: opsrcIn.APIVersion,
-			Kind:       opsrcIn.Kind,
-			Name:       opsrcIn.Name,
-			UID:        opsrcIn.UID,
-			Controller: &trueVar,
-		},
-	}
 	cscWant.Spec = v1alpha1.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
@@ -92,7 +83,9 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
 
 	labelsWant := map[string]string{
-		"opsrc-group": "Community",
+		"opsrc-group":                           "Community",
+		operatorsource.OpsrcOwnerNameLabel:      "foo",
+		operatorsource.OpsrcOwnerNamespaceLabel: "marketplace",
 	}
 	opsrcIn.SetLabels(labelsWant)
 
@@ -107,17 +100,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	cscGet := v1alpha1.CatalogSourceConfig{}
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, &cscGet).Return(nil)
 
-	trueVar := true
 	cscWant := helperNewCatalogSourceConfigWithLabels("", "", labelsWant)
-	cscWant.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-		metav1.OwnerReference{
-			APIVersion: opsrcIn.APIVersion,
-			Kind:       opsrcIn.Kind,
-			Name:       opsrcIn.Name,
-			UID:        opsrcIn.UID,
-			Controller: &trueVar,
-		},
-	}
 	cscWant.Spec = v1alpha1.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
