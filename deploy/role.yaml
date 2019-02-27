@@ -28,6 +28,7 @@ rules:
   - create
   - delete
   - update
+  - list
 - apiGroups:
   - operators.coreos.com
   resources:
@@ -37,6 +38,7 @@ rules:
   - create
   - delete
   - update
+  - list
 - apiGroups:
   - apps
   resources:
@@ -46,6 +48,7 @@ rules:
   - create
   - delete
   - update
+  - list
 - apiGroups:
   - config.openshift.io
   resources:
@@ -71,3 +74,4 @@ rules:
   - create
   - delete
   - update
+  - list
