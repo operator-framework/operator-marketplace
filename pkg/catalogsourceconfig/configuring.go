@@ -128,7 +128,7 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 // datastore but listed in the spec.
 func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig) error {
 	missingPackages := []string{}
-	packageIDs := GetPackageIDs(csc.Spec.Packages)
+	packageIDs := csc.GetPackageIDs()
 	for _, packageID := range packageIDs {
 		if _, err := r.reader.Read(packageID); err != nil {
 			missingPackages = append(missingPackages, packageID)
@@ -143,11 +143,6 @@ func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig)
 		)
 	}
 	return nil
-}
-
-// GetPackageIDs returns a list of IDs from a comma separated string of IDs.
-func GetPackageIDs(csIDs string) []string {
-	return strings.Split(csIDs, ",")
 }
 
 // newCatalogSource returns a CatalogSource object.

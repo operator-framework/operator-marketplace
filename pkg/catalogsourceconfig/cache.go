@@ -56,8 +56,8 @@ func (c *cache) IsEntryStale(csc *v1alpha1.CatalogSourceConfig) (bool, bool) {
 		return true, true
 	}
 
-	cachedPackages := GetPackageIDs(spec.Packages)
-	inPackageIDs := GetPackageIDs(csc.Spec.Packages)
+	cachedPackages := spec.GetPackageIDs()
+	inPackageIDs := csc.GetPackageIDs()
 
 	if len(cachedPackages) != len(inPackageIDs) {
 		return true, false

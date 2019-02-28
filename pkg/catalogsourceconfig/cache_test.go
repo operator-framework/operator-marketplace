@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 // TestGet tests if an CatalogSourceConfig object inserted into the cache is found.
 func TestGet(t *testing.T) {
 	spec, found := cache.Get(csc)
-	outPackages := catalogsourceconfig.GetPackageIDs(spec.Packages)
+	outPackages := spec.GetPackageIDs()
 	assert.ElementsMatch(t, inPackages, outPackages)
 	assert.True(t, found)
 }

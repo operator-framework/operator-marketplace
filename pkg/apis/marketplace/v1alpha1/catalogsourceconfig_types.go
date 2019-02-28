@@ -99,7 +99,7 @@ func (csc *CatalogSourceConfig) EnsurePublisher() {
 
 // GetPackageIDs returns the list of package(s) specified.
 func (csc *CatalogSourceConfig) GetPackageIDs() []string {
-	return strings.Split(csc.Spec.Packages, ",")
+	return strings.Split(strings.Replace(csc.Spec.Packages, " ", "", -1), ",")
 }
 
 // GetTargetNamespace returns the TargetNamespace where the OLM resources will
@@ -122,4 +122,9 @@ func (csc *CatalogSourceConfig) RemoveOwner(ownerUID types.UID) {
 	}
 
 	csc.SetOwnerReferences(owners)
+}
+
+// GetPackageIDs returns the list of package(s) specified.
+func (spec *CatalogSourceConfigSpec) GetPackageIDs() []string {
+	return strings.Split(strings.Replace(spec.Packages, " ", "", -1), ",")
 }

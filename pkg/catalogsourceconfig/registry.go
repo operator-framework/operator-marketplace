@@ -241,7 +241,7 @@ func (r *registry) getLabel() map[string]string {
 func (r *registry) getOperatorSources() (string, []string) {
 	var opsrcString string
 	var opsrcList []string
-	for _, packageID := range GetPackageIDs(r.csc.Spec.Packages) {
+	for _, packageID := range r.csc.Spec.GetPackageIDs() {
 		opsrcMeta, err := r.reader.Read(packageID)
 		if err != nil {
 			r.log.Errorf("Error %v reading package %s", err, packageID)
@@ -402,7 +402,7 @@ func (r *registry) waitForDeploymentScaleDown(retryInterval, timeout time.Durati
 
 // getCommand returns the command used to launch the registry server
 func getCommand(packages string, sources string) []string {
-	return []string{"appregistry-server", "-s", sources, "-o", packages}
+	return []string{"appregistry-server", "-s", sources, "-o", strings.Replace(packages, " ", "", -1)}
 }
 
 // getRules returns the PolicyRule needed to access the given operatorSources and secrets
