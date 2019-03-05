@@ -53,7 +53,7 @@ func (s *registrySyncer) Sync(stop <-chan struct{}) {
 	for {
 		select {
 		case <-time.After(s.resyncInterval):
-			log.Debug("[sync] Checking for operator source update(s) in remote registry")
+			log.Info("[sync] Checking for operator source update(s) in remote registry")
 			s.poller.Poll()
 
 		case <-stop:

@@ -102,6 +102,12 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 		WithOwnerLabel(in).
 		CatalogSourceConfig()
 
+	// Drop the status to force a CatalogSourceConfig update. This is to account
+	// for the the scenario where a Quay namespace has changed without
+	// app-registry repositories being added or removed but with existing
+	// repositories being updated.
+	cscUpdate.Status = v1alpha1.CatalogSourceConfigStatus{}
+
 	err = r.client.Update(ctx, cscUpdate)
 	if err != nil {
 		r.logger.Errorf("Unexpected error while updating CatalogSourceConfig: %s", err.Error())

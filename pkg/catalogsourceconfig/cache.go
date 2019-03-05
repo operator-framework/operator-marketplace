@@ -12,6 +12,11 @@ import (
 // using the Operator Registry as the data store for CatalogSources. If this
 // is required even after, then it should be replaced with an existing thread
 // safe caching library like go-cache or cash.
+//
+// TODO: Make the cache app-registry version aware so that IsEntryStale() will
+// fire even for the scenario where a Quay namespace has changed without
+// app-registry repositories being added or removed but with existing
+// repositories being updated.
 type cache struct {
 	entries map[types.UID]*v1alpha1.CatalogSourceConfigSpec
 }
