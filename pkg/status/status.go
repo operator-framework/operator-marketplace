@@ -7,7 +7,6 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	cohelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
-	"github.com/operator-framework/operator-marketplace/version"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -24,16 +23,23 @@ type status struct {
 	coAPINotPresent bool
 	namespace       string
 	clusterOperator *configv1.ClusterOperator
+	version         string
 }
 
 // Status is the interface to report the health of the operator to CVO
 type Status interface {
 	SetFailing(message string)
 	SetAvailable(message string)
+	SetProgressing(message string)
+	GetVersion() string
+}
+
+func (s *status) GetVersion() string {
+	return s.version
 }
 
 // New returns an initialized Status
-func New(cfg *rest.Config, mgr manager.Manager, namespace string) Status {
+func New(cfg *rest.Config, mgr manager.Manager, namespace string, version string) Status {
 	// The default client serves read requests from the cache which contains
 	// objects only from the namespace the operator is watching. Given we need
 	// to query CRDs which are cluster wide, we add the CRDs to the manager's
@@ -70,6 +76,7 @@ func New(cfg *rest.Config, mgr manager.Manager, namespace string) Status {
 		configClient:    configClient,
 		coAPINotPresent: coAPINotPresent,
 		namespace:       namespace,
+		version:         version,
 	}
 }
 
@@ -81,6 +88,11 @@ func (s *status) SetFailing(message string) {
 // SetAvailable reports that the operator is available to process events
 func (s *status) SetAvailable(message string) {
 	s.setStatus(configv1.OperatorAvailable, message)
+}
+
+// SetProgressing reports that the operator is being deployed
+func (s *status) SetProgressing(message string) {
+	s.setStatus(configv1.OperatorProgressing, message)
 }
 
 // ensureClusterOperator ensures that a ClusterOperator CR is present on the
@@ -127,7 +139,7 @@ func (s *status) setOperandVersion() {
 	// Report the operator version
 	operatorVersion := configv1.OperandVersion{
 		Name:    "operator",
-		Version: version.Version,
+		Version: s.version,
 	}
 	operatorhelpers.SetOperandVersion(&s.clusterOperator.Status.Versions, operatorVersion)
 }
@@ -138,8 +150,10 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 
 	availableStatus := configv1.ConditionFalse
 	failingStatus := configv1.ConditionFalse
+	progressingStatus := configv1.ConditionFalse
 	availableMessage := ""
 	failingMessage := ""
+	progressingMessage := ""
 
 	switch condition {
 	case configv1.OperatorAvailable:
@@ -149,6 +163,10 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 	case configv1.OperatorFailing:
 		failingStatus = configv1.ConditionTrue
 		failingMessage = message
+
+	case configv1.OperatorProgressing:
+		progressingStatus = configv1.ConditionTrue
+		progressingMessage = message
 	}
 
 	time := v1.Now()
@@ -157,8 +175,8 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 	// the relevant ClusterStatusConditionType's Status set to ConditionTrue
 	cohelpers.SetStatusCondition(&s.clusterOperator.Status.Conditions, configv1.ClusterOperatorStatusCondition{
 		Type:               configv1.OperatorProgressing,
-		Status:             configv1.ConditionFalse,
-		Message:            "",
+		Status:             progressingStatus,
+		Message:            progressingMessage,
 		LastTransitionTime: time,
 	})
 	cohelpers.SetStatusCondition(&s.clusterOperator.Status.Conditions, configv1.ClusterOperatorStatusCondition{
