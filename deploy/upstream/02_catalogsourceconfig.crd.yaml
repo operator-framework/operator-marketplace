@@ -17,14 +17,6 @@ spec:
   scope: Namespaced
   version: v1alpha1
   additionalPrinterColumns:
-  - name: TargetNamespace
-    type: string
-    description: The namespace where the operators will be enabled
-    JSONPath: .spec.targetNamespace
-  - name: Packages
-    type: string
-    description: List of operator(s) which will be enabled in the target namespace
-    JSONPath: .spec.packages
   - name: Status
     type: string
     description: Current status of the CatalogSourceConfig
