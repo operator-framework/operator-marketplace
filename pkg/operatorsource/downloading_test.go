@@ -30,8 +30,9 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	kubeclient := mocks.NewKubeClient(controller)
+	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -58,6 +59,12 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	// We expect the datastore to save downloaded manifest(s) returned by the registry.
 	writer.EXPECT().Write(opsrcIn, manifestExpected).Return(1, nil)
 
+	// The first time we ask for the packages from the datastore, we expect to get nothing.
+	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("")
+
+	// Then we expect to call send refresh, because the package list was empty.
+	refresher.EXPECT().SendRefresh()
+
 	// We expect datastore to return the specified list of packages.
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(opsrcWant.Status.Packages)
 
@@ -77,8 +84,9 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	kubeclient := mocks.NewKubeClient(controller)
+	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)

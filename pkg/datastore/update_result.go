@@ -18,6 +18,12 @@ func NewPackageUpdateAggregator() *PackageUpdateAggregator {
 	}
 }
 
+func NewPackageRefreshNotification() *PackageUpdateAggregator {
+	return &PackageUpdateAggregator{
+		refreshNeeded: true,
+	}
+}
+
 // UpdateResult holds information related to what has changed in the remote
 // registry associated with an operator source.
 type UpdateResult struct {
@@ -50,14 +56,24 @@ type PackageUpdateNotification interface {
 
 	// IsUpdated returns true if the specified package has a new version.
 	IsUpdated(pkg string) bool
+
+	// IsRefreshNotification returns true if the notification is used to update the
+	// initial state. We use this on startup and as a way to force update when
+	// the cache is in a bad state.
+	IsRefreshNotification() bool
 }
 
 // PackageUpdateAggregator is used to aggregate update information from across
 // all operator source(s).
 // PackageUpdateAggregator also implements PackageUpdateNotification interface.
 type PackageUpdateAggregator struct {
-	updated map[string]bool
-	removed map[string]bool
+	updated       map[string]bool
+	removed       map[string]bool
+	refreshNeeded bool
+}
+
+func (a *PackageUpdateAggregator) IsRefreshNotification() bool {
+	return a.refreshNeeded
 }
 
 // Add accepts an UpdateResult for a given operator source and aggregates it.

@@ -33,6 +33,10 @@ type Reader interface {
 	// The OpsrcRef returned can be used to determine how to download manifests
 	// for a specific operator package.
 	Read(packageID string) (opsrcMeta *OpsrcRef, err error)
+
+	// ReadVersion takes a package identifer and returns version metadata
+	// to associate that package to a particular repository version.
+	ReadRepositoryVersion(packageID string) (version string, err error)
 }
 
 // Writer is an interface that is used to manage the underlying datastore
@@ -123,6 +127,17 @@ func (ds *memoryDatastore) Read(packageID string) (opsrcMeta *OpsrcRef, err erro
 	}
 
 	opsrcMeta = repository.Opsrc
+
+	return
+}
+
+func (ds *memoryDatastore) ReadRepositoryVersion(packageID string) (version string, err error) {
+	repository, err := ds.GetRepositoryByPackageName(packageID)
+	if err != nil {
+		return
+	}
+
+	version = repository.Metadata.Release
 
 	return
 }

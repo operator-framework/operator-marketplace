@@ -31,6 +31,7 @@ func NewHandler(mgr manager.Manager, client client.Client) Handler {
 			registryClientFactory: appregistry.NewClientFactory(),
 			datastore:             datastore.Cache,
 			client:                client,
+			refresher:             cscRefresher,
 		},
 		transitioner:       phase.NewTransitioner(),
 		newCacheReconciler: NewOutOfSyncCacheReconciler,

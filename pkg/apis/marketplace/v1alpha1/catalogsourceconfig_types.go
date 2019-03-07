@@ -54,6 +54,9 @@ type CatalogSourceConfigSpec struct {
 type CatalogSourceConfigStatus struct {
 	// Current phase of the CatalogSourceConfig object.
 	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
+
+	// Map of packages (key) and their app registry package version (value)
+	PackageRepositioryVersions map[string]string `json:"packageMap,omitempty"`
 }
 
 func init() {
