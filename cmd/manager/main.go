@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -61,7 +63,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	status := status.New(cfg, mgr, namespace)
+	operatorStatus := status.New(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"))
+	operatorStatus.SetProgressing(fmt.Sprintf("Version %s of the operator is being deployed", operatorStatus.GetVersion()))
 
 	log.Print("Registering Components.")
 
@@ -70,17 +73,17 @@ func main() {
 
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		fatal(err, status)
+		fatal(err, operatorStatus)
 	}
 
 	// Add external resource to scheme
 	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
-		fatal(err, status)
+		fatal(err, operatorStatus)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		fatal(err, status)
+		fatal(err, operatorStatus)
 	}
 
 	// Serve a health check.
@@ -95,12 +98,13 @@ func main() {
 	go registrySyncer.Sync(stopCh)
 	go catalogsourceconfig.Syncer.Sync(stopCh)
 
-	status.SetAvailable("Operator running")
+	operatorStatus.SetAvailable(fmt.Sprintf("Version %s of the operator is available", operatorStatus.GetVersion()))
+
 	// Start the Cmd
 	log.Fatal(mgr.Start(stopCh))
 }
 
-func fatal(err error, status status.Status) {
-	status.SetFailing(err.Error())
+func fatal(err error, operatorStatus status.Status) {
+	operatorStatus.SetFailing(err.Error())
 	log.Fatal(err)
 }
