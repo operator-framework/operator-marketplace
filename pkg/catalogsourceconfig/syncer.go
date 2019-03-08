@@ -8,11 +8,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	Syncer *catalogSyncer
+)
+
+// InitializeStaticSyncer encapsulates the NewCatalogSyncer constructor
+// to create a global instance of the CatalogSyncer type.
+func InitializeStaticSyncer(client client.Client, initialWait time.Duration) {
+	Syncer = NewCatalogSyncer(client, initialWait)
+}
+
 // NewCatalogSyncer returns a new instance of CatalogSyncer interface.
 func NewCatalogSyncer(client client.Client, initialWait time.Duration) *catalogSyncer {
 	return &catalogSyncer{
 		initialWait:    initialWait,
-		triggerer:      NewTriggerer(client),
+		triggerer:      NewTriggerer(client, datastore.Cache),
 		notificationCh: make(chan datastore.PackageUpdateNotification),
 	}
 }
@@ -68,4 +78,11 @@ func (s *catalogSyncer) Send(notification datastore.PackageUpdateNotification) {
 		log.Info("[sync] sending list of package(s) with new version")
 		s.notificationCh <- notification
 	}()
+}
+
+// SendRefresh sends a refresh notification to trigger refresh of all packages
+// if their datastore and status versions differ
+func (s *catalogSyncer) SendRefresh() {
+	refreshNotification := datastore.NewPackageRefreshNotification()
+	s.Send(refreshNotification)
 }

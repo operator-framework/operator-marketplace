@@ -9,11 +9,11 @@ import (
 )
 
 // NewRegistrySyncer returns a new instance of RegistrySyncer interface.
-func NewRegistrySyncer(client client.Client, initialWait time.Duration, resyncInterval time.Duration, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender) RegistrySyncer {
+func NewRegistrySyncer(client client.Client, initialWait time.Duration, resyncInterval time.Duration, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender, refresher PackageRefreshNotificationSender) RegistrySyncer {
 	return &registrySyncer{
 		initialWait:    initialWait,
 		resyncInterval: resyncInterval,
-		poller:         NewPoller(client, updateNotificationSendWait, sender),
+		poller:         NewPoller(client, updateNotificationSendWait, sender, refresher),
 	}
 }
 
@@ -24,6 +24,16 @@ func NewRegistrySyncer(client client.Client, initialWait time.Duration, resyncIn
 // blocking operation.
 type PackageUpdateNotificationSender interface {
 	Send(notification datastore.PackageUpdateNotification)
+}
+
+// PackageRefreshNotificationSender is an interface that wraps the SendRefresh method.
+//
+// SendRefresh sends package refresh notification to the underlying channel that
+// CatalogSourceConfig is waiting on. This method is expected to be a non
+// blocking operation. When this notification is sent, all non datastore
+// catalogsourceconfigs check their version map in the status against the datastore.
+type PackageRefreshNotificationSender interface {
+	SendRefresh()
 }
 
 // RegistrySyncer is an interface that wraps the Sync method.
@@ -48,6 +58,8 @@ func (s *registrySyncer) Sync(stop <-chan struct{}) {
 	// reconciling existing OperatorSource CR(s). Let's give the process a
 	// grace period to reconcile and rebuild the local cache from existing CR(s).
 	<-time.After(s.initialWait)
+
+	s.poller.Initialize()
 
 	log.Info("[sync] Operator source sync loop has started")
 	for {

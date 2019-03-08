@@ -11,11 +11,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	cscRefresher PackageRefreshNotificationSender
+)
+
 // NewPoller returns a new instance of Poller interface.
-func NewPoller(client client.Client, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender) Poller {
+func NewPoller(client client.Client, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender, refresher PackageRefreshNotificationSender) Poller {
 	poller := &poller{
 		datastore: datastore.Cache,
 		sender:    sender,
+		refresher: refresher,
 		helper: &pollHelper{
 			factory:      appregistry.NewClientFactory(),
 			datastore:    datastore.Cache,
@@ -23,6 +28,8 @@ func NewPoller(client client.Client, updateNotificationSendWait time.Duration, s
 			transitioner: phase.NewTransitioner(),
 		},
 	}
+
+	cscRefresher = refresher
 
 	return poller
 }
@@ -41,6 +48,12 @@ func NewPoller(client client.Client, updateNotificationSendWait time.Duration, s
 // on to the next OperatorSource object.
 type Poller interface {
 	Poll()
+
+	// Initialize is the method that is called on the poller when the poller
+	// is first started. It sends a package refresh notification to the
+	// catalogsourceconfig syncer to force a comparison with the datastore
+	// to refresh invalid state.
+	Initialize()
 }
 
 // poller implements the Poller interface.
@@ -48,7 +61,13 @@ type poller struct {
 	helper                     PollHelper
 	datastore                  datastore.Writer
 	sender                     PackageUpdateNotificationSender
+	refresher                  PackageRefreshNotificationSender
 	updateNotificationSendWait time.Duration
+}
+
+func (p *poller) Initialize() {
+	log.Info("[sync] sending initial package update notification on start.")
+	p.refresher.SendRefresh()
 }
 
 func (p *poller) Poll() {

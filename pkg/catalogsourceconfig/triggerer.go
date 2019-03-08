@@ -9,14 +9,17 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+
+	log "github.com/sirupsen/logrus"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewTriggerer returns a new instance of Triggerer interface.
-func NewTriggerer(client client.Client) Triggerer {
+func NewTriggerer(client client.Client, reader datastore.Reader) Triggerer {
 	return &triggerer{
 		client:       client,
+		reader:       reader,
 		transitioner: phase.NewTransitioner(),
 	}
 }
@@ -42,6 +45,7 @@ type Triggerer interface {
 
 // triggerer implements the Triggerer interface.
 type triggerer struct {
+	reader       datastore.Reader
 	client       client.Client
 	transitioner phase.Transitioner
 }
@@ -76,18 +80,45 @@ func (t *triggerer) Trigger(notification datastore.PackageUpdateNotification) er
 func (t *triggerer) setPackages(instance *v1alpha1.CatalogSourceConfig, notification datastore.PackageUpdateNotification) (packages string, updateNeeded bool) {
 	packageList := make([]string, 0)
 	for _, pkg := range instance.GetPackageIDs() {
-		if notification.IsRemoved(pkg) {
-			updateNeeded = true
+		// If this is a refresh notification, we need to access the datastore to determine
+		// what catalogsourceconfigs need to be refreshed.
+		if notification.IsRefreshNotification() {
+			datastoreVersion, err := t.reader.ReadRepositoryVersion(pkg)
+			if err != nil {
+				log.Errorf(
+					"Unable to resolve package %s associated with csc %s in datastore. Removing.",
+					pkg, fmt.Sprintf("Name: %s Namespace: %s", instance.Name, instance.Namespace),
+				)
+				continue
+			}
 
-			// The package specified has been removed from the registry. We will
-			// remove it from the spec.
-			continue
-		}
+			packageList = append(packageList, pkg)
 
-		packageList = append(packageList, pkg)
+			if pkgVersion, available := instance.Status.PackageRepositioryVersions[pkg]; !available {
+				// If the package isn't in the status, we need to force an update.
+				updateNeeded = true
+			} else {
+				// If the status has a different version than the datastore, we need
+				// to force an update.
+				if pkgVersion != datastoreVersion {
+					updateNeeded = true
+				}
+			}
+		} else {
+			// Otherwise, lets look at the notification to see what packages were updated/removed
+			if notification.IsRemoved(pkg) {
+				updateNeeded = true
 
-		if notification.IsUpdated(pkg) {
-			updateNeeded = true
+				// The package specified has been removed from the registry. We will
+				// remove it from the spec.
+				continue
+			}
+
+			packageList = append(packageList, pkg)
+
+			if notification.IsUpdated(pkg) {
+				updateNeeded = true
+			}
 		}
 	}
 

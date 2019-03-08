@@ -26,7 +26,7 @@ const (
 	// configurable on a per OperatorSource level.
 	resyncInterval = time.Duration(60) * time.Minute
 
-	initialWait                = time.Duration(10) * time.Minute
+	initialWait                = time.Duration(1) * time.Minute
 	updateNotificationSendWait = time.Duration(10) * time.Minute
 )
 
@@ -65,6 +65,9 @@ func main() {
 
 	log.Print("Registering Components.")
 
+	catalogsourceconfig.InitializeStaticSyncer(mgr.GetClient(), initialWait)
+	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogsourceconfig.Syncer, catalogsourceconfig.Syncer)
+
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		fatal(err, status)
@@ -89,11 +92,8 @@ func main() {
 	log.Print("Starting the Cmd.")
 	stopCh := signals.SetupSignalHandler()
 
-	catalogSyncer := catalogsourceconfig.NewCatalogSyncer(mgr.GetClient(), initialWait)
-	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogSyncer)
-
 	go registrySyncer.Sync(stopCh)
-	go catalogSyncer.Sync(stopCh)
+	go catalogsourceconfig.Syncer.Sync(stopCh)
 
 	status.SetAvailable("Operator running")
 	// Start the Cmd

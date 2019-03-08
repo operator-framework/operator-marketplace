@@ -14,12 +14,13 @@ import (
 
 // NewDownloadingReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Downloading" phase.
-func NewDownloadingReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, client client.Client) Reconciler {
+func NewDownloadingReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, client client.Client, refresher PackageRefreshNotificationSender) Reconciler {
 	return &downloadingReconciler{
 		logger:    logger,
 		factory:   factory,
 		datastore: datastore,
 		client:    client,
+		refresher: refresher,
 	}
 }
 
@@ -30,6 +31,7 @@ type downloadingReconciler struct {
 	factory   appregistry.ClientFactory
 	datastore datastore.Writer
 	client    client.Client
+	refresher PackageRefreshNotificationSender
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Downloading" phase.
@@ -91,6 +93,12 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	r.logger.Infof("Downloaded %d manifest(s) from the operator source endpoint", len(manifests))
 
+	// Before we write to the datastore, lets check to see if there are any packages.
+	// If there are not, we are assuming this is a new operator source. We should force
+	// all catalog source configs to compare their versions to what's in the datastore
+	// after we update it.
+	preUpdateDatastorePackageList := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
+
 	count, err := r.datastore.Write(in, manifests)
 	if err != nil {
 		if count == 0 {
@@ -101,6 +109,13 @@ func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 		r.logger.Infof("There were some faulty operator manifest(s), errors - %v", err)
 		err = nil
+	}
+
+	// Now that we have updated the datastore, lets check if the opsrc is new.
+	// If it is, lets for a resync for catalogsourceconfigs.
+	if preUpdateDatastorePackageList == "" {
+		r.logger.Info("New opsrc detected. Refreshing catalogsourceconfigs.")
+		r.refresher.SendRefresh()
 	}
 
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
