@@ -15,7 +15,7 @@ const (
 
 	// In this phase, for OperatorSource objects we ensure that a corresponding
 	// CatalogSourceConfig object is created. For CatalogSourceConfig objects,
-	// we ensure that a ConfigMap is created and is associated with a
+	// we ensure that an Operator-Registry pod is created and is associated with a
 	// CatalogSource.
 	Configuring = "Configuring"
 
