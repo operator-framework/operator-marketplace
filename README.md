@@ -90,6 +90,55 @@ spec:
 
 For OLM to act on your subscription please note that an [`OperatorGroup`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/architecture.md#operator-group-design) that matches the [`InstallMode(s)`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#operator-metadata) in your [`CSV`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#what-is-a-cluster-service-version-csv) needs to be present in the subscription namespace.
 
+#### Uninstalling an operator via the CLI
+
+After an operator has been installed, to uninstall the operator you need to delete the following resources. Below we uninstall the `jaeger` operator as an example.
+
+Delete the `Subscription` in the `targetNamespace` that the operator was installed into. If created via the OpenShift OperatorHub UI, it will be named after the operator's packageName.
+
+```bash
+$ kubectl delete subscription jaeger -n local-operators
+```
+
+Delete the `ClusterServiceVersion` in the `targetNamespace` that the operator was installed into. This will also delete the operator deployment, pod(s), rbac, and other resources that OLM created for the operator. This also deletes any corresponding CSVs that OLM "Copied" into other namespaces watched by the operator.
+
+```bash
+$ kubectl delete clusterserviceversion jaeger-operator.v1.8.2 -n local-operators
+```
+
+Edit the installation `CatalogSourceConfig` and modify the `spec.packages` field to remove the operator's packageName with the following command:
+
+```bash
+$ kubectl edit catalogsourceconfig installed-upstream-community-operators -n marketplace
+```
+
+This will open up your terminal's default editor. Look at the `spec` section of the `CatalogSourceConfig`:
+
+```bash
+spec:
+  targetNamespace: local-operators
+  packages: descheduler,jaeger
+  csDisplayName: "Upstream Community Operators"
+  csPublisher: "Red Hat"
+```
+
+Remove `jaeger` from `spec.packages`:
+
+```bash
+spec:
+  csDisplayName: Community Operators
+  csPublisher: Community
+  packages: descheduler
+```
+
+Save the change and the marketplace-operator will reconcile the `CatalogSourceConfig`.
+
+If only one operator is installed into the `CatalogSourceConfig`, delete the installation `CatalogSourceConfig`. If created via the OpenShift OperatorHub UI, it will be named `installed-<OPERATORSOURCE>-<TARGETNAMESPACE>` based on the `OperatorSource` that the operator comes from and the `targetNamespace` that the operator was installed to.
+
+```bash
+$ kubectl delete catalogsourceconfig installed-upstream-community-operators -n marketplace
+```
+
 ## Populating your own App Registry OperatorSource
 
 Follow the steps [here](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md) to upload operator artifacts to `quay.io`.
