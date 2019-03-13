@@ -56,7 +56,7 @@ type CatalogSourceConfigStatus struct {
 	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
 
 	// Map of packages (key) and their app registry package version (value)
-	PackageRepositioryVersions map[string]string `json:"packageMap,omitempty"`
+	PackageRepositioryVersions map[string]string `json:"packageRepositioryVersions,omitempty"`
 }
 
 func init() {
