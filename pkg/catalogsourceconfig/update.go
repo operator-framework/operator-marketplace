@@ -59,7 +59,7 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSo
 	return
 }
 
-// deleteObjects deletes the CatalogSource and ConfigMap in the old TargetNamespace.
+// deleteObjects deletes the CatalogSource in the old TargetNamespace.
 func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error {
 	cachedCSCSpec, found := r.cache.Get(in)
 	// This should never happen as it is because the cached Spec has changed

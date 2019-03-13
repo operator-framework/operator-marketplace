@@ -30,9 +30,8 @@ func Add(mgr manager.Manager) error {
 func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
 	// The default client serves read requests from the cache which contains
 	// objects only from the namespace the operator is watching. Given we need
-	// to query other namespaces for ConfigMaps and CatalogSources, we create
-	// our own client and pass it the manager's scheme which has all our
-	// registered types
+	// to query other namespaces for CatalogSources, we create our own client
+	// and pass it the manager's scheme which has all our registered types
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, err
