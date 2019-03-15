@@ -5,6 +5,7 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -54,9 +55,11 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogS
 	r.cache.Evict(out)
 
 	// Delete all created resources
-	err = r.deleteCreatedResources(ctx, in.Name, in.Namespace)
+	err = r.deleteCreatedResources(ctx, in.Name, in.Namespace, in.Spec.TargetNamespace)
 	if err != nil {
-		return nil, nil, err
+		// Something went wrong before we removed the finalizer, let's retry.
+		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+		return
 	}
 
 	// Remove the csc finalizer from the object.
@@ -66,27 +69,34 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogS
 	// will not update it automatically like the normal phases.
 	err = r.client.Update(context.TODO(), out)
 	if err != nil {
-		return nil, nil, err
+		// An error happened on update. If it was transient, we will retry.
+		// If not, and the finalizer was removed, then the delete will clean
+		// the object up anyway. Let's set the next phase for a possible retry.
+		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+		return
 	}
 
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 
-	return out, nil, nil
+	return
 }
 
 // Delete all resources owned by the catalog source config
-func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, namespace string) error {
+func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, namespace, targetNamespace string) error {
 	allErrors := []error{}
 	labelMap := map[string]string{
 		CscOwnerNameLabel:      name,
 		CscOwnerNamespaceLabel: namespace,
 	}
 	labelSelector := labels.SelectorFromSet(labelMap)
-	options := &client.ListOptions{LabelSelector: labelSelector}
+	catalogSourceOptions := &client.ListOptions{LabelSelector: labelSelector}
+	catalogSourceOptions.InNamespace(targetNamespace)
+	namespacedResourceOptions := &client.ListOptions{LabelSelector: labelSelector}
+	namespacedResourceOptions.InNamespace(namespace)
 
 	// Delete Catalog Sources
 	catalogSources := &olm.CatalogSourceList{}
-	err := r.client.List(ctx, options, catalogSources)
+	err := r.client.List(ctx, catalogSourceOptions, catalogSources)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -101,7 +111,7 @@ func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, na
 
 	// Delete Services
 	services := &core.ServiceList{}
-	err = r.client.List(ctx, options, services)
+	err = r.client.List(ctx, namespacedResourceOptions, services)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -116,7 +126,7 @@ func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, na
 
 	// Delete Deployments
 	deployments := &apps.DeploymentList{}
-	err = r.client.List(ctx, options, deployments)
+	err = r.client.List(ctx, namespacedResourceOptions, deployments)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -131,7 +141,7 @@ func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, na
 
 	// Delete Role Bindings
 	roleBindings := &rbac.RoleBindingList{}
-	err = r.client.List(ctx, options, roleBindings)
+	err = r.client.List(ctx, namespacedResourceOptions, roleBindings)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -146,7 +156,7 @@ func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, na
 
 	// Delete Roles
 	roles := &rbac.RoleList{}
-	err = r.client.List(ctx, options, roles)
+	err = r.client.List(ctx, namespacedResourceOptions, roles)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -161,7 +171,7 @@ func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, na
 
 	// Delete Service Accounts
 	serviceAccounts := &core.ServiceAccountList{}
-	err = r.client.List(ctx, options, serviceAccounts)
+	err = r.client.List(ctx, namespacedResourceOptions, serviceAccounts)
 	if err != nil {
 		allErrors = append(allErrors, err)
 	}
