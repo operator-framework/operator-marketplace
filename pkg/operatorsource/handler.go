@@ -86,6 +86,12 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1alpha1.Operato
 	}
 
 	out, status, err = phaseReconciler.Reconcile(ctx, in)
+	if out == nil {
+		// If the reconciler didn't return an object, that means it must have been deleted.
+		// In that case, we should just return without attempting to modify it.
+		return err
+	}
+
 	return h.transition(ctx, logger, out, status, err)
 }
 

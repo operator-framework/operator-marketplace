@@ -5,6 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +53,9 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	// Delete the owned CatalogSourceConfig
 	err = r.deleteCreatedResources(ctx, in.Name, in.Namespace)
 	if err != nil {
-		return nil, nil, err
+		// Something went wrong before we removed the finalizer, let's retry.
+		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+		return
 	}
 
 	// Remove the opsrc finalizer from the object.
@@ -62,12 +65,16 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	// will not update it automatically like the normal phases.
 	err = r.client.Update(context.TODO(), out)
 	if err != nil {
-		return nil, nil, err
+		// An error happened on update. If it was transient, we will retry.
+		// If not, and the finalizer was removed, then the delete will clean
+		// the object up anyway. Let's set the next phase for a possible retry.
+		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+		return
 	}
 
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 
-	return out, nil, nil
+	return
 }
 
 // Delete all resources owned by the operator source

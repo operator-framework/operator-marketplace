@@ -54,6 +54,11 @@ func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v1alpha1.Ca
 	}
 
 	out, status, err := reconciler.Reconcile(ctx, in)
+	if out == nil {
+		// If the reconciler didn't return an object, that means it must have been deleted.
+		// In that case, we should just return without attempting to modify it.
+		return err
+	}
 
 	// If reconciliation threw an error, we can't quit just yet. We need to
 	// figure out whether the CatalogSourceConfig object needs to be updated.
