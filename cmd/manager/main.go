@@ -101,7 +101,7 @@ func main() {
 	operatorStatus.SetAvailable(fmt.Sprintf("Version %s of the operator is available", operatorStatus.GetVersion()))
 
 	// Start the Cmd
-	log.Fatal(mgr.Start(stopCh))
+	fatal(mgr.Start(stopCh), operatorStatus)
 }
 
 func fatal(err error, operatorStatus status.Status) {

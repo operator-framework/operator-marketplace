@@ -130,7 +130,6 @@ func (s *status) setStatus(condition configv1.ClusterStatusConditionType, messag
 	}
 	s.ensureClusterOperator()
 	s.setStatusCondition(condition, message)
-	s.setOperandVersion()
 	s.updateStatus()
 }
 
@@ -159,6 +158,8 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 	case configv1.OperatorAvailable:
 		availableStatus = configv1.ConditionTrue
 		availableMessage = message
+		// The operator version should only be set when the operator becomes available
+		s.setOperandVersion()
 
 	case configv1.OperatorFailing:
 		failingStatus = configv1.ConditionTrue
