@@ -1,7 +1,7 @@
 apiVersion: config.openshift.io/v1
 kind: ClusterOperator
 metadata:
-  name: marketplace-operator
+  name: marketplace
   namespace: openshift-marketplace
 status:
   versions:

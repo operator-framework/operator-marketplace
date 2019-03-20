@@ -21,7 +21,7 @@ import (
 
 const (
 	// clusterOperatorName is the name of the cluster operator
-	clusterOperatorName = "marketplace-operator"
+	clusterOperatorName = "marketplace"
 
 	// minSyncsBeforeReporting is the minimum number of syncs we wish to see
 	// before reporting that the operator is available
