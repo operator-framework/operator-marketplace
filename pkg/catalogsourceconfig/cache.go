@@ -89,7 +89,7 @@ func (c *cache) Evict(csc *v1alpha1.CatalogSourceConfig) {
 
 func (c *cache) Set(csc *v1alpha1.CatalogSourceConfig) {
 	c.entries[csc.ObjectMeta.UID] = &v1alpha1.CatalogSourceConfigSpec{
-		Packages:        csc.Spec.Packages,
+		Packages:        csc.GetPackages(),
 		TargetNamespace: csc.Spec.TargetNamespace,
 	}
 }
