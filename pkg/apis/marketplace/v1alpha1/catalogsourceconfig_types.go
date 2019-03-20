@@ -100,9 +100,14 @@ func (csc *CatalogSourceConfig) EnsurePublisher() {
 	}
 }
 
+func (csc *CatalogSourceConfig) GetPackages() string {
+	pkgs := getValidPackageSliceFromString(csc.Spec.Packages)
+	return strings.Join(pkgs, ",")
+}
+
 // GetPackageIDs returns the list of package(s) specified.
 func (csc *CatalogSourceConfig) GetPackageIDs() []string {
-	return strings.Split(strings.Replace(csc.Spec.Packages, " ", "", -1), ",")
+	return getValidPackageSliceFromString(csc.Spec.Packages)
 }
 
 // GetTargetNamespace returns the TargetNamespace where the OLM resources will
@@ -129,5 +134,19 @@ func (csc *CatalogSourceConfig) RemoveOwner(ownerUID types.UID) {
 
 // GetPackageIDs returns the list of package(s) specified.
 func (spec *CatalogSourceConfigSpec) GetPackageIDs() []string {
-	return strings.Split(strings.Replace(spec.Packages, " ", "", -1), ",")
+	return getValidPackageSliceFromString(spec.Packages)
+}
+
+func getValidPackageSliceFromString(pkgs string) []string {
+	pkgIds := make([]string, 0)
+
+	pkgSlice := strings.Split(strings.Replace(pkgs, " ", "", -1), ",")
+
+	for _, pkg := range pkgSlice {
+		if pkg != "" {
+			pkgIds = append(pkgIds, pkg)
+		}
+	}
+
+	return pkgIds
 }

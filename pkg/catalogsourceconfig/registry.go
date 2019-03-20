@@ -96,7 +96,7 @@ func (r *registry) GetAddress() string {
 // ensureDeployment ensures that registry Deployment is present for serving
 // the the grpc interface for the packages from the given operatorSources
 func (r *registry) ensureDeployment(operatorSources string) error {
-	registryCommand := getCommand(r.csc.Spec.Packages, operatorSources)
+	registryCommand := getCommand(r.csc.GetPackages(), operatorSources)
 	deployment := new(DeploymentBuilder).WithTypeMeta().Deployment()
 	if err := r.client.Get(context.TODO(), r.csc.key(), deployment); err != nil {
 		deployment = r.newDeployment(registryCommand)
@@ -402,7 +402,7 @@ func (r *registry) waitForDeploymentScaleDown(retryInterval, timeout time.Durati
 
 // getCommand returns the command used to launch the registry server
 func getCommand(packages string, sources string) []string {
-	return []string{"appregistry-server", "-s", sources, "-o", strings.Replace(packages, " ", "", -1)}
+	return []string{"appregistry-server", "-s", sources, "-o", packages}
 }
 
 // getRules returns the PolicyRule needed to access the given operatorSources and secrets
