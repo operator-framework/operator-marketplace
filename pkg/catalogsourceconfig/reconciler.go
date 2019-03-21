@@ -3,7 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 )
 
 // Reconciler is the interface that wraps the Reconcile method.
@@ -32,5 +32,5 @@ import (
 // Reconcile operation is expected to be idempotent so that in the event of
 // multiple invocations there would be no adverse or side effect.
 type Reconciler interface {
-	Reconcile(ctx context.Context, in *v1alpha1.CatalogSourceConfig) (out *v1alpha1.CatalogSourceConfig, nextPhase *v1alpha1.Phase, err error)
+	Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error)
 }

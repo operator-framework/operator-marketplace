@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +23,7 @@ func TestWrite(t *testing.T) {
 		"service-catalog",
 	}
 
-	opsrc := &v1alpha1.OperatorSource{
+	opsrc := &marketplace.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
 			UID: types.UID("123456"),
 		},
@@ -61,7 +61,7 @@ func TestWrite(t *testing.T) {
 // when we do a read the metadata that associates the repository to the opsrc
 // is maintained.
 func TestReadOpsrcMeta(t *testing.T) {
-	opsrc := &v1alpha1.OperatorSource{
+	opsrc := &marketplace.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       types.UID("123456"),
 			Name:      "operators-opsrc",
@@ -98,7 +98,7 @@ func TestReadOpsrcMeta(t *testing.T) {
 // In this test we make sure that we properly relate multiple opsrcs
 // to the correct repositories.
 func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
-	opsrc := &v1alpha1.OperatorSource{
+	opsrc := &marketplace.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       types.UID("123456"),
 			Name:      "operators-opsrc",
@@ -121,7 +121,7 @@ func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
 	_, err := ds.Write(opsrc, metadata)
 	require.NoError(t, err)
 
-	opsrc2 := &v1alpha1.OperatorSource{
+	opsrc2 := &marketplace.OperatorSource{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       types.UID("456789"),
 			Name:      "operators-different",

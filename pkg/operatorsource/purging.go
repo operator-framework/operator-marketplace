@@ -3,7 +3,7 @@ package operatorsource
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
@@ -43,7 +43,7 @@ type purgingReconciler struct {
 // field and trigger reconciliation anew from "Validating" phase.
 //
 // If the purge fails the OperatorSource object is moved to "Failed" phase.
-func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
+func (r *purgingReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourcePurging {
 		err = phase.ErrWrongReconcilerInvoked
 		return
@@ -64,7 +64,7 @@ func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1alpha1.Operator
 	// The reason we are not mutating current phase is because it is the
 	// responsibility of the caller to set the new phase appropriately.
 	tmp := out.Status.CurrentPhase
-	out.Status = v1alpha1.OperatorSourceStatus{}
+	out.Status = marketplace.OperatorSourceStatus{}
 	out.Status.CurrentPhase = tmp
 
 	nextPhase = phase.GetNext(phase.Initial)

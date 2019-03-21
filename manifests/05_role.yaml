@@ -30,11 +30,18 @@ metadata:
   namespace: openshift-marketplace
 rules:
 - apiGroups:
-  - marketplace.redhat.com
+  - operators.coreos.com
   resources:
-  - "*"
+  - catalogsources
+  - catalogsourceconfigs
+  - operatorsources
   verbs:
-  - '*'
+  - get
+  - create
+  - delete
+  - update
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:

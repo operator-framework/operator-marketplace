@@ -6,18 +6,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var (
-	phaseWantValidating = v1alpha1.Phase{
+	phaseWantValidating = marketplace.Phase{
 		Name:    "Validating",
 		Message: "Scheduled for validation",
 	}
-	nextPhaseAfterValidating = &v1alpha1.Phase{
+	nextPhaseAfterValidating = &marketplace.Phase{
 		Name:    phaseWantValidating.Name,
 		Message: phaseWantValidating.Message,
 	}
@@ -30,9 +30,9 @@ func TestTransitionInto_IdenticalPhase_FalseExpected(t *testing.T) {
 	clock := clock.NewFakeClock(time.Now())
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	opsrcIn := &v1alpha1.OperatorSource{
-		Status: v1alpha1.OperatorSourceStatus{
-			CurrentPhase: v1alpha1.ObjectPhase{
+	opsrcIn := &marketplace.OperatorSource{
+		Status: marketplace.OperatorSourceStatus{
+			CurrentPhase: marketplace.ObjectPhase{
 				Phase: phaseWantValidating,
 			},
 		},
@@ -54,10 +54,10 @@ func TestTransitionInto_BothPhaseAndMessageAreDifferent_TrueExpected(t *testing.
 	clock := clock.NewFakeClock(now)
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	opsrcIn := &v1alpha1.OperatorSource{
-		Status: v1alpha1.OperatorSourceStatus{
-			CurrentPhase: v1alpha1.ObjectPhase{
-				Phase: v1alpha1.Phase{
+	opsrcIn := &marketplace.OperatorSource{
+		Status: marketplace.OperatorSourceStatus{
+			CurrentPhase: marketplace.ObjectPhase{
+				Phase: marketplace.Phase{
 					Name:    "Initial",
 					Message: "Not validated",
 				},
@@ -82,15 +82,15 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 	clock := clock.NewFakeClock(now)
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	phaseWant := v1alpha1.Phase{
+	phaseWant := marketplace.Phase{
 		Name:    "Failed",
 		Message: "Second try- reason 2",
 	}
 
-	opsrcIn := &v1alpha1.OperatorSource{
-		Status: v1alpha1.OperatorSourceStatus{
-			CurrentPhase: v1alpha1.ObjectPhase{
-				Phase: v1alpha1.Phase{
+	opsrcIn := &marketplace.OperatorSource{
+		Status: marketplace.OperatorSourceStatus{
+			CurrentPhase: marketplace.ObjectPhase{
+				Phase: marketplace.Phase{
 					Name:    phaseWant.Name,
 					Message: "First try- reason 1",
 				},
@@ -98,7 +98,7 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 		},
 	}
 
-	nextPhase := &v1alpha1.Phase{
+	nextPhase := &marketplace.Phase{
 		Name:    phaseWant.Name,
 		Message: phaseWant.Message,
 	}

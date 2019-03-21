@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/sirupsen/logrus"
 	apps "k8s.io/api/apps/v1"
@@ -29,7 +29,7 @@ const (
 var action = []string{"grpc_health_probe", "-addr=localhost:50051"}
 
 type catalogSourceConfigWrapper struct {
-	*v1alpha1.CatalogSourceConfig
+	*marketplace.CatalogSourceConfig
 }
 
 func (c *catalogSourceConfigWrapper) key() client.ObjectKey {
@@ -56,7 +56,7 @@ type Registry interface {
 }
 
 // NewRegistry returns an initialized instance of Registry
-func NewRegistry(log *logrus.Entry, client client.Client, reader datastore.Reader, csc *v1alpha1.CatalogSourceConfig, image string) Registry {
+func NewRegistry(log *logrus.Entry, client client.Client, reader datastore.Reader, csc *marketplace.CatalogSourceConfig, image string) Registry {
 	return &registry{
 		log:    log,
 		client: client,
@@ -409,7 +409,7 @@ func getCommand(packages string, sources string) []string {
 // from the registry pod
 func getRules(operatorSources []string) []rbac.PolicyRule {
 	return []rbac.PolicyRule{
-		NewRule([]string{"get"}, []string{"marketplace.redhat.com"}, []string{"operatorsources"}, operatorSources),
+		NewRule([]string{"get"}, []string{"operators.coreos.com"}, []string{"operatorsources"}, operatorSources),
 		NewRule([]string{"get"}, []string{""}, []string{"secrets"}, nil),
 	}
 }

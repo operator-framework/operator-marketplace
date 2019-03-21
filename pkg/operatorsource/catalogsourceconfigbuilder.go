@@ -3,7 +3,7 @@ package operatorsource
 import (
 	"fmt"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,11 +24,11 @@ const OpsrcOwnerNamespaceLabel string = "opsrc-owner-namespace"
 
 // CatalogSourceConfigBuilder builds a new CatalogSourceConfig type object.
 type CatalogSourceConfigBuilder struct {
-	object v1alpha1.CatalogSourceConfig
+	object marketplace.CatalogSourceConfig
 }
 
 // CatalogSourceConfig returns a prepared CatalogSourceConfig object.
-func (b *CatalogSourceConfigBuilder) CatalogSourceConfig() *v1alpha1.CatalogSourceConfig {
+func (b *CatalogSourceConfigBuilder) CatalogSourceConfig() *marketplace.CatalogSourceConfig {
 	return &b.object
 }
 
@@ -36,8 +36,8 @@ func (b *CatalogSourceConfigBuilder) CatalogSourceConfig() *v1alpha1.CatalogSour
 func (b *CatalogSourceConfigBuilder) WithTypeMeta() *CatalogSourceConfigBuilder {
 	b.object.TypeMeta = metav1.TypeMeta{
 		APIVersion: fmt.Sprintf("%s/%s",
-			v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version),
-		Kind: v1alpha1.CatalogSourceConfigKind,
+			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
+		Kind: marketplace.CatalogSourceConfigKind,
 	}
 
 	return b
@@ -73,7 +73,7 @@ func (b *CatalogSourceConfigBuilder) WithLabels(opsrcLabels map[string]string) *
 }
 
 // WithOwnerLabel sets the owner label of the CatalogSourceConfig object to the given owner.
-func (b *CatalogSourceConfigBuilder) WithOwnerLabel(owner *v1alpha1.OperatorSource) *CatalogSourceConfigBuilder {
+func (b *CatalogSourceConfigBuilder) WithOwnerLabel(owner *marketplace.OperatorSource) *CatalogSourceConfigBuilder {
 	labels := map[string]string{
 		OpsrcOwnerNameLabel:      owner.Name,
 		OpsrcOwnerNamespaceLabel: owner.Namespace,
@@ -89,7 +89,7 @@ func (b *CatalogSourceConfigBuilder) WithOwnerLabel(owner *v1alpha1.OperatorSour
 
 // WithSpec sets Spec accordingly.
 func (b *CatalogSourceConfigBuilder) WithSpec(targetNamespace, packages, displayName, publisher string) *CatalogSourceConfigBuilder {
-	b.object.Spec = v1alpha1.CatalogSourceConfigSpec{
+	b.object.Spec = marketplace.CatalogSourceConfigSpec{
 		TargetNamespace: targetNamespace,
 		Packages:        packages,
 		DisplayName:     displayName,

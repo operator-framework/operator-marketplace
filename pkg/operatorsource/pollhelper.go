@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -72,7 +72,7 @@ func (h *pollHelper) HasUpdate(source *datastore.OperatorSourceKey) (*datastore.
 }
 
 func (h *pollHelper) TriggerPurge(source *datastore.OperatorSourceKey) (deleted bool, updateErr error) {
-	instance := &v1alpha1.OperatorSource{}
+	instance := &marketplace.OperatorSource{}
 
 	// Get the current state of the given object before we make any decision.
 	if err := h.client.Get(context.TODO(), source.Name, instance); err != nil {
@@ -92,7 +92,7 @@ func (h *pollHelper) TriggerPurge(source *datastore.OperatorSourceKey) (deleted 
 	instance.EnsureGVK()
 
 	// We want to purge the OperatorSource object so that the cache can rebuild.
-	nextPhase := &v1alpha1.Phase{
+	nextPhase := &marketplace.Phase{
 		Name:    phase.OperatorSourcePurging,
 		Message: "Remote registry has been updated",
 	}

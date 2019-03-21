@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	"strings"
@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	// Name for the finalizer to allow for deletion reconciliation
-	// when a CatalogSourceConfig is deleted.
-	CSCFinalizer = "finalizer.catalogsourceconfigs.marketplace.redhat.com"
+	// CSCFinalizer is the name for the finalizer to allow for deletion
+	// reconciliation when a CatalogSourceConfig is deleted.
+	CSCFinalizer = "finalizer.catalogsourceconfigs.operators.coreos.com"
 )
 
 // +genclient
@@ -64,7 +64,7 @@ func init() {
 }
 
 // Set group, version, and kind strings
-// from the internal reference that we defined in the v1alpha1 package.
+// from the internal reference that we defined in the v1 package.
 // The object the sdk client returns does not set these
 // so we must find the correct values and set them manually.
 func (csc *CatalogSourceConfig) EnsureGVK() {

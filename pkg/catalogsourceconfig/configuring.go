@@ -8,7 +8,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
@@ -51,7 +51,7 @@ type configuringReconciler struct {
 // Upon success, it returns "Succeeded" as the next and final desired phase.
 // On error, the function returns "Failed" as the next desired phase
 // and Message is set to the appropriate error message.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSourceConfig) (out *v1alpha1.CatalogSourceConfig, nextPhase *v1alpha1.Phase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error) {
 	if in.Status.CurrentPhase.Name != phase.Configuring {
 		err = phase.ErrWrongReconcilerInvoked
 		return
@@ -79,7 +79,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Cata
 
 // reconcileCatalogSource ensures a CatalogSource exists with all the
 // resources it requires.
-func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSourceConfig) error {
+func (r *configuringReconciler) reconcileCatalogSource(csc *marketplace.CatalogSourceConfig) error {
 	// Ensure that the packages in the spec are available in the datastore
 	err := r.checkPackages(csc)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *configuringReconciler) reconcileCatalogSource(csc *v1alpha1.CatalogSour
 // field is updated at the end of the configuring phase if successful. It iterates
 // over the list of packages and creates a new map of PackageName:Version for each
 // package in the spec.
-func (r *configuringReconciler) ensurePackagesInStatus(csc *v1alpha1.CatalogSourceConfig) {
+func (r *configuringReconciler) ensurePackagesInStatus(csc *marketplace.CatalogSourceConfig) {
 	newPackageRepositioryVersions := make(map[string]string)
 	packageIDs := csc.GetPackageIDs()
 	for _, packageID := range packageIDs {
@@ -148,7 +148,7 @@ func (r *configuringReconciler) ensurePackagesInStatus(csc *v1alpha1.CatalogSour
 
 // checkPackages returns an error if there are packages missing from the
 // datastore but listed in the spec.
-func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig) error {
+func (r *configuringReconciler) checkPackages(csc *marketplace.CatalogSourceConfig) error {
 	missingPackages := []string{}
 	packageIDs := csc.GetPackageIDs()
 	for _, packageID := range packageIDs {
@@ -168,7 +168,7 @@ func (r *configuringReconciler) checkPackages(csc *v1alpha1.CatalogSourceConfig)
 }
 
 // newCatalogSource returns a CatalogSource object.
-func newCatalogSource(csc *v1alpha1.CatalogSourceConfig, address string) *olm.CatalogSource {
+func newCatalogSource(csc *marketplace.CatalogSourceConfig, address string) *olm.CatalogSource {
 	builder := new(CatalogSourceBuilder).
 		WithOwnerLabel(csc).
 		WithMeta(csc.Name, csc.Spec.TargetNamespace).

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -25,7 +25,7 @@ func TestReconcileWithPurging(t *testing.T) {
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourcePurging)
 	opsrcWant := opsrcIn.DeepCopy()
 
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Initial,
 		Message: phase.GetMessage(phase.Initial),
 	}

@@ -3,7 +3,7 @@ package operatorsource
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
@@ -51,7 +51,7 @@ type configuringReconciler struct {
 //
 // If the corresponding CatalogSourceConfig object already exists
 // then no further action is taken.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.Configuring {
 		err = phase.ErrWrongReconcilerInvoked
 		return
@@ -85,7 +85,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 
 	// If we are here, the given CatalogSourceConfig object already exists.
 	cscNamespacedName := types.NamespacedName{Name: in.Name, Namespace: in.Namespace}
-	cscExisting := v1alpha1.CatalogSourceConfig{}
+	cscExisting := marketplace.CatalogSourceConfig{}
 	err = r.client.Get(ctx, cscNamespacedName, &cscExisting)
 	if err != nil {
 		r.logger.Errorf("Unexpected error while getting CatalogSourceConfig: %s", err.Error())
@@ -106,7 +106,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1alpha1.Oper
 	// for the the scenario where a Quay namespace has changed without
 	// app-registry repositories being added or removed but with existing
 	// repositories being updated.
-	cscUpdate.Status = v1alpha1.CatalogSourceConfigStatus{}
+	cscUpdate.Status = marketplace.CatalogSourceConfigStatus{}
 
 	err = r.client.Update(ctx, cscUpdate)
 	if err != nil {

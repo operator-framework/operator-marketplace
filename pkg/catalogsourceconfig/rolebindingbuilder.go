@@ -1,7 +1,7 @@
 package catalogsourceconfig
 
 import (
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	rbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,7 +37,7 @@ func (b *RoleBindingBuilder) WithMeta(name, namespace string) *RoleBindingBuilde
 }
 
 // WithOwnerLabel sets the owner label of the RoleBinding object to the given owner.
-func (b *RoleBindingBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *RoleBindingBuilder {
+func (b *RoleBindingBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *RoleBindingBuilder {
 	labels := map[string]string{
 		CscOwnerNameLabel:      owner.Name,
 		CscOwnerNamespaceLabel: owner.Namespace,

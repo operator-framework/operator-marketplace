@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -52,7 +52,7 @@ type downloadingReconciler struct {
 // given OperatorSource object.
 // On error, the function returns "Failed" as the next desied phase
 // and Message is set to appropriate error message.
-func (r *downloadingReconciler) Reconcile(ctx context.Context, in *v1alpha1.OperatorSource) (out *v1alpha1.OperatorSource, nextPhase *v1alpha1.Phase, err error) {
+func (r *downloadingReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourceDownloading {
 		err = phase.ErrWrongReconcilerInvoked
 		return

@@ -16,7 +16,7 @@ stringData:
 Then, to associate that secret with a registry, simply add a reference to the secret in the OperatorSource spec:
 
 ```yaml
-apiVersion: "marketplace.redhat.com/v1alpha1"
+apiVersion: "operators.coreos.com/v1"
 kind: "OperatorSource"
 metadata:
   name: "certified-operators"

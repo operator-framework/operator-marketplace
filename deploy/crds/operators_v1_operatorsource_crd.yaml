@@ -1,12 +1,12 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: operatorsources.marketplace.redhat.com
+  name: operatorsources.operators.coreos.com
   annotations:
     displayName: Operator Source
     description: Represents an OperatorSource.
 spec:
-  group: marketplace.redhat.com
+  group: operators.coreos.com
   names:
     kind: OperatorSource
     listKind: OperatorSourceList
@@ -15,7 +15,7 @@ spec:
     shortNames:
     - opsrc
   scope: Namespaced
-  version: v1alpha1
+  version: v1
   additionalPrinterColumns:
   - name: Type
     type: string
