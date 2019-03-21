@@ -38,19 +38,23 @@ type phaseReconcilerFactory struct {
 }
 
 func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, csc *v1alpha1.CatalogSourceConfig) (Reconciler, error) {
-	// Check if the cache is stale. A stale cache entry is an indicator that the
-	// object has changed and requires updating.
-	pkgStale, targetStale := f.cache.IsEntryStale(csc)
-	if pkgStale || targetStale {
-		return NewUpdateReconciler(log, f.client, f.cache, targetStale), nil
-	}
-
 	// If the object has a deletion timestamp, it means it has been marked for
 	// deletion. Return a deleted reconciler to remove that csc data from
 	// the cache, and remove the finalizer so the garbage collector can
 	// clean it up.
 	if !csc.ObjectMeta.DeletionTimestamp.IsZero() {
 		return NewDeletedReconciler(log, f.cache, f.client), nil
+	}
+
+	// Check if the cache is stale. A stale cache entry is an indicator that the
+	// object has changed and requires updating. Only do this when the object has
+	// already been created (not in the initial phase) and when it is not already
+	// attempting to configure (which will populate the cache).
+	if csc.Status.CurrentPhase.Name != phase.Initial && csc.Status.CurrentPhase.Name != phase.Configuring {
+		pkgStale, targetStale := f.cache.IsEntryStale(csc)
+		if pkgStale || targetStale {
+			return NewUpdateReconciler(log, f.client, f.cache, targetStale), nil
+		}
 	}
 
 	currentPhase := csc.Status.CurrentPhase.Name
