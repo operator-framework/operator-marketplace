@@ -2,14 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
@@ -17,10 +16,10 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	log "github.com/sirupsen/logrus"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
 const (
@@ -63,27 +62,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	operatorStatus := status.New(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"))
-	operatorStatus.SetProgressing(fmt.Sprintf("Version %s of the operator is being deployed", operatorStatus.GetVersion()))
-
 	log.Print("Registering Components.")
 
 	catalogsourceconfig.InitializeStaticSyncer(mgr.GetClient(), initialWait)
 	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogsourceconfig.Syncer, catalogsourceconfig.Syncer)
 
+	// monitorStopCh is used to send a signal to stop reporting cluteroperator status
+	monitorStopCh := make(chan struct{})
+	// monitorDoneCh will recieve a signal when threads have stopped updating cluster operator status
+	monitorDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), monitorStopCh)
+
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		fatal(err, operatorStatus)
+		fatal(err, monitorDoneCh, monitorStopCh)
 	}
 
 	// Add external resource to scheme
 	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
-		fatal(err, operatorStatus)
+		fatal(err, monitorDoneCh, monitorStopCh)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		fatal(err, operatorStatus)
+		fatal(err, monitorDoneCh, monitorStopCh)
 	}
 
 	// Serve a health check.
@@ -98,13 +99,19 @@ func main() {
 	go registrySyncer.Sync(stopCh)
 	go catalogsourceconfig.Syncer.Sync(stopCh)
 
-	operatorStatus.SetAvailable(fmt.Sprintf("Version %s of the operator is available", operatorStatus.GetVersion()))
-
 	// Start the Cmd
-	log.Fatal(mgr.Start(stopCh))
+	// Update clusteroperator status and log a fatal error
+	fatal(mgr.Start(stopCh), monitorDoneCh, monitorStopCh)
 }
 
-func fatal(err error, operatorStatus status.Status) {
-	operatorStatus.SetFailing(err.Error())
+// fatal updates clusteroperator status and logs a fatal error
+func fatal(err error, monitorDoneCh <-chan struct{}, monitorStopCh chan struct{}) {
+	// Stop reporting clusterOperator status
+	close(monitorStopCh)
+
+	// Wait for clusterOperator status reporting to stop
+	<-monitorDoneCh
+
+	// exit
 	log.Fatal(err)
 }

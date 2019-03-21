@@ -14,12 +14,6 @@ rules:
   - update
   - list
 - apiGroups:
-  - apiextensions.k8s.io
-  resources:
-  - customresourcedefinitions
-  verbs:
-  - get
-- apiGroups:
   - config.openshift.io
   resources:
   - clusteroperators

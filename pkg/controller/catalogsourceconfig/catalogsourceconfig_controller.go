@@ -5,6 +5,7 @@ import (
 
 	marketplacev1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,10 +81,19 @@ type ReconcileCatalogSourceConfig struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling CatalogSourceConfig %s/%s\n", request.Namespace, request.Name)
+	// Reconcile kicked off, message Sync Channel
+	status.SendSyncMessage(nil)
 
+	// If err is not nil at the end of this function message the syncCh channel
+	var err error
+	defer func() {
+		if err != nil {
+			status.SendSyncMessage(err)
+		}
+	}()
 	// Fetch the CatalogSourceConfig instance
 	instance := &marketplacev1alpha1.CatalogSourceConfig{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
