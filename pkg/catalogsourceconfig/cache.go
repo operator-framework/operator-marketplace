@@ -53,8 +53,9 @@ func (c *cache) Get(csc *v1alpha1.CatalogSourceConfig) (*v1alpha1.CatalogSourceC
 
 func (c *cache) IsEntryStale(csc *v1alpha1.CatalogSourceConfig) (bool, bool) {
 	spec, found := c.Get(csc)
+	// Found is false if the CSC wasn't found in the cache. So it must be stale.
 	if !found {
-		return false, false
+		return true, true
 	}
 
 	if spec.TargetNamespace != csc.Spec.TargetNamespace {
