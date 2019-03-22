@@ -2,7 +2,6 @@ package catalogsourceconfig
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -37,13 +36,10 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSo
 
 	// The TargetNamespace of the CatalogSourceConfig object has changed
 	if r.targetChanged {
-		// Delete the objects in the old TargetNamespace
-		err = r.deleteObjects(in)
-		if err != nil {
-			// Next retry should resume from the current phase.
-			nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
-			return
-		}
+		// Best case attempt at deleting the objects in the old TargetNamespace
+		// If the csc is not cached we don't want to fail because there are
+		// cases where we won't be able to find the objects.
+		r.deleteObjects(in)
 	}
 
 	// Remove it from the cache so that it does not get picked up during
@@ -59,13 +55,22 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSo
 	return
 }
 
-// deleteObjects deletes the CatalogSource in the old TargetNamespace.
-func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error {
+// deleteObjects attempts to delete the CatalogSource in the old TargetNamespace.
+// This is just an attempt, because if we are not aware of the the old namespace
+// we will not be able to succeed.
+func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) {
 	cachedCSCSpec, found := r.cache.Get(in)
-	// This should never happen as it is because the cached Spec has changed
-	// that we are in the update reconciler.
+	// This generally won't happen as it is because the cached Spec has changed
+	// when we are in the update reconciler.
+	// However, in the case that the cache is invalidated because of a restart,
+	// we could simply be unsure if the targetNamespace changed. Ideally,  we
+	// we should be using something like a direct reference to the old object
+	// instead of an in memory cache, since when the service restarts we will be
+	// unable to find the old object if the targetNamespace changed while we were
+	// down. For now, we will just ignore it.
 	if !found {
-		return fmt.Errorf("Unexpected cache miss")
+		r.log.Debugf("Cache invalid for csc %s, unable to validate if the targetNamespace changed.", in.Name)
+		return
 	}
 
 	// Delete the CatalogSource
@@ -78,5 +83,5 @@ func (r *updateReconciler) deleteObjects(in *v1alpha1.CatalogSourceConfig) error
 	}
 	r.log.Infof("Deleted CatalogSource %s/%s", cachedCSCSpec.TargetNamespace, name)
 
-	return nil
+	return
 }
