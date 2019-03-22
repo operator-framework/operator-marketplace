@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -19,9 +18,6 @@ import (
 )
 
 const (
-	cleanupRetryInterval = time.Second * 1
-	cleanupTimeout       = time.Second * 5
-
 	GroupLabel string = "opsrc-group"
 )
 
@@ -32,14 +28,14 @@ func TestMarketplace(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: marketplace.OperatorSourceKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
+				marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
 		},
 	}
 	catalogsourceconfig := &marketplace.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind: marketplace.CatalogSourceConfigKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
+				marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
 		},
 	}
 	err := test.AddToFrameworkScheme(apis.AddToScheme, operatorsource)
@@ -61,9 +57,11 @@ func TestMarketplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to add catalogsource custom resource scheme to framework: %v", err)
 	}
+
 	// run subtests
 	t.Run("marketplace-group", func(t *testing.T) {
 		t.Run("Cluster", MarketplaceCluster)
+		t.Run("csc-non-existing-namespac", runCSCWithInvalidTargetNamespace)
 	})
 }
 

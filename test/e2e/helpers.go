@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/operator-framework/operator-sdk/pkg/test"
-
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,8 +14,10 @@ import (
 )
 
 const (
-	retryInterval = time.Second * 5
-	timeout       = time.Minute * 5
+	retryInterval        = time.Second * 5
+	timeout              = time.Minute * 10
+	cleanupRetryInterval = time.Second * 1
+	cleanupTimeout       = time.Minute * 10
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace
@@ -70,4 +71,38 @@ func WaitForSuccessfulDeployment(t *testing.T, f *test.Framework, deployment app
 	}
 	t.Logf("Deployment %s has been initialized successfully\n", deployment.Name)
 	return nil
+}
+
+// createRuntimeObject creates a runtime object using the test framework
+func createRuntimeObject(f *test.Framework, ctx *test.TestCtx, obj runtime.Object) error {
+	return f.Client.Create(
+		context.TODO(),
+		obj,
+		&test.CleanupOptions{
+			TestContext:   ctx,
+			Timeout:       cleanupTimeout,
+			RetryInterval: cleanupRetryInterval,
+		})
+}
+
+// pollUntilTrue will check if a function returns a true value
+// every pollInterval duration until the timeout duration has
+// passed
+//
+// pollUntilTrue function will run over the timeout if the
+// provided function hangs
+func pollUntilTrue(pollInterval time.Duration, timeout time.Duration, f func() bool) bool {
+	ticker := time.NewTicker(pollInterval)
+	timeoutCh := time.After(timeout)
+	for {
+		select {
+		case <-timeoutCh:
+			ticker.Stop()
+			return false
+		case <-ticker.C:
+			if f() {
+				return true
+			}
+		}
+	}
 }
