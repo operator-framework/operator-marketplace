@@ -37,14 +37,20 @@ type Repository struct {
 	Opsrc *OpsrcRef
 }
 
-// OpsrcRef defines the name and namespace for a given Operator Source. It is used
-// to define the 1:1 relationship between opsrc and repository name.
+// OpsrcRef defines the endpoint, registry namespace and secret for a given
+// OperatorSource.
 type OpsrcRef struct {
-	// Name of the OperatorSource
-	Name string
+	// Endpoint points to the remote app registry server from
+	// where operator manifests can be fetched.
+	Endpoint string
 
-	// Namespace of the OperatorSource
-	Namespace string
+	// RegistryNamespace refers to the namespace in app registry. Only operator
+	// manifests under this namespace will be visible.
+	// Please note that this is not a k8s namespace.
+	RegistryNamespace string
+
+	// SecretNamespacedName is the name of the kubernetes Secret object.
+	SecretNamespacedName string
 }
 
 // RegistryMetadata encapsulates metadata that uniquely describes the source of

@@ -69,18 +69,23 @@ func NewRegistry(log *logrus.Entry, client client.Client, reader datastore.Reade
 // Ensure ensures a registry-pod deployment and its associated
 // resources are created.
 func (r *registry) Ensure() error {
-	oprsrcString, oprsrcList := r.getOperatorSources()
+	appRegistries, secretIsPresent := r.getAppRegistryCmdLineOptions()
 
-	if err := r.ensureServiceAccount(); err != nil {
-		return err
+	// We create a ServiceAccount, Role and RoleBindings only if the registry
+	// pod needs to access private registry which requires access to a secret
+	if secretIsPresent {
+		if err := r.ensureServiceAccount(); err != nil {
+			return err
+		}
+		if err := r.ensureRole(); err != nil {
+			return err
+		}
+		if err := r.ensureRoleBinding(); err != nil {
+			return err
+		}
 	}
-	if err := r.ensureRole(oprsrcList); err != nil {
-		return err
-	}
-	if err := r.ensureRoleBinding(); err != nil {
-		return err
-	}
-	if err := r.ensureDeployment(oprsrcString); err != nil {
+
+	if err := r.ensureDeployment(appRegistries, secretIsPresent); err != nil {
 		return err
 	}
 	if err := r.ensureService(); err != nil {
@@ -94,12 +99,15 @@ func (r *registry) GetAddress() string {
 }
 
 // ensureDeployment ensures that registry Deployment is present for serving
-// the the grpc interface for the packages from the given operatorSources
-func (r *registry) ensureDeployment(operatorSources string) error {
-	registryCommand := getCommand(r.csc.GetPackages(), operatorSources)
+// the the grpc interface for the packages from the given app registries.
+// needServiceAccount indicates that the deployment is for a private registry
+// and the pod requires a Service Account with the Role that allows it to access
+// secrets.
+func (r *registry) ensureDeployment(appRegistries string, needServiceAccount bool) error {
+	registryCommand := getCommand(r.csc.GetPackages(), appRegistries)
 	deployment := new(DeploymentBuilder).WithTypeMeta().Deployment()
 	if err := r.client.Get(context.TODO(), r.csc.key(), deployment); err != nil {
-		deployment = r.newDeployment(registryCommand)
+		deployment = r.newDeployment(registryCommand, needServiceAccount)
 		err = r.client.Create(context.TODO(), deployment)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			r.log.Errorf("Failed to create Deployment %s: %v", deployment.GetName(), err)
@@ -126,7 +134,7 @@ func (r *registry) ensureDeployment(operatorSources string) error {
 
 		replicas = 1
 		deployment.Spec.Replicas = &replicas
-		deployment.Spec.Template = r.newPodTemplateSpec(registryCommand)
+		deployment.Spec.Template = r.newPodTemplateSpec(registryCommand, needServiceAccount)
 		if err = r.client.Update(context.TODO(), deployment); err != nil {
 			r.log.Errorf("Failed to update Deployment %s : %v", deployment.GetName(), err)
 			return err
@@ -136,12 +144,12 @@ func (r *registry) ensureDeployment(operatorSources string) error {
 	return nil
 }
 
-// ensureRole ensure that the Role required to access the given operatorSources
-// from the registry Deployment is present.
-func (r *registry) ensureRole(operatorSources []string) error {
+// ensureRole ensure that the Role required to access secrets from the registry
+// Deployment is present.
+func (r *registry) ensureRole() error {
 	role := new(RoleBuilder).WithTypeMeta().Role()
 	if err := r.client.Get(context.TODO(), r.csc.key(), role); err != nil {
-		role = r.newRole(operatorSources)
+		role = r.newRole()
 		err = r.client.Create(context.TODO(), role)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			r.log.Errorf("Failed to create Role %s: %v", role.GetName(), err)
@@ -150,7 +158,7 @@ func (r *registry) ensureRole(operatorSources []string) error {
 		r.log.Infof("Created Role %s", role.GetName())
 	} else {
 		// Update the Rules to be on the safe side
-		role.Rules = getRules(operatorSources)
+		role.Rules = getRules()
 		err = r.client.Update(context.TODO(), role)
 		if err != nil {
 			r.log.Errorf("Failed to update Role %s : %v", role.GetName(), err)
@@ -235,26 +243,28 @@ func (r *registry) getLabel() map[string]string {
 	return map[string]string{"marketplace.catalogSourceConfig": r.csc.GetName()}
 }
 
-// getOperatorSources returns a concatanated string of namespaced OperatorSources
-// and an array of OperatorSource names where the packages in the
-// CatalogSourceConfig are present.
-func (r *registry) getOperatorSources() (string, []string) {
-	var opsrcString string
-	var opsrcList []string
+// getAppRegistryCmdLineOptions returns a group of "--registry=" command line
+// option(s) required for operator-registry. If one of the packages is from a
+// private repository secretIsPresent will be true.
+func (r *registry) getAppRegistryCmdLineOptions() (appRegistryOptions string, secretIsPresent bool) {
 	for _, packageID := range r.csc.Spec.GetPackageIDs() {
 		opsrcMeta, err := r.reader.Read(packageID)
 		if err != nil {
 			r.log.Errorf("Error %v reading package %s", err, packageID)
 			continue
 		}
-		opsrcNamespacedName := opsrcMeta.Namespace + "/" + opsrcMeta.Name
-		if !strings.Contains(opsrcString, opsrcNamespacedName) {
-			opsrcString += opsrcNamespacedName + ","
-			opsrcList = append(opsrcList, opsrcMeta.Name)
+		//--registry="https://quay.io/cnr|community-operators" --regisry="https://quay.io/cnr|custom-operators|mynamespace/mysecret"
+		appRegistry := "--registry=" + opsrcMeta.Endpoint + "|" + opsrcMeta.RegistryNamespace
+		if opsrcMeta.SecretNamespacedName != "" {
+			appRegistry += "|" + opsrcMeta.SecretNamespacedName
+			secretIsPresent = true
+		}
+		if !strings.Contains(appRegistryOptions, appRegistry) {
+			appRegistryOptions += appRegistry + " "
 		}
 	}
-	opsrcString = strings.TrimSuffix(opsrcString, ",")
-	return opsrcString, opsrcList
+	appRegistryOptions = strings.TrimSuffix(appRegistryOptions, " ")
+	return
 }
 
 // getSubjects returns the Subjects that the RoleBinding should apply to.
@@ -270,18 +280,18 @@ func (r *registry) getSubjects() []rbac.Subject {
 
 // newDeployment() returns a Deployment object that can be used to bring up a
 // registry deployment
-func (r *registry) newDeployment(registryCommand []string) *apps.Deployment {
+func (r *registry) newDeployment(registryCommand []string, needServiceAccount bool) *apps.Deployment {
 	return new(DeploymentBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
 		WithOwnerLabel(r.csc.CatalogSourceConfig).
-		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand)).
+		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand, needServiceAccount)).
 		Deployment()
 }
 
 // newPodTemplateSpec returns a PodTemplateSpec object that can be used to bring
 // up a registry pod
-func (r *registry) newPodTemplateSpec(registryCommand []string) core.PodTemplateSpec {
-	return core.PodTemplateSpec{
+func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccount bool) core.PodTemplateSpec {
+	podTemplateSpec := core.PodTemplateSpec{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      r.csc.GetName(),
 			Namespace: r.csc.GetNamespace(),
@@ -319,18 +329,21 @@ func (r *registry) newPodTemplateSpec(registryCommand []string) core.PodTemplate
 					},
 				},
 			},
-			ServiceAccountName: r.csc.GetName(),
 		},
 	}
+	if needServiceAccount {
+		podTemplateSpec.Spec.ServiceAccountName = r.csc.GetName()
+	}
+	return podTemplateSpec
 }
 
-// newRole returns a Role object with the rules set to access the given
-// operatorSources from the registry pod
-func (r *registry) newRole(operatorSources []string) *rbac.Role {
+// newRole returns a Role object with the rules set to access secrets from the
+// registry pod
+func (r *registry) newRole() *rbac.Role {
 	return new(RoleBuilder).
 		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
 		WithOwnerLabel(r.csc.CatalogSourceConfig).
-		WithRules(getRules(operatorSources)).
+		WithRules(getRules()).
 		Role()
 }
 
@@ -401,15 +414,14 @@ func (r *registry) waitForDeploymentScaleDown(retryInterval, timeout time.Durati
 }
 
 // getCommand returns the command used to launch the registry server
-func getCommand(packages string, sources string) []string {
-	return []string{"appregistry-server", "-s", sources, "-o", packages}
+// appregistry-server --registry="<url>|<registry namespace>|<namespaced-secret> -o <packages>"
+func getCommand(packages string, registries string) []string {
+	return []string{"appregistry-server", registries, "-o", packages}
 }
 
-// getRules returns the PolicyRule needed to access the given operatorSources and secrets
-// from the registry pod
-func getRules(operatorSources []string) []rbac.PolicyRule {
+// getRules returns the PolicyRule needed to access secrets from the registry pod
+func getRules() []rbac.PolicyRule {
 	return []rbac.PolicyRule{
-		NewRule([]string{"get"}, []string{"operators.coreos.com"}, []string{"operatorsources"}, operatorSources),
 		NewRule([]string{"get"}, []string{""}, []string{"secrets"}, nil),
 	}
 }

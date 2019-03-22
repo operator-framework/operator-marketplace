@@ -152,12 +152,18 @@ func (ds *memoryDatastore) Write(opsrc *marketplace.OperatorSource, registryMeta
 
 	for _, metadata := range registryMetas {
 		// For each repository store the associated registry metadata.
+		secretNamespacedName := ""
+		if opsrc.Spec.AuthorizationToken.SecretName != "" {
+			secretNamespacedName = opsrc.Namespace + "/" + opsrc.Spec.AuthorizationToken.SecretName
+		}
+
 		repository := &Repository{
 			Metadata: *metadata,
 			Package:  metadata.Repository,
 			Opsrc: &OpsrcRef{
-				Name:      opsrc.Name,
-				Namespace: opsrc.Namespace,
+				Endpoint:             opsrc.Spec.Endpoint,
+				RegistryNamespace:    opsrc.Spec.RegistryNamespace,
+				SecretNamespacedName: secretNamespacedName,
 			},
 		}
 		repositories[metadata.Repository] = repository

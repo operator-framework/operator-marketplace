@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,6 +67,10 @@ func TestReadOpsrcMeta(t *testing.T) {
 			Name:      "operators-opsrc",
 			Namespace: "operators",
 		},
+		Spec: marketplace.OperatorSourceSpec{
+			Endpoint:          "https://quay.io/cnr",
+			RegistryNamespace: "registry-namespace",
+		},
 	}
 
 	metadata := []*datastore.RegistryMetadata{
@@ -86,13 +90,13 @@ func TestReadOpsrcMeta(t *testing.T) {
 
 	opsrcmeta, err := ds.Read("amq-streams")
 	require.NoError(t, err)
-	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
-	assert.Equal(t, "operators", opsrcmeta.Namespace)
+	assert.Equal(t, "https://quay.io/cnr", opsrcmeta.Endpoint)
+	assert.Equal(t, "registry-namespace", opsrcmeta.RegistryNamespace)
 
 	opsrcmeta, err = ds.Read("etcd")
 	require.NoError(t, err)
-	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
-	assert.Equal(t, "operators", opsrcmeta.Namespace)
+	assert.Equal(t, "https://quay.io/cnr", opsrcmeta.Endpoint)
+	assert.Equal(t, "registry-namespace", opsrcmeta.RegistryNamespace)
 }
 
 // In this test we make sure that we properly relate multiple opsrcs
@@ -103,6 +107,10 @@ func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
 			UID:       types.UID("123456"),
 			Name:      "operators-opsrc",
 			Namespace: "operators",
+		},
+		Spec: marketplace.OperatorSourceSpec{
+			Endpoint:          "https://quay.io/cnr",
+			RegistryNamespace: "registry-namespace",
 		},
 	}
 
@@ -127,6 +135,10 @@ func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
 			Name:      "operators-different",
 			Namespace: "operators",
 		},
+		Spec: marketplace.OperatorSourceSpec{
+			Endpoint:          "https://quay-diff.io/cnr",
+			RegistryNamespace: "registry-namespace-diff",
+		},
 	}
 
 	metadata = []*datastore.RegistryMetadata{
@@ -141,16 +153,16 @@ func TestReadOpsrcMetaMultipleOpsrc(t *testing.T) {
 
 	opsrcmeta, err := ds.Read("amq-streams")
 	require.NoError(t, err)
-	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
-	assert.Equal(t, "operators", opsrcmeta.Namespace)
+	assert.Equal(t, "https://quay.io/cnr", opsrcmeta.Endpoint)
+	assert.Equal(t, "registry-namespace", opsrcmeta.RegistryNamespace)
 
 	opsrcmeta, err = ds.Read("etcd")
 	require.NoError(t, err)
-	assert.Equal(t, "operators-opsrc", opsrcmeta.Name)
-	assert.Equal(t, "operators", opsrcmeta.Namespace)
+	assert.Equal(t, "https://quay.io/cnr", opsrcmeta.Endpoint)
+	assert.Equal(t, "registry-namespace", opsrcmeta.RegistryNamespace)
 
 	opsrcmeta, err = ds.Read("federationv2")
 	require.NoError(t, err)
-	assert.Equal(t, "operators-different", opsrcmeta.Name)
-	assert.Equal(t, "operators", opsrcmeta.Namespace)
+	assert.Equal(t, "https://quay-diff.io/cnr", opsrcmeta.Endpoint)
+	assert.Equal(t, "registry-namespace-diff", opsrcmeta.RegistryNamespace)
 }
