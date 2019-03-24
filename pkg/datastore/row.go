@@ -3,7 +3,7 @@ package datastore
 import (
 	"sync"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -29,7 +29,7 @@ type OperatorSourceKey struct {
 	//
 	// We compare the Spec of the received OperatorSource object to the one
 	// in datastore.
-	Spec *v1alpha1.OperatorSourceSpec
+	Spec *marketplace.OperatorSourceSpec
 }
 
 // operatorSourceRow is what gets stored in datastore after an OperatorSource CR
@@ -71,7 +71,7 @@ type operatorSourceRowMap struct {
 
 // AddEmpty adds a new operator source to the map with an empty set of
 // registry metadata.
-func (m *operatorSourceRowMap) AddEmpty(opsrc *v1alpha1.OperatorSource) {
+func (m *operatorSourceRowMap) AddEmpty(opsrc *marketplace.OperatorSource) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -80,14 +80,14 @@ func (m *operatorSourceRowMap) AddEmpty(opsrc *v1alpha1.OperatorSource) {
 
 // Add adds a new operator source to the map with an the specified set of
 // registry metadata.
-func (m *operatorSourceRowMap) Add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository) {
+func (m *operatorSourceRowMap) Add(opsrc *marketplace.OperatorSource, repositories map[string]*Repository) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	m.add(opsrc, repositories)
 }
 
-func (m *operatorSourceRowMap) add(opsrc *v1alpha1.OperatorSource, repositories map[string]*Repository) {
+func (m *operatorSourceRowMap) add(opsrc *marketplace.OperatorSource, repositories map[string]*Repository) {
 	m.Sources[opsrc.GetUID()] = &operatorSourceRow{
 		OperatorSourceKey: OperatorSourceKey{
 			UID: opsrc.GetUID(),

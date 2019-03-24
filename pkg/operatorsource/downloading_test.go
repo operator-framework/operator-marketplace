@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
@@ -22,7 +22,7 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Configuring,
 		Message: phase.GetMessage(phase.Configuring),
 	}
@@ -103,7 +103,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 	assert.Error(t, errGot)
 
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Failed,
 		Message: errGot.Error(),
 	}

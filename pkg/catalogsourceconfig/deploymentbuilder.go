@@ -1,7 +1,7 @@
 package catalogsourceconfig
 
 import (
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +38,7 @@ func (b *DeploymentBuilder) WithMeta(name, namespace string) *DeploymentBuilder 
 }
 
 // WithOwnerLabel sets the owner label of the Deployment object to the given owner.
-func (b *DeploymentBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *DeploymentBuilder {
+func (b *DeploymentBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *DeploymentBuilder {
 	labels := map[string]string{
 		CscOwnerNameLabel:      owner.Name,
 		CscOwnerNamespaceLabel: owner.Namespace,

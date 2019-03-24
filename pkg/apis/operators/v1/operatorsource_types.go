@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	"strings"
@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	// Name for the finalizer to allow for deletion reconciliation
-	// when an OperatorSource is deleted.
-	OpSrcFinalizer = "finalizer.operatorsources.marketplace.redhat.com"
+	// OpSrcFinalizer is the name for the finalizer to allow for deletion
+	// reconciliation when an OperatorSource is deleted.
+	OpSrcFinalizer = "finalizer.operatorsources.operators.coreos.com"
 )
 
 // Only type definitions go into this file.
@@ -83,7 +83,7 @@ type OperatorSourceStatus struct {
 }
 
 // Set group, version, and kind strings
-// from the internal reference that we defined in the v1alpha1 package.
+// from the internal reference that we defined in the v1 package.
 // The object the sdk client returns does not set these
 // so we must find the correct values and set them manually.
 func (opsrc *OperatorSource) EnsureGVK() {

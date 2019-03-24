@@ -1,7 +1,7 @@
 package catalogsourceconfig
 
 import (
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,7 +37,7 @@ func (b *ServiceAccountBuilder) WithMeta(name, namespace string) *ServiceAccount
 }
 
 // WithOwnerLabel sets the owner label of the ServiceAccount object to the given owner.
-func (b *ServiceAccountBuilder) WithOwnerLabel(owner *v1alpha1.CatalogSourceConfig) *ServiceAccountBuilder {
+func (b *ServiceAccountBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *ServiceAccountBuilder {
 	labels := map[string]string{
 		CscOwnerNameLabel:      owner.Name,
 		CscOwnerNamespaceLabel: owner.Namespace,

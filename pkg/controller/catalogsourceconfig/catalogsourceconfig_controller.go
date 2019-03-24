@@ -3,7 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 
-	marketplacev1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
@@ -58,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CatalogSourceConfig
-	err = c.Watch(&source.Kind{Type: &marketplacev1alpha1.CatalogSourceConfig{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &marketplace.CatalogSourceConfig{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (rec
 		}
 	}()
 	// Fetch the CatalogSourceConfig instance
-	instance := &marketplacev1alpha1.CatalogSourceConfig{}
+	instance := &marketplace.CatalogSourceConfig{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

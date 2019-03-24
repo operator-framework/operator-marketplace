@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -23,7 +23,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -47,7 +47,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	datastore.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
-	cscWant.Spec = v1alpha1.CatalogSourceConfigSpec{
+	cscWant.Spec = marketplace.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
@@ -69,7 +69,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	defer controller.Finish()
 
 	namespace, name := "marketplace", "foo"
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -97,11 +97,11 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 
 	// We expect Get to return the given CatalogSourceConfig successfully.
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	cscGet := v1alpha1.CatalogSourceConfig{}
+	cscGet := marketplace.CatalogSourceConfig{}
 	kubeclient.EXPECT().Get(context.TODO(), namespacedName, &cscGet).Return(nil)
 
 	cscWant := helperNewCatalogSourceConfigWithLabels("", "", labelsWant)
-	cscWant.Spec = v1alpha1.CatalogSourceConfigSpec{
+	cscWant.Spec = marketplace.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
@@ -123,7 +123,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	namespace, name := "marketplace", "foo"
 
 	updateError := k8s_errors.NewServerTimeout(schema.GroupResource{}, "operation", 1)
-	nextPhaseWant := &v1alpha1.Phase{
+	nextPhaseWant := &marketplace.Phase{
 		Name:    phase.Configuring,
 		Message: updateError.Error(),
 	}

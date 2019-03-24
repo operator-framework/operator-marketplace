@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -54,7 +54,7 @@ func (t *triggerer) Trigger(notification datastore.PackageUpdateNotification) er
 	options := &client.ListOptions{}
 	options.SetLabelSelector(fmt.Sprintf("%s!=true", operatorsource.DatastoreLabel))
 
-	cscs := &v1alpha1.CatalogSourceConfigList{}
+	cscs := &marketplace.CatalogSourceConfigList{}
 	if err := t.client.List(context.TODO(), options, cscs); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (t *triggerer) Trigger(notification datastore.PackageUpdateNotification) er
 	return utilerrors.NewAggregate(allErrors)
 }
 
-func (t *triggerer) setPackages(instance *v1alpha1.CatalogSourceConfig, notification datastore.PackageUpdateNotification) (packages string, updateNeeded bool) {
+func (t *triggerer) setPackages(instance *marketplace.CatalogSourceConfig, notification datastore.PackageUpdateNotification) (packages string, updateNeeded bool) {
 	packageList := make([]string, 0)
 	for _, pkg := range instance.GetPackageIDs() {
 		// If this is a refresh notification, we need to access the datastore to determine
@@ -126,11 +126,11 @@ func (t *triggerer) setPackages(instance *v1alpha1.CatalogSourceConfig, notifica
 	return
 }
 
-func (t *triggerer) update(instance *v1alpha1.CatalogSourceConfig, packages string) error {
+func (t *triggerer) update(instance *marketplace.CatalogSourceConfig, packages string) error {
 	out := instance.DeepCopy()
 
 	// We want to Set the phase to Initial to kick off reconciliation anew.
-	nextPhase := &v1alpha1.Phase{
+	nextPhase := &marketplace.Phase{
 		Name:    phase.Initial,
 		Message: "Package(s) have update(s), scheduling for reconciliation",
 	}

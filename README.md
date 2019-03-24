@@ -61,7 +61,7 @@ upstream-community-operators   federationv2,svcat,metering,etcd,prometheus,autom
 
 Now if you want to install the `descheduler` and `jaeger` operators, create a `CatalogSourceConfig` CR as shown below:
 ```
-apiVersion: marketplace.redhat.com/v1alpha1
+apiVersion: operators.coreos.com/v1
 kind: CatalogSourceConfig
 metadata:
   name: installed-upstream-community-operators

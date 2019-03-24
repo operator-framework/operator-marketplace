@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -46,7 +46,7 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil)
 
 	// We expect the phase reconciler to successfully reconcile the object inside event.
-	nextPhaseExpected := &v1alpha1.Phase{
+	nextPhaseExpected := &marketplace.Phase{
 		Name:    "validating",
 		Message: "validation is in progress",
 	}
@@ -135,7 +135,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 
 	// We expect the phase reconciler to throw an error.
 	reconcileErrorExpected := errors.New("reconciliation error")
-	nextPhaseExpected := &v1alpha1.Phase{
+	nextPhaseExpected := &marketplace.Phase{
 		Name:    "Failed",
 		Message: "Reconciliation has failed",
 	}

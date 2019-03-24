@@ -3,7 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
 )
@@ -26,7 +26,7 @@ type initialReconciler struct {
 // phase. This is the first phase in the reconciliation process.
 //
 // Upon success, it returns "Configuring" as the next desired phase.
-func (r *initialReconciler) Reconcile(ctx context.Context, in *v1alpha1.CatalogSourceConfig) (out *v1alpha1.CatalogSourceConfig, nextPhase *v1alpha1.Phase, err error) {
+func (r *initialReconciler) Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error) {
 	if in.Status.CurrentPhase.Name != phase.Initial {
 		err = phase.ErrWrongReconcilerInvoked
 		return

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/stretchr/testify/assert"
 
@@ -14,7 +14,7 @@ import (
 
 var cache catalogsourceconfig.Cache
 var inPackages []string
-var csc *v1alpha1.CatalogSourceConfig
+var csc *marketplace.CatalogSourceConfig
 var testUID types.UID
 
 func TestMain(m *testing.M) {
@@ -82,12 +82,12 @@ func TestStale(t *testing.T) {
 	assert.True(t, targetStale)
 }
 
-func helperNewCatalogSourceConfig(UID types.UID, targetNamespace, packages string) *v1alpha1.CatalogSourceConfig {
-	return &v1alpha1.CatalogSourceConfig{
+func helperNewCatalogSourceConfig(UID types.UID, targetNamespace, packages string) *marketplace.CatalogSourceConfig {
+	return &marketplace.CatalogSourceConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			UID: UID,
 		},
-		Spec: v1alpha1.CatalogSourceConfigSpec{
+		Spec: marketplace.CatalogSourceConfigSpec{
 			TargetNamespace: targetNamespace,
 			Packages:        packages,
 		},

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
-	operator "github.com/operator-framework/operator-marketplace/pkg/apis/marketplace/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 
@@ -28,18 +28,18 @@ const (
 // Test marketplace is the root function that triggers the set of e2e tests
 func TestMarketplace(t *testing.T) {
 	// Add marketplace types to test framework scheme
-	operatorsource := &operator.OperatorSource{
+	operatorsource := &marketplace.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: marketplace.OperatorSourceKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-				operator.SchemeGroupVersion.Group, operator.SchemeGroupVersion.Version),
+			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
 		},
 	}
-	catalogsourceconfig := &operator.CatalogSourceConfig{
+	catalogsourceconfig := &marketplace.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.CatalogSourceConfigKind,
+			Kind: marketplace.CatalogSourceConfigKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-				operator.SchemeGroupVersion.Group, operator.SchemeGroupVersion.Version),
+			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
 		},
 	}
 	err := test.AddToFrameworkScheme(apis.AddToScheme, operatorsource)
@@ -91,9 +91,9 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 	}
 
 	groupWant := "Community"
-	testOperatorSource := &operator.OperatorSource{
+	testOperatorSource := &marketplace.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: marketplace.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-operators",
@@ -102,7 +102,7 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 				GroupLabel: groupWant,
 			},
 		},
-		Spec: operator.OperatorSourceSpec{
+		Spec: marketplace.OperatorSourceSpec{
 			Type:              "appregistry",
 			Endpoint:          "https://quay.io/cnr",
 			RegistryNamespace: "marketplace_e2e",
@@ -128,7 +128,7 @@ func defaultCreateTest(t *testing.T, f *test.Framework, ctx *test.TestCtx) error
 	}
 
 	// Check that we created the catalogsourceconfig.
-	resultCatalogSourceConfig := &operator.CatalogSourceConfig{}
+	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
 	err = WaitForResult(t, f, resultCatalogSourceConfig, namespace, catalogSourceConfigName)
 	if err != nil {
 		return err
