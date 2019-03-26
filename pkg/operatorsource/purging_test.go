@@ -31,8 +31,8 @@ func TestReconcileWithPurging(t *testing.T) {
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
-	client := mocks.NewKubeClient(controller)
-	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, client)
+	fakeclient := NewFakeClient()
+	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, fakeclient)
 
 	// We expect the operator source to be removed from the datastore.
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID()).Times(1)

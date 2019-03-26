@@ -29,10 +29,10 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
-	kubeclient := mocks.NewKubeClient(controller)
+	fakeclient := NewFakeClient()
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient, refresher)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
@@ -83,10 +83,10 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_ErrorExpected(t *testi
 
 	writer := mocks.NewDatastoreWriter(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
-	kubeclient := mocks.NewKubeClient(controller)
+	fakeclient := NewFakeClient()
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, kubeclient, refresher)
+	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)
