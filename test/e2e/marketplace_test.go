@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -19,9 +18,6 @@ import (
 )
 
 const (
-	cleanupRetryInterval = time.Second * 1
-	cleanupTimeout       = time.Second * 5
-
 	GroupLabel string = "opsrc-group"
 )
 
@@ -64,6 +60,7 @@ func TestMarketplace(t *testing.T) {
 	// run subtests
 	t.Run("marketplace-group", func(t *testing.T) {
 		t.Run("Cluster", MarketplaceCluster)
+		t.Run("csc-non-existing-namespace", runCSCWithNonExistingTargetNamespace)
 	})
 }
 
