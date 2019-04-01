@@ -24,6 +24,7 @@ func TestMarketplace(t *testing.T) {
 
 	// Run Test Groups
 	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
+	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
 
 // initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the
