@@ -26,7 +26,7 @@ $ export REGISTRY=<SOME_REGISTRY> \
 ## Using the Marketplace Operator
 
 ### Description
-The operator manages two CRDs: [OperatorSource](./deploy/crds/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crds/catalogsourceconfig.crd.yaml).
+The operator manages two CRDs: [OperatorSource](./deploy/crds/operators_v1_operatorsource_crd.yaml) and [CatalogSourceConfig](./deploy/crds/operators_v1_catalogsourceconfig_crd.yaml).
 
 `OperatorSource` is used to define the external datastore we are using to store operator bundles. At the moment we only support Quay's app-registry as our external datastore. Please see [here](deploy/examples/community.operatorsource.cr.yaml) for an example `OperatorSource`. The `endpoint` in the `spec` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry. The `registryNamespace` is the name of your app-registry namespace. `displayName` and `publisher` are optional and only needed for UI purposes. If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
 On adding an `OperatorSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/operator-hub) in the OKD console. There is no equivalent UI in the Kubernetes console.
