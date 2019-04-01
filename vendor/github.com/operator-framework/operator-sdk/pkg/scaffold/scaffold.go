@@ -29,6 +29,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/scaffold/input"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"golang.org/x/tools/imports"
 )
 
@@ -36,13 +37,13 @@ import (
 type Scaffold struct {
 	// Repo is the go project package
 	Repo string
-
 	// AbsProjectPath is the absolute path to the project root, including the project directory.
 	AbsProjectPath string
-
 	// ProjectName is the operator's name, ex. app-operator
 	ProjectName string
-
+	// Fs is the filesystem GetWriter uses to write scaffold files.
+	Fs afero.Fs
+	// GetWriter returns a writer for writing scaffold files.
 	GetWriter func(path string, mode os.FileMode) (io.Writer, error)
 }
 
@@ -74,8 +75,11 @@ func (s *Scaffold) configure(cfg *input.Config) {
 
 // Execute executes scaffolding the Files
 func (s *Scaffold) Execute(cfg *input.Config, files ...input.File) error {
+	if s.Fs == nil {
+		s.Fs = afero.NewOsFs()
+	}
 	if s.GetWriter == nil {
-		s.GetWriter = (&fileutil.FileWriter{}).WriteCloser
+		s.GetWriter = fileutil.NewFileWriterFS(s.Fs).WriteCloser
 	}
 
 	// Configure s using common fields from cfg.
@@ -107,7 +111,7 @@ func (s *Scaffold) doFile(e input.File) error {
 	absFilePath := filepath.Join(s.AbsProjectPath, i.Path)
 
 	// Check if the file to write already exists
-	if _, err := os.Stat(absFilePath); err == nil || os.IsExist(err) {
+	if _, err := s.Fs.Stat(absFilePath); err == nil || os.IsExist(err) {
 		switch i.IfExistsAction {
 		case input.Overwrite:
 		case input.Skip:
@@ -117,18 +121,12 @@ func (s *Scaffold) doFile(e input.File) error {
 		}
 	}
 
-	return s.doTemplate(i, e, absFilePath)
+	return s.doRender(i, e, absFilePath)
 }
 
 const goFileExt = ".go"
 
-// doTemplate executes the template at absPath for a file using the input
-func (s *Scaffold) doTemplate(i input.Input, e input.File, absPath string) error {
-	temp, err := newTemplate(e).Parse(i.TemplateBody)
-	if err != nil {
-		return err
-	}
-
+func (s *Scaffold) doRender(i input.Input, e input.File, absPath string) error {
 	var mode os.FileMode = fileutil.DefaultFileMode
 	if i.IsExec {
 		mode = fileutil.DefaultExecFileMode
@@ -145,31 +143,57 @@ func (s *Scaffold) doTemplate(i input.Input, e input.File, absPath string) error
 		}()
 	}
 
-	out := &bytes.Buffer{}
-	err = temp.Execute(out, e)
-	if err != nil {
-		return err
+	var b []byte
+	if c, ok := e.(CustomRenderer); ok {
+		c.SetFS(s.Fs)
+		// CustomRenderers have a non-template method of file rendering.
+		if b, err = c.CustomRender(); err != nil {
+			return err
+		}
+	} else {
+		// All other files are rendered via their templates.
+		temp, err := newTemplate(i)
+		if err != nil {
+			return err
+		}
+
+		out := &bytes.Buffer{}
+		if err = temp.Execute(out, e); err != nil {
+			return err
+		}
+		b = out.Bytes()
 	}
-	b := out.Bytes()
 
 	// gofmt the imports
 	if filepath.Ext(absPath) == goFileExt {
 		b, err = imports.Process(absPath, b, nil)
 		if err != nil {
-			fmt.Printf("%s\n", out.Bytes())
 			return err
 		}
 	}
 
+	// Files being overwritten must be trucated to len 0 so no old bytes remain.
+	if _, err = s.Fs.Stat(absPath); err == nil && i.IfExistsAction == input.Overwrite {
+		if file, ok := f.(afero.File); ok {
+			if err = file.Truncate(0); err != nil {
+				return err
+			}
+		}
+	}
 	_, err = f.Write(b)
-	log.Infoln("Create", i.Path)
+	log.Infoln("Created", i.Path)
 	return err
 }
 
-// newTemplate a new template with common functions
-func newTemplate(t input.File) *template.Template {
-	return template.New(fmt.Sprintf("%T", t)).Funcs(template.FuncMap{
+// newTemplate returns a new template named by i.Path with common functions and
+// the input's TemplateFuncs.
+func newTemplate(i input.Input) (*template.Template, error) {
+	t := template.New(i.Path).Funcs(template.FuncMap{
 		"title": strings.Title,
 		"lower": strings.ToLower,
 	})
+	if len(i.TemplateFuncs) > 0 {
+		t.Funcs(i.TemplateFuncs)
+	}
+	return t.Parse(i.TemplateBody)
 }
