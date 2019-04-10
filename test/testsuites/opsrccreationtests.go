@@ -20,7 +20,7 @@ func OpSrcCreation(t *testing.T) {
 // testOperatorSourceGeneratesExpectedObjects ensures that after creating an OperatorSource that the
 // following objects are generated as a result:
 // a CatalogSourceConfig
-// a CatalogSource with the expected labels
+// a CatalogSource with expected labels
 // a Service
 // a Deployment that has reached a ready state
 func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
