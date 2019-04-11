@@ -1,25 +1,51 @@
 # Marketplace Operator
 Marketplace is a conduit to bring off-cluster operators to your cluster.
 
-## Project Status: pre-alpha
-The project is currently pre-alpha and it is expected that breaking changes to the API will be made in the upcoming releases.
-
 ## Prerequisites
 In order to deploy the Marketplace Operator, you must:
 1. Have an OKD or a Kubernetes cluster with Operator Lifecycle Manager (OLM) [installed](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md).
 2. Be logged in as a user with Cluster Admin role.
-   * This is a stop gap measure until the RBAC permissions are defined
 
 ## Using the Marketplace Operator
 
 ### Description
 The operator manages two CRDs: [OperatorSource](./deploy/crds/operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/crds/catalogsourceconfig.crd.yaml).
 
-`OperatorSource` is used to define the external datastore we are using to store operator bundles. At the moment we only support Quay's app-registry as our external datastore. Please see [here](deploy/examples/community.operatorsource.cr.yaml) for an example `OperatorSource`. The `endpoint` in the `spec` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry. The `registryNamespace` is the name of your app-registry namespace. `displayName` and `publisher` are optional and only needed for UI purposes. If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
+#### OperatorSource
+
+`OperatorSource` is used to define the external datastore we are using to store operator bundles.
+
+Here is a description of the spec fields:
+
+- `type` is the type of external datastore being described. At the moment we only support Quay's app-registry as our external datastore, so this value should be set to `appregistry`
+
+- `endpoint` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry.
+
+- `registryNamespace` is the name of your app-registry namespace.
+
+- `displayName` and `publisher` are optional and only needed for UI purposes.
+
+Please see [here](deploy/examples/community.operatorsource.cr.yaml) for an example `OperatorSource`.
+
+If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
+
 On adding an `OperatorSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/operator-hub) in the OKD console. There is no equivalent UI in the Kubernetes console.
 
-`CatalogSourceConfig` is used to enable an operator present in the `OperatorSource` to your cluster. Behind the scenes, it will configure an OLM `CatalogSource` so that the operator can then be managed by OLM. Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
-The `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated. `packages` is a comma separated list of operators. `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays. Once a `CatalogSourceConfig` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
+#### CatalogSourceConfig
+
+`CatalogSourceConfig` is used to enable an operator present in the `OperatorSource` to your cluster. Behind the scenes, it will configure an OLM `CatalogSource` so that the operator can then be managed by OLM.
+
+Here is a description of the spec fields:
+
+- `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated.
+
+- `packages` is a comma separated list of operators.
+
+- `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays.
+
+Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
+
+Once a `CatalogSourceConfig` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
 
 Please note that the Marketplace operator uses `CatalogSourceConfigs` and `CatalogSources` internally and you will find them present in the namespace where the Marketplace operator is running. These resources can be ignored and should not be modified or used.
 
@@ -35,6 +61,7 @@ $ kubectl apply -f deploy/upstream
 ```
 
 #### Installing an operator using Marketplace
+
 The following section assumes that Marketplace was installed in the `marketplace` namespace. For Marketplace to function you need to have at least one `OperatorSource` CR present on the cluster. To get started you can use the `OperatorSource` for [upstream-community-operators](deploy/examples/upstream.operatorsource.cr.yaml). If you are on an OKD cluster, you can skip this step as the `OperatorSource` for [community-operators](deploy/examples/community.operatorsource.cr.yaml) is installed by default instead.
 ```bash
 $ kubectl apply -f deploy/examples/upstream.operatorsource.cr.yaml
@@ -141,6 +168,8 @@ $ oc create -f your-operator-source.yaml
 ```
 
 Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
+
+You can also access private AppRegistry repositories via an authenticated `OperatorSource`, which you can learn more about [here](docs/how-to-authenticate-private-repositories.md).
 
 ## Running End to End (e2e) Tests
 
