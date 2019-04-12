@@ -5,7 +5,7 @@ An operator's CSV must contain the following annotations for it to be displayed 
 ```yaml
 metadata:
   annotations:
-    categories: A list of comma separated categories that your operator falls under.
+    categories: A list of comma separated list of categories from the values below. If not set, this will be set to "Other" in the UI.
     capabilities: A level of the operators capabilities in accordance to the Operator Maturity Model. Must be one of the following: Basic Install, Seamless Upgrades, Full Lifecycle, Deep Insights, Auto Pilot
     certified: The operator's certification. This field should be set to false until a process to get this value is defined at a later date.
     description: |-
@@ -16,6 +16,7 @@ metadata:
     createdAt: The date that the operator was created. The format should match yyyy-mm-ddThh:mm:ssZ
     support: The maintainer of the operator. This value should be a name, not an email.
     repository: (Optional) a URL to a source code repository of the Operator, intended for community Operators to direct users where to file issues / bugs
+    alm-examples: A string of a JSON list of example CRs for the operator's CRDs. These should be able to work without modification, unless otherwise stated in the operator description.
 spec:
   displayName: A short name for the operator.
   description: A detailed description of the operator, preferably in markdown format.
@@ -26,7 +27,28 @@ spec:
   maturity: The operator's maturity level. This field can be omitted until a process to get this value is defined at a later date.
 ```
 
-> Find out more about [Operator Maturity Model](https://github.com/operator-framework/operator-sdk/raw/master/doc/images/operator-maturity-model.png)
+### Operator Capability Model
+
+Find out more about [Operator Maturity Model](https://github.com/operator-framework/operator-sdk/raw/master/doc/images/operator-maturity-model.png)
+
+### Categories
+
+For the best user experience, choose from the following categories:
+
+| Category  |
+|-----------|
+| AI/Machine Learning |
+| Big Data |
+| Security |
+| Networking |
+| Storage |
+| Integration & Delivery |
+| Database |
+| Cloud Provider |
+| Logging & Tracing |
+| Streaming & Messaging |
+| Monitoring |
+| OpenShift Optional |
 
 ## Example CSV
 
