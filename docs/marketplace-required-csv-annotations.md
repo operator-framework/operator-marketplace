@@ -6,6 +6,7 @@ An operator's CSV must contain the following annotations for it to be displayed 
 metadata:
   annotations:
     categories: A list of comma separated categories that your operator falls under.
+    capabilities: A level of the operators capabilities in accordance to the Operator Maturity Model. Must be one of the following: Basic Install, Seamless Upgrades, Full Lifecycle, Deep Insights, Auto Pilot
     certified: The operator's certification. This field should be set to false until a process to get this value is defined at a later date.
     description: |-
       A short description of the operator that will be displayed on the marketplace tile.
@@ -14,6 +15,7 @@ metadata:
     containerImage: The repository that hosts the operator image. The format should match ${REGISTRYHOST}/${USERNAME}/${NAME}:${TAG}
     createdAt: The date that the operator was created. The format should match yyyy-mm-ddThh:mm:ssZ
     support: The maintainer of the operator. This value should be a name, not an email.
+    repository: (Optional) a URL to a source code repository of the Operator, intended for community Operators to direct users where to file issues / bugs
 spec:
   displayName: A short name for the operator.
   description: A detailed description of the operator, preferably in markdown format.
@@ -23,6 +25,8 @@ spec:
     name: The provider of the operator. This value should be a name, not an email.
   maturity: The operator's maturity level. This field can be omitted until a process to get this value is defined at a later date.
 ```
+
+> Find out more about [Operator Maturity Model](https://github.com/operator-framework/operator-sdk/raw/master/doc/images/operator-maturity-model.png)
 
 ## Example CSV
 
@@ -34,6 +38,7 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     categories: openshift optional
+    capabilities: Basic Install
     certified: false
     containerImage: registry.svc.ci.openshift.org/openshift/origin-v4.0:descheduler-operator
     createdAt: 2019-01-01T11:59:59Z
