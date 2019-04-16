@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"testing"
+	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -63,6 +64,8 @@ func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	time.Sleep(10 * time.Minute)
 
 	labels := resultCatalogSource.GetLabels()
 	groupGot, ok := labels[helpers.TestOperatorSourceLabelKey]
