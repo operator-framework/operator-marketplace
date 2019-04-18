@@ -115,7 +115,7 @@ func childResourcesCreated(t *testing.T) {
 		t.Fatalf("Could not get namespace: %v", err)
 	}
 	// Check that the CatalogSourceConfig and its child resources were created.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesCreated(test.Global.Client, cscName, namespace, targetNamespace)
+	err = helpers.CheckCscSuccessfulCreation(test.Global.Client, cscName, namespace, targetNamespace)
 	if err != nil {
 		t.Fatal(err)
 
@@ -132,7 +132,7 @@ func childResourcesDeleted(t *testing.T) {
 	}
 
 	// Check that the CatalogSourceConfig and its child resources were deleted.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesDeleted(test.Global.Client, cscName, namespace, targetNamespace)
+	err = helpers.CheckCscSuccessfulDeletion(test.Global.Client, cscName, namespace, targetNamespace)
 	if err != nil {
 		t.Fatalf("Could not ensure that CatalogSourceConfig and its child resources were deleted: %v", err)
 	}

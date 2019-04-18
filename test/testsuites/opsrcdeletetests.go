@@ -33,7 +33,7 @@ func testDeleteOpSrc(t *testing.T) {
 	require.NoError(t, err, "Could not create operator source.")
 
 	// Check for the datastore CatalogSourceConfig and its child resources.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesCreated(test.Global.Client, testOperatorSource.Name, namespace, namespace)
+	err = helpers.CheckCscSuccessfulCreation(test.Global.Client, testOperatorSource.Name, namespace, namespace)
 	require.NoError(t, err, "Could not ensure that CatalogSourceConfig and its child resources were deleted")
 
 	// Now let's delete the OperatorSource
@@ -42,6 +42,6 @@ func testDeleteOpSrc(t *testing.T) {
 
 	// Now let's wait until the OperatorSource is successfully deleted and the
 	// child resources are removed.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesDeleted(test.Global.Client, testOperatorSource.Name, namespace, targetNamespace)
+	err = helpers.CheckCscSuccessfulDeletion(test.Global.Client, testOperatorSource.Name, namespace, targetNamespace)
 	require.NoError(t, err, "Could not ensure that CatalogSourceConfig and its child resources were deleted.")
 }
