@@ -54,7 +54,7 @@ func cscWithNonExistingTargetNamespace(t *testing.T, f *test.Framework, ctx *tes
 	// Create a new CatalogSourceConfig with a non-existing targetNamespace.
 	nonExistingTargetNamespaceCsc := &operator.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: operator.CatalogSourceConfigKind,
 		}, ObjectMeta: metav1.ObjectMeta{
 			Name:      nonExistingTargetNamespaceCscName,
 			Namespace: namespace,
