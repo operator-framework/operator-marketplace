@@ -48,7 +48,8 @@ func CscTargetNamespace(t *testing.T) {
 
 	// Create the CatalogSourceConfig and if an error occurs do not run tests that
 	// rely on the existence of the CatalogSourceConfig.
-	err = helpers.CreateRuntimeObject(client, ctx, nonExistingTargetNamespaceCsc)
+	// The CatalogSourceConfig is created with nil ctx and must be deleted manually before test suite exits.
+	err = helpers.CreateRuntimeObject(client, nil, nonExistingTargetNamespaceCsc)
 	if err != nil {
 		t.Fatalf("Unable to create test CatalogSourceConfig: %v", err)
 	}
@@ -64,6 +65,16 @@ func CscTargetNamespace(t *testing.T) {
 	}
 
 	t.Run("succeeded-state-after-target-namespace-created", succeededStateAfterTargetNamespaceCreated)
+
+	t.Run("child-resources-created", childResourcesCreated)
+
+	// Delete the CatalogSourceConfig.
+	err = helpers.DeleteRuntimeObject(client, nonExistingTargetNamespaceCsc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("child-resources-deleted", childResourcesDeleted)
 }
 
 // configuringStateWhenTargetNamespaceDoesNotExist is a test case that creates a CatalogSourceConfig
@@ -99,6 +110,38 @@ func succeededStateAfterTargetNamespaceCreated(t *testing.T) {
 	expectedPhase := "Succeeded"
 	err = helpers.WaitForExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, "")
 	if err != nil {
-		t.Fatalf("CatalogSourceConfig never reached expected phase/message, expected %v", expectedPhase)
+		t.Fatalf("CatalogSourceConfig never reached expected phase, expected %v", expectedPhase)
+	}
+}
+
+// childResourcesCreated checks that once a CatalogSourceConfig is created that all expected runtime
+// objects are created as well.
+func childResourcesCreated(t *testing.T) {
+	// Get test namespace.
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	if err != nil {
+		t.Fatalf("Could not get namespace: %v", err)
+	}
+	// Check that the CatalogSourceConfig and its child resources were created.
+	err = helpers.CheckCatalogSourceConfigAndChildResourcesCreated(test.Global.Client, cscName, namespace, targetNamespace)
+	if err != nil {
+		t.Fatal(err)
+
+	}
+}
+
+// childResourcesDeleted checks that once a CatalogSourceConfig is deleted that all expected runtime
+// objects are deleted as well.
+func childResourcesDeleted(t *testing.T) {
+	// Get test namespace
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	if err != nil {
+		t.Fatalf("Could not get namespace: %v", err)
+	}
+
+	// Check that the CatalogSourceConfig and its child resources were deleted.
+	err = helpers.CheckCatalogSourceConfigAndChildResourcesDeleted(test.Global.Client, cscName, namespace, targetNamespace)
+	if err != nil {
+		t.Fatalf("Could not ensure that CatalogSourceConfig and its child resources were deleted: %v", err)
 	}
 }

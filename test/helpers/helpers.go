@@ -101,6 +101,28 @@ func WaitForExpectedPhaseAndMessage(client test.FrameworkClient, cscName string,
 	})
 }
 
+// WaitForNotFound polls the cluster for a particular resource name and namespace
+// If the request fails because the runtime object is found it retries until the specified timeout
+// If the request returns a IsNotFound error the method will return true
+func WaitForNotFound(client test.FrameworkClient, result runtime.Object, namespace, name string) error {
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	err := wait.Poll(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, result)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateRuntimeObject creates a runtime object using the test framework.
 func CreateRuntimeObject(client test.FrameworkClient, ctx *test.TestCtx, obj runtime.Object) error {
 	return client.Create(
@@ -111,6 +133,13 @@ func CreateRuntimeObject(client test.FrameworkClient, ctx *test.TestCtx, obj run
 			Timeout:       time.Second * 30,
 			RetryInterval: time.Second * 1,
 		})
+}
+
+// DeleteRuntimeObject deletes a runtime object using the test framework
+func DeleteRuntimeObject(client test.FrameworkClient, obj runtime.Object) error {
+	return client.Delete(
+		context.TODO(),
+		obj)
 }
 
 // CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into
@@ -168,6 +197,39 @@ func CheckCatalogSourceConfigAndChildResourcesCreated(client test.FrameworkClien
 
 	// Now check that the Deployment is ready.
 	err = WaitForSuccessfulDeployment(client, *resultDeployment)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CheckCatalogSourceConfigAndChildResourcesDeleted checks that a CatalogSourceConfig
+// and it's child resources were deleted.
+func CheckCatalogSourceConfigAndChildResourcesDeleted(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+	// Check that the CatalogSourceConfig was deleted.
+	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
+	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check that the CatalogSource was deleted.
+	resultCatalogSource := &olm.CatalogSource{}
+	err = WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check that the Service was deleted.
+	resultService := &corev1.Service{}
+	err = WaitForNotFound(client, resultService, namespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check that the Deployment was deleted.
+	resultDeployment := &apps.Deployment{}
+	err = WaitForNotFound(client, resultDeployment, namespace, cscName)
 	if err != nil {
 		return err
 	}
