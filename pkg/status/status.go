@@ -152,9 +152,9 @@ func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string
 	}
 }
 
-// setFailing reports that operator has failed along with the error message
-func (s *status) setFailing(message string) error {
-	return s.setStatus(configv1.OperatorFailing, message)
+// setDegrading reports that operator has degraded along with the error message
+func (s *status) setDegrading(message string) error {
+	return s.setStatus(configv1.OperatorDegraded, message)
 }
 
 // setAvailable reports that the operator is available to process events
@@ -231,10 +231,10 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 	updatedCondition := string(condition)
 
 	availableStatus := configv1.ConditionFalse
-	failingStatus := configv1.ConditionFalse
+	degradedStatus := configv1.ConditionFalse
 	progressingStatus := configv1.ConditionFalse
 	availableMessage := ""
-	failingMessage := ""
+	degradedMessage := ""
 	progressingMessage := ""
 
 	switch condition {
@@ -244,9 +244,9 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 		// Only update the version when the operator becomes available
 		s.setOperandVersion()
 
-	case configv1.OperatorFailing:
-		failingStatus = configv1.ConditionTrue
-		failingMessage = message
+	case configv1.OperatorDegraded:
+		degradedStatus = configv1.ConditionTrue
+		degradedMessage = message
 
 	case configv1.OperatorProgressing:
 		progressingStatus = configv1.ConditionTrue
@@ -270,9 +270,9 @@ func (s *status) setStatusCondition(condition configv1.ClusterStatusConditionTyp
 		LastTransitionTime: time,
 	})
 	cohelpers.SetStatusCondition(&s.clusterOperator.Status.Conditions, configv1.ClusterOperatorStatusCondition{
-		Type:               configv1.OperatorFailing,
-		Status:             failingStatus,
-		Message:            failingMessage,
+		Type:               configv1.OperatorDegraded,
+		Status:             degradedStatus,
+		Message:            degradedMessage,
 		LastTransitionTime: time,
 	})
 	return updatedCondition
@@ -338,8 +338,8 @@ func (s *status) monitorClusterStatus() {
 		select {
 		case <-s.stopCh:
 			// If the stopCh is closed, the operator will exit and CO should
-			// be set to failing.
-			s.setFailing("Operator exited")
+			// be set to degrading.
+			s.setDegrading("Operator exited")
 			return
 		// Attempt to update the cluster operator status whenever the seconds
 		// number of seconds defined by coStatusReportInterval passes
@@ -359,7 +359,7 @@ func (s *status) monitorClusterStatus() {
 						if isSucceeding {
 							statusErr = s.setAvailable(fmt.Sprintf("%s is available", s.version))
 						} else {
-							statusErr = s.setFailing(fmt.Sprintf("Current sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio))
+							statusErr = s.setDegrading(fmt.Sprintf("Current sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio))
 						}
 					}
 				} else {
