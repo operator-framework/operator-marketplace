@@ -11,14 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// cscName is the name of the CatalogSourceConfig used in this test suite.
-	cscName string = "target-namespace-operators"
-
-	// targetNamespace is the targetNamespace value of the CatalogSourceConfig used in this test suite.
-	targetNamespace string = "target-namespace"
-)
-
 // CscTargetNamespace is a test suit that confirms that targetNamespace values are handled appropriately.
 func CscTargetNamespace(t *testing.T) {
 	ctx := test.NewTestCtx(t)
