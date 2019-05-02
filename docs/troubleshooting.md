@@ -13,6 +13,7 @@ Table of contents
 2. [OperatorSource failing to download from datastore](#operatorSource-failing-to-download-from-datastore)
 3. [OperatorSource `MESSAGE` reads unknown error (status 404)](#operatorsource-`message`-reads-unknown-error-(status-404)) 
 4. [CatalogSourceConfig stuck in `Configuring` phase](#catalogsourceconfig-stuck-in-configuring-phase)
+5. [Conflicting Package Names](#conflicting-package-names)
 
 
 ## No packages show up in the UI (No OperatorHub Items Found)
@@ -121,6 +122,15 @@ Some of the common reasons we have encountered that caused this `MESSAGE` are qu
 
 If you are trying to [install an operator from the cli](https://github.com/operator-framework/operator-marketplace#installing-an-operator-using-marketplace), the packages listed in the CatalogSourceConfig must have valid package names. If you have private app-resgistries, please follow the steps listed [here](https://github.com/operator-framework/operator-marketplace/blob/master/docs/how-to-authenticate-private-repositories.md).
 
+## Conflicting Package Names
+
+Package names are global across OperatorSources. To avoid unexpected behavior users should avoid adding any OperatorSources that contain existing packages.
+
+Users can view existing package names with the following command:
+
+```bash
+$ oc get packagemanifests -n openshift-marketplace
+```
 
 ## Where to go for help
 
