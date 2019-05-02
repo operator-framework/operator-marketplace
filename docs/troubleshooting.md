@@ -10,10 +10,9 @@ Table of contents
 ===================
 
 1. [No packages show up in the UI (No OperatorHub Items Found)](#no-packages-show-up-in-the-ui-(no-operatorhub-items-found))
-2. [OperatorSource failing to download from datastore](#operatorSource-failing-to-download-from-datastore)
+2. [OperatorSource failing to connect to the datastore](#operatorSource-failing-to-connect-to-the-datastore)
 3. [OperatorSource `MESSAGE` reads unknown error (status 404)](#operatorsource-`message`-reads-unknown-error-(status-404)) 
-4. [CatalogSourceConfig stuck in `Configuring` phase](#catalogsourceconfig-stuck-in-configuring-phase)
-5. [Conflicting Package Names](#conflicting-package-names)
+4. [Conflicting Package Names](#conflicting-package-names)
 
 
 ## No packages show up in the UI (No OperatorHub Items Found)
@@ -84,8 +83,16 @@ Next, make sure that the `packagemanifests` were created by the `OLM package-ser
 $ oc get packagemanifests -n openshift-marketplace
 
 NAME                             CATALOG               AGE
-packageserver                    OLM Operators         3h31m
-
+planetscale-certified            Certified Operators   40h
+robin-operator                   Certified Operators   40h
+storageos                        Certified Operators   40h
+synopsys-certified               Certified Operators   40h
+amq-streams                      Red Hat Operators     40h
+codeready-workspaces             Red Hat Operators     40h
+camel-k                          Community Operators   40h
+cluster-logging                  Community Operators   40h
+cockroachdb                      Community Operators   40h
+descheduler                      Community Operators   40h
 ```
 
 If no `packagemanifests` were created, check the logs for the `package-server` pods.
@@ -108,19 +115,19 @@ If everything seems healthy, and still no packages show up in the UI, it could b
 
 
 
-## OperatorSource failing to download from datastore
+## OperatorSource failing to connect to the datastore
 
-If an OperatorSource fails to reconcile for any reason (i.e operators in that particular OperatorSource fail to show up in the UI), it might be helpful first inspect the `STATUS` and the `MESSAGE` of the OperatorSource with `oc get opsrc -n openshift-marketplace`. You can also inspect the log messages of the marketplace-operator for detailed information about the OperatorSource. 
+If an OperatorSource fails to reconcile for any reason, first inspect the `STATUS` and the `MESSAGE` of the OperatorSource with `oc get opsrc -n openshift-marketplace`. You can also inspect the log messages of the marketplace-operator with `oc logs <name-of-marketplace-operator> -n openshift-marketplace` for detailed information about the OperatorSource. 
 
-Note: A common reason for an OperatorSource to not reconcile correctly has been the use of the wrong [end point](https://github.com/operator-framework/operator-marketplace/blob/master/deploy/examples/community.operatorsource.cr.yaml#L8). Please make sure that the end point is specified as `https://quay.io/cnr`.
+A common reason for an OperatorSource to not reconcile correctly is the use of the wrong [endpoint](https://github.com/operator-framework/operator-marketplace/blob/master/deploy/examples/community.operatorsource.cr.yaml#L8). Please make sure that the endpoint is specified as `https://quay.io/cnr`.
 
-## OperatorSource `MESSAGE` reads unknown error (status 404)
+If quay.io is unavailable, the `MESSAGE` will usually read `unknown error (status 404)`. If the steps listed in this section do not help debug the problem, please reach out to one of the forums listed in [Where to go for help](#where-to-go-for-help).   
 
-Some of the common reasons we have encountered that caused this `MESSAGE` are quay.io being unavailable or the wrong end point being listed in the OperatorSource. If the steps listed [here](#operatorSource-failing-to-download-from-datastore) does not help debug the problem, please reach out to one of the forums listed in [Where to go for help](#where-to-go-for-help).   
+## Operator(s) in an OperatorSource fail to show up in the UI
 
-## CatalogSourceConfig stuck in Configuring phase
+If operators in a particular OperatorSource fail to show up in the UI, it could be because those operators had parsing errors and were ignored by the registry pod. To inspect the corresponding registry pod logs, first identify the name of the registry pod for the OperatorSource with `oc get pods -n openshift-marketplace` (the name of the pod should be of the format `<operator-source-name>-<random-characters>`). Get the logs for the pod with `oc logs <identified-pod-name> -n openshift-marketplace`.
 
-If you are trying to [install an operator from the cli](https://github.com/operator-framework/operator-marketplace#installing-an-operator-using-marketplace), the packages listed in the CatalogSourceConfig must have valid package names. If you have private app-resgistries, please follow the steps listed [here](https://github.com/operator-framework/operator-marketplace/blob/master/docs/how-to-authenticate-private-repositories.md).
+If there are private app-registry repositories in your namespace, not specifying the authenticationToken in the OperatorSource CR will result in them not being listed. Please follow the steps [here](https://github.com/operator-framework/operator-marketplace/blob/master/docs/how-to-authenticate-private-repositories.md) for adding the token to the CR.  
 
 ## Conflicting Package Names
 
@@ -132,7 +139,7 @@ Users can view existing package names with the following command:
 $ oc get packagemanifests -n openshift-marketplace
 ```
 
-## Where to go for help
+# Where to go for help
 
-* #forum-operators channel in the [upstream Kubernetes slack instance](https://slack.k8s.io/)
+* #kubernetes-operators channel in the [upstream Kubernetes slack instance](https://slack.k8s.io/)
 * [google group for Operator-Framework](https://groups.google.com/forum/#!forum/operator-framework)
