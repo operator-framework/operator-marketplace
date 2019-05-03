@@ -1,12 +1,15 @@
 package testsuites
 
 import (
-	"testing"
+	"fmt"
 	"strings"
+	"testing"
 
 	operator "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -41,9 +44,7 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 
 	// Get test namespace
 	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Errorf("Could not get namespace: %v", err)
-	}
+	require.NoError(t, err, "Could not get namespace")
 
 	invalidURLOperatorSource := &operator.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
@@ -60,9 +61,7 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 		},
 	}
 	err = helpers.CreateRuntimeObject(client, ctx, invalidURLOperatorSource)
-	if err != nil {
-		t.Errorf("Could not create OperatorSource: %v", err)
-	}
+	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource is in "Downloading" state with appropriate message
 	resultOperatorSource := &operator.OperatorSource{}
@@ -78,9 +77,7 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 		}
 		return false, nil
 	})
-	if err != nil {
-		t.Errorf("OperatorSource never reached expected phase/message, expected %v: %v", expectedPhase, err)
-	}
+	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }
 
 // Create OperatorSource with invalid URL
@@ -98,9 +95,7 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 
 	// Get test namespace
 	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Errorf("Could not get namespace: %v", err)
-	}
+	require.NoError(t, err, "Could not get namespace")
 
 	invalidURLOperatorSource := &operator.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
@@ -117,9 +112,7 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 		},
 	}
 	err = helpers.CreateRuntimeObject(client, ctx, invalidURLOperatorSource)
-	if err != nil {
-		t.Errorf("Could not create OperatorSource: %v", err)
-	}
+	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource reaches "Failed" state eventually
 	resultOperatorSource := &operator.OperatorSource{}
@@ -135,9 +128,7 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 		}
 		return false, nil
 	})
-	if err != nil {
-		t.Errorf("OperatorSource never reached expected phase/message, expected %v: %v", expectedPhase, err)
-	}
+	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }
 
 // Create OperatorSource with valid URL but non-existent registry namespace
@@ -159,10 +150,7 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 
 	// Get test namespace
 	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Errorf("Could not get namespace: %v", err)
-	}
-
+	require.NoError(t, err, "Could not get namespace")
 	nonexistentRegistryNamespaceOperatorSource := &operator.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind: operator.OperatorSourceKind,
@@ -178,9 +166,7 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 		},
 	}
 	err = helpers.CreateRuntimeObject(client, ctx, nonexistentRegistryNamespaceOperatorSource)
-	if err != nil {
-		t.Errorf("Could not create OperatorSource: %v", err)
-	}
+	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource reaches "Failed" state eventually
 	resultOperatorSource := &operator.OperatorSource{}
@@ -196,7 +182,5 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 		}
 		return false, nil
 	})
-	if err != nil {
-		t.Errorf("OperatorSource never reached expected phase/message, expected %v: %v", expectedPhase, err)
-	}
+	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }

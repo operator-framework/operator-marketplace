@@ -35,9 +35,7 @@ func genericTestSuite(t *testing.T) {
 
     // Create the operatorsource.
     err = helpers.CreateRuntimeObject(f, ctx, helpers.CreateOperatorSource(namespace))
-    if err != nil {
-        t.Errorf("Could not create operator source: %v", err)
-    }
+    require.NoError(t, err, "Could not create OperatorSource")
 
     // Run the tests that rely on the runtime objects created earlier.
     t.Run("test1", testsuites.Test1)
