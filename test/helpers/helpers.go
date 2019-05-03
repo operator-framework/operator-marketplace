@@ -135,6 +135,18 @@ func CreateRuntimeObject(client test.FrameworkClient, ctx *test.TestCtx, obj run
 		})
 }
 
+// CreateRuntimeObjectNoCleanup creates a runtime object without any cleanup
+// options. Using this method to create a runtime object means that the framework
+// will not automatically delete the object after test execution, and it must
+// be manually deleted.
+func CreateRuntimeObjectNoCleanup(client test.FrameworkClient, obj runtime.Object) error {
+	return client.Create(
+		context.TODO(),
+		obj,
+		nil,
+	)
+}
+
 // DeleteRuntimeObject deletes a runtime object using the test framework
 func DeleteRuntimeObject(client test.FrameworkClient, obj runtime.Object) error {
 	return client.Delete(
