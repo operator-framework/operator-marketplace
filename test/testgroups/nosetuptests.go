@@ -10,4 +10,5 @@ import (
 func NoSetupTestGroup(t *testing.T) {
 	// Run the test suites.
 	t.Run("invalid-operator-source-test-suite", testsuites.InvalidOpSrc)
+	t.Run("delete-operator-source-test-suite", testsuites.DeleteOpSrc)
 }
