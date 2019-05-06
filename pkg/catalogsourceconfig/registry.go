@@ -298,6 +298,7 @@ func (r *registry) newDeployment(registryCommand []string, needServiceAccount bo
 // newPodTemplateSpec returns a PodTemplateSpec object that can be used to bring
 // up a registry pod
 func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccount bool) core.PodTemplateSpec {
+	tolerationSecondSpec := int64(120)
 	podTemplateSpec := core.PodTemplateSpec{
 		ObjectMeta: meta.ObjectMeta{
 			Name:      r.csc.GetName(),
@@ -305,6 +306,25 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 			Labels:    r.getLabel(),
 		},
 		Spec: core.PodSpec{
+			Tolerations: []core.Toleration{
+				{
+					Key:      "node-role.kubernetes.io/master",
+					Operator: "Exists",
+					Effect:   "NoSchedule",
+				},
+				{
+					Key:               "node-role.kubernetes.io/unreachable",
+					Operator:          "Exists",
+					Effect:            "NoExecute",
+					TolerationSeconds: &tolerationSecondSpec,
+				},
+				{
+					Key:               "node-role.kubernetes.io/not-ready",
+					Operator:          "Exists",
+					Effect:            "NoExecute",
+					TolerationSeconds: &tolerationSecondSpec,
+				},
+			},
 			Containers: []core.Container{
 				{
 					Name:    r.csc.GetName(),
