@@ -289,8 +289,8 @@ func (s *status) monitorClusterStatus() {
 			// be set to degraded.
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, "")
-			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, "")
-			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, "Operator exited")
+			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, "The operator has exited and is no longer reporting status.")
+			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, "")
 			statusErr := s.setStatus(statusConditions)
 			if statusErr != nil {
 				log.Error("[status] " + statusErr.Error())
