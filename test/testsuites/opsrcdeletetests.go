@@ -26,7 +26,7 @@ func testDeleteOpSrc(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	testOperatorSource := helpers.CreateOperatorSourceDefinition(namespace)
+	testOperatorSource := helpers.CreateOperatorSourceDefinition(helpers.TestOperatorSourceName, namespace)
 
 	// Create the OperatorSource with no cleanup options.
 	err = helpers.CreateRuntimeObjectNoCleanup(client, testOperatorSource)
