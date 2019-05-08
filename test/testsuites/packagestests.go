@@ -13,10 +13,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TestCscWithNonExistingPackage tests that a csc with a non-existing package
+// PackageTests is a test suite that ensures that package behave as intended
+func PackageTests(t *testing.T) {
+	t.Run("csc-with-non-existing-package", testCscWithNonExistingPackage)
+	t.Run("opsrc-with-conflicting-packages", testOpSrcWithConflictingPackages)
+}
+
+// testCscWithNonExistingPackage tests that a csc with a non-existing package
 // is handled correctly by the marketplace operator and its child resources are not
 // created.
-func TestCscWithNonExistingPackage(t *testing.T) {
+func testCscWithNonExistingPackage(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
 
@@ -73,4 +79,30 @@ func childResourcesNotCreated(t *testing.T) {
 	// Check that the CatalogSourceConfig's child resources were not created.
 	err = helpers.CheckCscChildResourcesDeleted(test.Global.Client, cscName, namespace, namespace)
 	assert.NoError(t, err, "Child resources of CatalogSourceConfig were unexpectedly created")
+}
+
+// testOpSrcWithConflictingPackages ensures that an OperatorSource and its child resources
+// are successfully rolled out regardless of whether or not there is a
+// package conflict with an exiting OperatorSource.
+func testOpSrcWithConflictingPackages(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get global framework variables.
+	client := test.Global.Client
+
+	// Get test namespace.
+	namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	// The OperatorSource created below will point to the same Application Registry
+	// as the OperatorSource created in operatorsourcetests.go and will contain
+	// conflicting package names as a result.
+	opSrcName := "conflicting-operators"
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateOperatorSourceDefinition(opSrcName, namespace))
+	assert.NoError(t, err, "Could not create operator source")
+
+	// Confirm child resources were created without errors.
+	err = helpers.CheckCscSuccessfulCreation(client, opSrcName, namespace, namespace)
+	assert.NoError(t, err, "Child resources not created")
 }
