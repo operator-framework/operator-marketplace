@@ -175,20 +175,12 @@ func CreateOperatorSourceDefinition(namespace string) *marketplace.OperatorSourc
 		},
 	}
 }
-
-// CheckCatalogSourceConfigAndChildResourcesCreated checks that a CatalogSourceConfig
-// and it's child resources were deployed.
-func CheckCatalogSourceConfigAndChildResourcesCreated(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
-	// Check that the CatalogSourceConfig was created.
-	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
-	err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
-	if err != nil {
-		return err
-	}
-
+// CheckCscChildResourcesCreated checks that a CatalogSourceConfig's
+// child resources were deployed.
+func CheckCscChildResourcesCreated(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
 	// Check that the CatalogSource was created.
 	resultCatalogSource := &olm.CatalogSource{}
-	err = WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
 	if err != nil {
 		return err
 	}
@@ -215,19 +207,12 @@ func CheckCatalogSourceConfigAndChildResourcesCreated(client test.FrameworkClien
 	return nil
 }
 
-// CheckCatalogSourceConfigAndChildResourcesDeleted checks that a CatalogSourceConfig
-// and it's child resources were deleted.
-func CheckCatalogSourceConfigAndChildResourcesDeleted(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
-	// Check that the CatalogSourceConfig was deleted.
-	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
-	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
-	if err != nil {
-		return err
-	}
-
+// CheckCscChildResourcesDeleted checks that a CatalogSourceConfig's
+// child resources were deleted.
+func CheckCscChildResourcesDeleted(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
 	// Check that the CatalogSource was deleted.
 	resultCatalogSource := &olm.CatalogSource{}
-	err = WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
 	if err != nil {
 		return err
 	}
@@ -245,5 +230,43 @@ func CheckCatalogSourceConfigAndChildResourcesDeleted(client test.FrameworkClien
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// CheckCscSuccessfulCreation checks that a CatalogSourceConfig
+// and it's child resources were deployed.
+func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+	// Check that the CatalogSourceConfig was created.
+	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
+	err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check that all child resources were created.
+	err = CheckCscChildResourcesCreated(client, cscName, namespace, targetNamespace)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CheckCscSuccessfulDeletion checks that a CatalogSourceConfig
+// and it's child resources were deleted.
+func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+	// Check that the CatalogSourceConfig was deleted.
+	resultCatalogSourceConfig := &marketplace.CatalogSourceConfig{}
+	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check that all child resources were deleted.
+	err = CheckCscChildResourcesDeleted(client, cscName, namespace, targetNamespace)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

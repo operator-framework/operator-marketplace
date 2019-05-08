@@ -11,14 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// cscName is the name of the CatalogSourceConfig used in this test suite.
-	cscName string = "target-namespace-operators"
-
-	// targetNamespace is the targetNamespace value of the CatalogSourceConfig used in this test suite.
-	targetNamespace string = "target-namespace"
-)
-
 // CscTargetNamespace is a test suit that confirms that targetNamespace values are handled appropriately.
 func CscTargetNamespace(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -123,7 +115,7 @@ func childResourcesCreated(t *testing.T) {
 		t.Fatalf("Could not get namespace: %v", err)
 	}
 	// Check that the CatalogSourceConfig and its child resources were created.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesCreated(test.Global.Client, cscName, namespace, targetNamespace)
+	err = helpers.CheckCscSuccessfulCreation(test.Global.Client, cscName, namespace, targetNamespace)
 	if err != nil {
 		t.Fatal(err)
 
@@ -140,7 +132,7 @@ func childResourcesDeleted(t *testing.T) {
 	}
 
 	// Check that the CatalogSourceConfig and its child resources were deleted.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesDeleted(test.Global.Client, cscName, namespace, targetNamespace)
+	err = helpers.CheckCscSuccessfulDeletion(test.Global.Client, cscName, namespace, targetNamespace)
 	if err != nil {
 		t.Fatalf("Could not ensure that CatalogSourceConfig and its child resources were deleted: %v", err)
 	}

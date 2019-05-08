@@ -28,7 +28,7 @@ func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
 	}
 
 	// Check for the CatalogSourceConfig and it's child resources.
-	err = helpers.CheckCatalogSourceConfigAndChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace)
+	err = helpers.CheckCscSuccessfulCreation(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace)
 	if err != nil {
 		t.Error(err)
 	}
