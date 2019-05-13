@@ -139,6 +139,11 @@ func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string
 		log.Fatal("[status] " + err.Error())
 	}
 
+	// If version is an empty string, warn that the operator is not a part of the OpenShift release payload.
+	if version == "" {
+		version = "OpenShift Independent Version"
+	}
+
 	return &status{
 		configClient:    configClient,
 		coAPINotPresent: coAPINotPresent,
@@ -311,7 +316,7 @@ func (s *status) monitorClusterStatus() {
 			// or if it is the first report.
 			if s.clusterOperator == nil {
 				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards %s", s.version))
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", s.version))
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, "")
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, "")
 				statusErr = s.setStatus(statusConditions)
@@ -329,7 +334,7 @@ func (s *status) monitorClusterStatus() {
 			if cohelpers.IsStatusConditionFalse(s.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, "")
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("%s is available", s.version))
+				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version))
 				statusErr = s.setStatus(statusConditions)
 				break
 			}
