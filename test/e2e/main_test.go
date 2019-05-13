@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -23,6 +24,7 @@ func TestMarketplace(t *testing.T) {
 	initTestingFramework(t)
 
 	// Run Test Groups
+	t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
@@ -63,5 +65,17 @@ func initTestingFramework(t *testing.T) {
 	err = test.AddToFrameworkScheme(olm.AddToScheme, catalogSource)
 	if err != nil {
 		t.Fatalf("failed to add CatalogSource custom resource scheme to framework: %v", err)
+	}
+	// Add (configv1) ClusterOperator to framework scheme
+	clusterOperator := &configv1.ClusterOperator{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "ClusterOperator",
+			APIVersion: fmt.Sprintf("%s/%s",
+				configv1.SchemeGroupVersion.Group, configv1.SchemeGroupVersion.Version),
+		},
+	}
+	err = test.AddToFrameworkScheme(configv1.Install, clusterOperator)
+	if err != nil {
+		t.Fatalf("failed to add ClusterOperator custom resource scheme to framework: %v", err)
 	}
 }
