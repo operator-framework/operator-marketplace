@@ -67,9 +67,9 @@ func main() {
 	catalogsourceconfig.InitializeStaticSyncer(mgr.GetClient(), initialWait)
 	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogsourceconfig.Syncer, catalogsourceconfig.Syncer)
 
-	// monitorStopCh is used to send a signal to stop reporting cluster operator status
+	// monitorStopCh is used to send a signal to stop reporting ClusterOperator status
 	monitorStopCh := make(chan struct{})
-	// monitorDoneCh will recieve a signal when threads have stopped updating cluster operator status
+	// monitorDoneCh will recieve a signal when threads have stopped updating ClusterOperator status
 	monitorDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), monitorStopCh)
 
 	// Setup Scheme for all defined resources

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// clusterOperatorName is the name of the cluster operator
+	// clusterOperatorName is the name of the ClusterOperator
 	clusterOperatorName = "marketplace"
 
 	// minSyncsBeforeReporting is the minimum number of syncs we wish to see
@@ -42,7 +42,7 @@ const (
 	syncsBeforeTruncate = 10000
 	syncTruncateValue   = 100
 
-	// coStatusReportInterval is the interval at which the cluster operator status is updated
+	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
 )
 
@@ -89,7 +89,7 @@ func StartReporting(cfg *rest.Config, mgr manager.Manager, namespace string, ver
 	// ensure instance is only created once.
 	once.Do(func() {
 		instance = new(cfg, mgr, namespace, version, stopCh)
-		// exit if cluster operator api is not present
+		// exit if ClusterOperator api is not present
 		if instance.coAPINotPresent {
 			return
 		}
@@ -275,7 +275,7 @@ func (s *status) syncChannelReceiver() {
 	}
 }
 
-// monitorClusterStatus updates the cluster operator's status based on
+// monitorClusterStatus updates the ClusterOperator's status based on
 // the number of successful syncs / total syncs
 func (s *status) monitorClusterStatus() {
 	// Signal to the main channel that we have stopped reporting status.
@@ -296,7 +296,7 @@ func (s *status) monitorClusterStatus() {
 				log.Error("[status] " + statusErr.Error())
 			}
 			return
-		// Attempt to update the cluster operator status whenever the seconds
+		// Attempt to update the ClusterOperator status whenever the seconds
 		// number of seconds defined by coStatusReportInterval passes.
 		case <-time.After(coStatusReportInterval):
 			// Log any status update errors after exit.
@@ -307,7 +307,7 @@ func (s *status) monitorClusterStatus() {
 				}
 			}()
 
-			// Create the cluster operator in the progressing state if it does not exist
+			// Create the ClusterOperator in the progressing state if it does not exist
 			// or if it is the first report.
 			if s.clusterOperator == nil {
 				conditionListBuilder := clusterStatusListBuilder()
