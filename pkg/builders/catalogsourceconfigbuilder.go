@@ -1,40 +1,26 @@
-package operatorsource
+package builders
 
 import (
 	"fmt"
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DatastoreLabel is the label used in a CatalogSourceConfig to indicate that
-// the resulting CatalogSource acts as the datastore for the OperatorSource
-// if it is set to "true".
-const DatastoreLabel string = "opsrc-datastore"
-
-// OpsrcOwnerNameLabel is the label used to mark ownership over resources
-// that are owned by the OperatorSource. When this label is set, the reconciler
-// should handle these resources when the OperatorSource is deleted.
-const OpsrcOwnerNameLabel string = "opsrc-owner-name"
-
-// OpsrcOwnerNamespaceLabel is the label used to mark ownership over resources
-// that are owned by the OperatorSource. When this label is set, the reconciler
-// should handle these resources when the OperatorSource is deleted.
-const OpsrcOwnerNamespaceLabel string = "opsrc-owner-namespace"
-
 // CatalogSourceConfigBuilder builds a new CatalogSourceConfig type object.
 type CatalogSourceConfigBuilder struct {
-	object marketplace.CatalogSourceConfig
+	Object marketplace.CatalogSourceConfig
 }
 
 // CatalogSourceConfig returns a prepared CatalogSourceConfig object.
 func (b *CatalogSourceConfigBuilder) CatalogSourceConfig() *marketplace.CatalogSourceConfig {
-	return &b.object
+	return &b.Object
 }
 
 // WithTypeMeta sets TypeMeta of the CatalogSourceConfig object.
 func (b *CatalogSourceConfigBuilder) WithTypeMeta() *CatalogSourceConfigBuilder {
-	b.object.TypeMeta = metav1.TypeMeta{
+	b.Object.TypeMeta = metav1.TypeMeta{
 		APIVersion: fmt.Sprintf("%s/%s",
 			marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
 		Kind: marketplace.CatalogSourceConfigKind,
@@ -45,8 +31,8 @@ func (b *CatalogSourceConfigBuilder) WithTypeMeta() *CatalogSourceConfigBuilder 
 
 // WithNamespacedName sets name and namespace of the CatalogSourceConfig object.
 func (b *CatalogSourceConfigBuilder) WithNamespacedName(namespace, name string) *CatalogSourceConfigBuilder {
-	b.object.SetNamespace(namespace)
-	b.object.SetName(name)
+	b.Object.SetNamespace(namespace)
+	b.Object.SetName(name)
 
 	return b
 }
@@ -56,18 +42,18 @@ func (b *CatalogSourceConfigBuilder) WithNamespacedName(namespace, name string) 
 // opsrcLabels.
 func (b *CatalogSourceConfigBuilder) WithLabels(opsrcLabels map[string]string) *CatalogSourceConfigBuilder {
 	labels := map[string]string{
-		DatastoreLabel: "true",
+		datastore.DatastoreLabel: "true",
 	}
 
 	for key, value := range opsrcLabels {
 		labels[key] = value
 	}
 
-	for key, value := range b.object.GetLabels() {
+	for key, value := range b.Object.GetLabels() {
 		labels[key] = value
 	}
 
-	b.object.SetLabels(labels)
+	b.Object.SetLabels(labels)
 
 	return b
 }
@@ -79,17 +65,17 @@ func (b *CatalogSourceConfigBuilder) WithOwnerLabel(owner *marketplace.OperatorS
 		OpsrcOwnerNamespaceLabel: owner.Namespace,
 	}
 
-	for key, value := range b.object.GetLabels() {
+	for key, value := range b.Object.GetLabels() {
 		labels[key] = value
 	}
 
-	b.object.SetLabels(labels)
+	b.Object.SetLabels(labels)
 	return b
 }
 
 // WithSpec sets Spec accordingly.
 func (b *CatalogSourceConfigBuilder) WithSpec(targetNamespace, packages, displayName, publisher string) *CatalogSourceConfigBuilder {
-	b.object.Spec = marketplace.CatalogSourceConfigSpec{
+	b.Object.Spec = marketplace.CatalogSourceConfigSpec{
 		TargetNamespace: targetNamespace,
 		Packages:        packages,
 		DisplayName:     displayName,

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -90,8 +91,8 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *marketplace.Opera
 // Delete all resources owned by the operator source
 func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, namespace string) (err error) {
 	labelMap := map[string]string{
-		OpsrcOwnerNameLabel:      name,
-		OpsrcOwnerNamespaceLabel: namespace,
+		builders.OpsrcOwnerNameLabel:      name,
+		builders.OpsrcOwnerNamespaceLabel: namespace,
 	}
 	labelSelector := labels.SelectorFromSet(labelMap)
 	options := &client.ListOptions{LabelSelector: labelSelector}

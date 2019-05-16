@@ -10,6 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -137,9 +138,9 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 
 	labelsWant := map[string]string{
-		"opsrc-group":                           "Community",
-		operatorsource.OpsrcOwnerNameLabel:      "foo",
-		operatorsource.OpsrcOwnerNamespaceLabel: "marketplace",
+		"opsrc-group":                     "Community",
+		builders.OpsrcOwnerNameLabel:      "foo",
+		builders.OpsrcOwnerNamespaceLabel: "marketplace",
 	}
 	opsrcIn.SetLabels(labelsWant)
 
@@ -205,9 +206,9 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
 
 	labelsWant := map[string]string{
-		"opsrc-group":                           "Community",
-		operatorsource.OpsrcOwnerNameLabel:      "foo",
-		operatorsource.OpsrcOwnerNamespaceLabel: "marketplace",
+		"opsrc-group":                     "Community",
+		builders.OpsrcOwnerNameLabel:      "foo",
+		builders.OpsrcOwnerNamespaceLabel: "marketplace",
 	}
 	opsrcIn.SetLabels(labelsWant)
 

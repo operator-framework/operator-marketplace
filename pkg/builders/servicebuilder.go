@@ -1,7 +1,6 @@
-package catalogsourceconfig
+package builders
 
 import (
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,10 +35,10 @@ func (b *ServiceBuilder) WithMeta(name, namespace string) *ServiceBuilder {
 }
 
 // WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
-func (b *ServiceBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *ServiceBuilder {
+func (b *ServiceBuilder) WithOwnerLabel(name, namespace string) *ServiceBuilder {
 	labels := map[string]string{
-		CscOwnerNameLabel:      owner.Name,
-		CscOwnerNamespaceLabel: owner.Namespace,
+		OwnerNameLabel:      name,
+		OwnerNamespaceLabel: namespace,
 	}
 
 	for key, value := range b.service.GetLabels() {

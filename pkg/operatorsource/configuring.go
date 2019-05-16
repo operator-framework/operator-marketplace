@@ -6,6 +6,7 @@ import (
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -34,7 +35,7 @@ func NewConfiguringReconcilerWithClientInterface(logger *log.Entry, factory appr
 		datastore: datastore,
 		client:    client,
 		refresher: refresher,
-		builder:   &CatalogSourceConfigBuilder{},
+		builder:   &builders.CatalogSourceConfigBuilder{},
 	}
 }
 
@@ -46,7 +47,7 @@ type configuringReconciler struct {
 	datastore datastore.Writer
 	client    interface_client.Client
 	refresher PackageRefreshNotificationSender
-	builder   *CatalogSourceConfigBuilder
+	builder   *builders.CatalogSourceConfigBuilder
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Configuring" phase.
@@ -114,7 +115,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.O
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
 	out.Status.Packages = packages
 
-	cscCreate := new(CatalogSourceConfigBuilder).WithTypeMeta().
+	cscCreate := new(builders.CatalogSourceConfigBuilder).WithTypeMeta().
 		WithNamespacedName(in.Namespace, in.Name).
 		WithLabels(in.GetLabels()).
 		WithSpec(in.Namespace, packages, in.Spec.DisplayName, in.Spec.Publisher).
@@ -212,7 +213,7 @@ func (r *configuringReconciler) updateExistingCatalogSourceConfig(ctx context.Co
 
 	cscExisting.EnsureGVK()
 
-	builder := CatalogSourceConfigBuilder{object: cscExisting}
+	builder := builders.CatalogSourceConfigBuilder{Object: cscExisting}
 	cscUpdate := builder.WithSpec(in.Namespace, packages, in.Spec.DisplayName, in.Spec.Publisher).
 		WithLabels(in.GetLabels()).
 		WithOwnerLabel(in).

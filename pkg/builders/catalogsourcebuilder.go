@@ -1,20 +1,9 @@
-package catalogsourceconfig
+package builders
 
 import (
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// OpsrcOwnerNameLabel is the label used to mark ownership over resources
-// that are owned by the CatalogSourceConfig. When this label is set, the reconciler
-// should handle these resources when the CatalogSourceConfig is deleted.
-const CscOwnerNameLabel string = "csc-owner-name"
-
-// OpsrcOwnerNamespaceLabel is the label used to mark ownership over resources
-// that are owned by the CatalogSourceConfig. When this label is set, the reconciler
-// should handle these resources when the CatalogSourceConfig is deleted.
-const CscOwnerNamespaceLabel string = "csc-owner-namespace"
 
 // CatalogSourceBuilder builds a new CatalogSource object.
 type CatalogSourceBuilder struct {
@@ -73,10 +62,10 @@ func (b *CatalogSourceBuilder) WithOLMLabels(cscLabels map[string]string) *Catal
 }
 
 // WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
-func (b *CatalogSourceBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *CatalogSourceBuilder {
+func (b *CatalogSourceBuilder) WithOwnerLabel(name, namespace string) *CatalogSourceBuilder {
 	labels := map[string]string{
-		CscOwnerNameLabel:      owner.Name,
-		CscOwnerNamespaceLabel: owner.Namespace,
+		OwnerNameLabel:      name,
+		OwnerNamespaceLabel: namespace,
 	}
 
 	for key, value := range b.cs.GetLabels() {

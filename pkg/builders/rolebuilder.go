@@ -1,7 +1,6 @@
-package catalogsourceconfig
+package builders
 
 import (
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	rbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,10 +36,10 @@ func (b *RoleBuilder) WithMeta(name, namespace string) *RoleBuilder {
 }
 
 // WithOwnerLabel sets the owner label of the Role object to the given owner.
-func (b *RoleBuilder) WithOwnerLabel(owner *marketplace.CatalogSourceConfig) *RoleBuilder {
+func (b *RoleBuilder) WithOwnerLabel(name, namespace string) *RoleBuilder {
 	labels := map[string]string{
-		CscOwnerNameLabel:      owner.Name,
-		CscOwnerNamespaceLabel: owner.Namespace,
+		OwnerNameLabel:      name,
+		OwnerNamespaceLabel: namespace,
 	}
 
 	for key, value := range b.role.GetLabels() {

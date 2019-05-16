@@ -7,7 +7,6 @@ import (
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 
 	log "github.com/sirupsen/logrus"
@@ -52,7 +51,7 @@ type triggerer struct {
 
 func (t *triggerer) Trigger(notification datastore.PackageUpdateNotification) error {
 	options := &client.ListOptions{}
-	options.SetLabelSelector(fmt.Sprintf("%s!=true", operatorsource.DatastoreLabel))
+	options.SetLabelSelector(fmt.Sprintf("%s!=true", datastore.DatastoreLabel))
 
 	cscs := &marketplace.CatalogSourceConfigList{}
 	if err := t.client.List(context.TODO(), options, cscs); err != nil {
