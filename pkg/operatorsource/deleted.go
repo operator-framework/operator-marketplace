@@ -3,13 +3,13 @@ package operatorsource
 import (
 	"context"
 
+	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
+
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,9 +60,11 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *marketplace.Opera
 
 	// Delete the operator source manifests.
 	r.datastore.RemoveOperatorSource(out.UID)
+	grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
 
-	// Delete the owned CatalogSourceConfig
-	err = r.deleteCreatedResources(ctx, in.Name, in.Namespace)
+	// Delete the owned registry resources.
+	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Namespace)
+
 	if err != nil {
 		// Something went wrong before we removed the finalizer, let's retry.
 		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
@@ -84,33 +86,6 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *marketplace.Opera
 	}
 
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
-
-	return
-}
-
-// Delete all resources owned by the operator source
-func (r *deletedReconciler) deleteCreatedResources(ctx context.Context, name, namespace string) (err error) {
-	labelMap := map[string]string{
-		builders.OpsrcOwnerNameLabel:      name,
-		builders.OpsrcOwnerNamespaceLabel: namespace,
-	}
-	labelSelector := labels.SelectorFromSet(labelMap)
-	options := &client.ListOptions{LabelSelector: labelSelector}
-
-	// Delete Catalog Source Configs
-	catalogSourceConfigs := &marketplace.CatalogSourceConfigList{}
-	err = r.client.List(ctx, options, catalogSourceConfigs)
-	if err != nil {
-		return err
-	}
-
-	for _, catalogSourceConfig := range catalogSourceConfigs.Items {
-		r.logger.Infof("Removing catalogSourceConfig %s from namespace %s", catalogSourceConfig.Name, catalogSourceConfig.Namespace)
-		err = r.client.Delete(ctx, &catalogSourceConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	return
 }

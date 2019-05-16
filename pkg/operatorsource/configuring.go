@@ -6,20 +6,18 @@ import (
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewConfiguringReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Configuring" phase.
-func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, client client.Client, refresher PackageRefreshNotificationSender) Reconciler {
-	return NewConfiguringReconcilerWithClientInterface(logger, factory, datastore, interface_client.NewClient(client), refresher)
+func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client client.Client, refresher PackageRefreshNotificationSender) Reconciler {
+	return NewConfiguringReconcilerWithClientInterface(logger, factory, datastore, reader, interface_client.NewClient(client), refresher)
 }
 
 // NewConfiguringReconcilerWithClientInterface returns a configuring
@@ -28,14 +26,14 @@ func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFacto
 // client provided by the operator-sdk, instead of the raw client itself.
 // Using this interface facilitates mocking of kube client interaction
 // with the cluster, while using fakeclient during unit testing.
-func NewConfiguringReconcilerWithClientInterface(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, client interface_client.Client, refresher PackageRefreshNotificationSender) Reconciler {
+func NewConfiguringReconcilerWithClientInterface(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client interface_client.Client, refresher PackageRefreshNotificationSender) Reconciler {
 	return &configuringReconciler{
 		logger:    logger,
 		factory:   factory,
 		datastore: datastore,
 		client:    client,
 		refresher: refresher,
-		builder:   &builders.CatalogSourceConfigBuilder{},
+		reader:    reader,
 	}
 }
 
@@ -47,7 +45,7 @@ type configuringReconciler struct {
 	datastore datastore.Writer
 	client    interface_client.Client
 	refresher PackageRefreshNotificationSender
-	builder   *builders.CatalogSourceConfigBuilder
+	reader    datastore.Reader
 }
 
 // Reconcile reconciles an OperatorSource object that is in "Configuring" phase.
@@ -115,37 +113,23 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.O
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
 	out.Status.Packages = packages
 
-	cscCreate := new(builders.CatalogSourceConfigBuilder).WithTypeMeta().
-		WithNamespacedName(in.Namespace, in.Name).
-		WithLabels(in.GetLabels()).
-		WithSpec(in.Namespace, packages, in.Spec.DisplayName, in.Spec.Publisher).
-		WithOwnerLabel(in).
-		CatalogSourceConfig()
+	grpcCatalog := grpccatalog.New(r.logger, r.reader, r.client)
 
-	err = r.client.Create(ctx, cscCreate)
-	if err != nil && !k8s_errors.IsAlreadyExists(err) {
-		r.logger.Errorf("Unexpected error while creating CatalogSourceConfig: %s", err.Error())
-		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
-
-		return
+	key := client.ObjectKey{
+		Name:      in.Name,
+		Namespace: in.Namespace,
 	}
-
-	if err == nil {
-		nextPhase = phase.GetNext(phase.Succeeded)
-		r.logger.Info("CatalogSourceConfig object has been created successfully")
-
-		return
+	// Get all labels from OperatorSource and add the DatastoreLabel to the map
+	labels := map[string]string{
+		datastore.DatastoreLabel: "true"}
+	for key, value := range in.Labels {
+		labels[key] = value
 	}
-
-	// If we are here, the given CatalogSourceConfig object already exists.
-	err = r.updateExistingCatalogSourceConfig(ctx, in, packages)
+	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, packages, labels)
 	if err != nil {
-		r.logger.Errorf("Unexpected error while updating CatalogSourceConfig: %s", err.Error())
 		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return
 	}
-
-	r.logger.Info("CatalogSourceConfig object has been updated successfully")
 
 	nextPhase = phase.GetNext(phase.Succeeded)
 	return
@@ -198,37 +182,4 @@ func (r *configuringReconciler) writeMetadataToDatastore(in *marketplace.Operato
 
 	r.logger.Infof("Successfully downloaded %d operator metadata", count)
 	return preUpdateDatastorePackageList == "", err
-}
-
-// updateExistingCatalogSourceConfig updates an existing CatalogSourceConfig
-// when the OperatorSource that owns it is updated in any way.
-func (r *configuringReconciler) updateExistingCatalogSourceConfig(ctx context.Context, in *marketplace.OperatorSource, packages string) error {
-
-	cscNamespacedName := types.NamespacedName{Name: in.Name, Namespace: in.Namespace}
-	cscExisting := marketplace.CatalogSourceConfig{}
-	err := r.client.Get(ctx, cscNamespacedName, &cscExisting)
-	if err != nil {
-		return err
-	}
-
-	cscExisting.EnsureGVK()
-
-	builder := builders.CatalogSourceConfigBuilder{Object: cscExisting}
-	cscUpdate := builder.WithSpec(in.Namespace, packages, in.Spec.DisplayName, in.Spec.Publisher).
-		WithLabels(in.GetLabels()).
-		WithOwnerLabel(in).
-		CatalogSourceConfig()
-
-	// Drop the status to force a CatalogSourceConfig update. This is to account
-	// for the the scenario where a Quay namespace has changed without
-	// app-registry repositories being added or removed but with existing
-	// repositories being updated.
-	cscUpdate.Status = marketplace.CatalogSourceConfigStatus{}
-
-	err = r.client.Update(ctx, cscUpdate)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

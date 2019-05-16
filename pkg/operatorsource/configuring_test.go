@@ -5,9 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
@@ -30,11 +33,12 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	}
 
 	writer := mocks.NewDatastoreWriter(controller)
+	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
-	fakeclient := NewFakeClient()
+	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -70,6 +74,12 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	// We expect datastore to return the specified list of packages.
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(opsrcWant.Status.Packages)
 
+	// Then we expect to read the packages
+	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+
+	// Then we expect a read to the datastore
+	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
@@ -84,11 +94,12 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	defer controller.Finish()
 
 	writer := mocks.NewDatastoreWriter(controller)
+	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	fakeclient := NewFakeClient()
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -127,12 +138,13 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	}
 
 	writer := mocks.NewDatastoreWriter(controller)
+	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	registryClient := mocks.NewAppRegistryClient(controller)
-	fakeclient := NewFakeClient()
+	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -170,6 +182,12 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	packages := "a,b,c"
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
+	// Then we expect to read the packages
+	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+
+	// Then we expect a read to the datastore
+	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
 	cscWant.Spec = marketplace.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
@@ -198,6 +216,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	}
 
 	writer := mocks.NewDatastoreWriter(controller)
+	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	registryClient := mocks.NewAppRegistryClient(controller)
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
@@ -238,10 +257,15 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	packages := "a,b,c"
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
-	csc := helperNewCatalogSourceConfigWithLabels(namespace, name, labelsWant)
-	fakeclient := NewFakeClientWithCSC(csc)
+	// Then we expect to read the packages
+	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	// Then we expect a read to the datastore
+	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+
+	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -265,12 +289,13 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	}
 
 	writer := mocks.NewDatastoreWriter(controller)
+	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	registryClient := mocks.NewAppRegistryClient(controller)
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 	kubeclient := mocks.NewClient(controller)
 
-	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, kubeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, kubeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
@@ -298,11 +323,13 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	// Then we expect to call send refresh, because the package list was empty.
 	refresher.EXPECT().SendRefresh()
 
-	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("a,b,c")
+	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID())
 
-	createErr := k8s_errors.NewAlreadyExists(schema.GroupResource{}, "CatalogSourceConfig already exists")
+	// Then we expect to read the packages
+	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
 
-	kubeclient.EXPECT().Create(context.TODO(), gomock.Any()).Return(createErr)
+	// Then we expect a read to the datastore
+	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	kubeclient.EXPECT().Get(context.TODO(), gomock.Any(), gomock.Any()).Return(nil)
 	kubeclient.EXPECT().Update(context.TODO(), gomock.Any()).Return(updateError)
