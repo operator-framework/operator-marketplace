@@ -3,9 +3,13 @@ package operatorsource_test
 import (
 	"fmt"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func helperGetContextLogger() *log.Entry {
@@ -87,4 +91,32 @@ func helperNewCatalogSourceConfigWithLabels(namespace, name string, opsrcLabels 
 	csc.SetLabels(labels)
 
 	return csc
+}
+
+func NewFakeClient() client.Client {
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+	return fake.NewFakeClientWithScheme(scheme)
+}
+
+func NewFakeClientWithCSC(csc *marketplace.CatalogSourceConfig) client.Client {
+	objs := []runtime.Object{
+		csc,
+	}
+
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+
+	return fake.NewFakeClientWithScheme(scheme, objs...)
+}
+
+func NewFakeClientWithOpsrc(opsrc *marketplace.OperatorSource) client.Client {
+	scheme := runtime.NewScheme()
+	apis.AddToScheme(scheme)
+
+	objs := []runtime.Object{
+		opsrc,
+	}
+
+	return fake.NewFakeClientWithScheme(scheme, objs...)
 }

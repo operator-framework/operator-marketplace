@@ -34,10 +34,11 @@ generate-mocks:
 	@echo making sure directory for mocks exists
 	mkdir -p $(MOCKS_DIR)
 
+	# $(mockgen) -destination=<Path/file where the mock is generated> -package=<The package that the generated mock files will belong to> -mock_names=<Original Interface name>=<Name of Generated mocked Interface> <Go package path of the original interface> <comma seperated list of the interface you want to mock>
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_datastore.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Reader=DatastoreReader,Writer=DatastoreWriter $(PKG)/datastore Reader,Writer
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_phase_reconciler.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Reconciler=PhaseReconciler $(PKG)/operatorsource Reconciler
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_phase_tansitioner.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Transitioner=PhaseTransitioner $(PKG)/phase Transitioner
-	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_kubeclient.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Client=KubeClient $(CONTROLLER_RUNTIME_PKG)/client Client
+	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_client.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Client=Client $(PKG)/client Client
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_phase_reconciler_strategy.go -package=$(OPERATORSOURCE_MOCK_PKG) $(PKG)/operatorsource PhaseReconcilerFactory
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_appregistry.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=ClientFactory=AppRegistryClientFactory,Client=AppRegistryClient $(PKG)/appregistry ClientFactory,Client
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_syncer.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=PackageRefreshNotificationSender=SyncerPackageRefreshNotificationSender $(PKG)/operatorsource PackageRefreshNotificationSender

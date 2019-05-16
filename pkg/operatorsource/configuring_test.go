@@ -13,7 +13,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Use Case: Not configured, CatalogSourceConfig object has not been created yet.
@@ -29,9 +28,9 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
-	kubeclient := mocks.NewKubeClient(controller)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
+	fakeclient := NewFakeClient()
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, fakeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -51,7 +50,6 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
-	kubeclient.EXPECT().Create(context.TODO(), cscWant).Return(nil)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -75,9 +73,6 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
-	kubeclient := mocks.NewKubeClient(controller)
-
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
@@ -92,20 +87,10 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	packages := "a,b,c"
 	datastore.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
-	createErr := k8s_errors.NewAlreadyExists(schema.GroupResource{}, "CatalogSourceConfig already exists")
-	kubeclient.EXPECT().Create(context.TODO(), gomock.Any()).Return(createErr)
+	csc := helperNewCatalogSourceConfigWithLabels(namespace, name, labelsWant)
+	fakeclient := NewFakeClientWithCSC(csc)
 
-	// We expect Get to return the given CatalogSourceConfig successfully.
-	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	cscGet := marketplace.CatalogSourceConfig{}
-	kubeclient.EXPECT().Get(context.TODO(), namespacedName, &cscGet).Return(nil)
-
-	cscWant := helperNewCatalogSourceConfigWithLabels("", "", labelsWant)
-	cscWant.Spec = marketplace.CatalogSourceConfigSpec{
-		TargetNamespace: opsrcIn.Namespace,
-		Packages:        packages,
-	}
-	kubeclient.EXPECT().Update(context.TODO(), cscWant).Return(nil)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, fakeclient)
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -129,9 +114,9 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	}
 
 	datastore := mocks.NewDatastoreWriter(controller)
-	kubeclient := mocks.NewKubeClient(controller)
+	kubeclient := mocks.NewClient(controller)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), datastore, kubeclient)
+	reconciler := operatorsource.NewReconcilerWithInterfaceClient(helperGetContextLogger(), datastore, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)

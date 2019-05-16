@@ -4,6 +4,7 @@ import (
 	"context"
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,16 @@ import (
 // NewConfiguringReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Configuring" phase.
 func NewConfiguringReconciler(logger *log.Entry, datastore datastore.Writer, client client.Client) Reconciler {
+	return NewReconcilerWithInterfaceClient(logger, datastore, interface_client.NewClient(client))
+}
+
+// NewReconcilerWithInterfaceClient returns a configuring Reconciler
+// that reconciles an OperatorSource object in "Configuring" phase.
+// It uses the Client interface which is a wrapper to the raw client
+// provided by the operator-sdk, instead of the raw client itself.
+// Using this interface facilitates mocking of kube client interaction
+// with the cluster, while using fakeclient during unit testing.
+func NewReconcilerWithInterfaceClient(logger *log.Entry, datastore datastore.Writer, client interface_client.Client) Reconciler {
 	return &configuringReconciler{
 		logger:    logger,
 		datastore: datastore,
@@ -28,7 +39,7 @@ func NewConfiguringReconciler(logger *log.Entry, datastore datastore.Writer, cli
 type configuringReconciler struct {
 	logger    *log.Entry
 	datastore datastore.Writer
-	client    client.Client
+	client    interface_client.Client
 	builder   *CatalogSourceConfigBuilder
 }
 
