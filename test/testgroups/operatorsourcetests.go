@@ -6,6 +6,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testsuites"
 	"github.com/operator-framework/operator-sdk/pkg/test"
+	"github.com/stretchr/testify/require"
 )
 
 // OperatorSourceTestGroup creates an OperatorSource and then runs a series of test suites that rely on this resource.
@@ -16,15 +17,11 @@ func OperatorSourceTestGroup(t *testing.T) {
 
 	// Get test namespace.
 	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Errorf("Could not get namespace: %v", err)
-	}
+	require.NoError(t, err, "Could not get namespace")
 
 	// Create the OperatorSource.
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateOperatorSourceDefinition(namespace))
-	if err != nil {
-		t.Errorf("Could not create operator source: %v", err)
-	}
+	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Run the test suites.
 	t.Run("opsrc-creation-test-suite", testsuites.OpSrcCreation)
