@@ -20,6 +20,7 @@ package loadtest
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"log"
 	"runtime"
@@ -31,7 +32,6 @@ import (
 	"cloud.google.com/go/pubsub"
 	pb "cloud.google.com/go/pubsub/loadtest/pb"
 	"github.com/golang/protobuf/ptypes"
-	"golang.org/x/net/context"
 	"golang.org/x/time/rate"
 )
 
@@ -134,7 +134,7 @@ func (l *PubServer) publishBatch() ([]int64, error) {
 
 // SubServer is a dummy Pub/Sub server for load testing.
 type SubServer struct {
-	// TODO(deklerk) what is this actually for?
+	// TODO(deklerk): what is this actually for?
 	lim *rate.Limiter
 
 	mu        sync.Mutex

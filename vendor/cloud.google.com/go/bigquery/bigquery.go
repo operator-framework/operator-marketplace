@@ -15,6 +15,7 @@
 package bigquery
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,8 +23,7 @@ import (
 
 	"cloud.google.com/go/internal"
 	"cloud.google.com/go/internal/version"
-	gax "github.com/googleapis/gax-go"
-	"golang.org/x/net/context"
+	gax "github.com/googleapis/gax-go/v2"
 	bq "google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"

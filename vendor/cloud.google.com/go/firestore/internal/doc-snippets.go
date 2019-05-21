@@ -14,13 +14,13 @@
 
 package internal
 
-// TODO(deklerk) can this file and directory be deleted, or is it being used for documentation somewhere?
+// TODO(deklerk): can this file and directory be deleted, or is it being used for documentation somewhere?
 
 import (
+	"context"
 	"fmt"
 
 	firestore "cloud.google.com/go/firestore"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 )
 

@@ -17,10 +17,12 @@ package test
 import (
 	goctx "context"
 	"fmt"
-	"net"
 	"os"
 	"sync"
 	"time"
+
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	k8sInternal "github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 
@@ -66,30 +68,10 @@ func setup(kubeconfigPath, namespacedManPath *string, localOperator bool) error 
 	}
 	var err error
 	var kubeconfig *rest.Config
-	if *kubeconfigPath == "incluster" {
-		// Work around https://github.com/kubernetes/kubernetes/issues/40973
-		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) == 0 {
-			addrs, err := net.LookupHost("kubernetes.default.svc")
-			if err != nil {
-				return fmt.Errorf("failed to get service host: %v", err)
-			}
-			os.Setenv("KUBERNETES_SERVICE_HOST", addrs[0])
-		}
-		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) == 0 {
-			os.Setenv("KUBERNETES_SERVICE_PORT", "443")
-		}
-		kubeconfig, err = rest.InClusterConfig()
-		*singleNamespace = true
-		namespace = os.Getenv(TestNamespaceEnv)
-		if len(namespace) == 0 {
-			return fmt.Errorf("test namespace env not set")
-		}
-	} else {
-		var kcNamespace string
-		kubeconfig, kcNamespace, err = k8sInternal.GetKubeconfigAndNamespace(*kubeconfigPath)
-		if *singleNamespace && namespace == "" {
-			namespace = kcNamespace
-		}
+	var kcNamespace string
+	kubeconfig, kcNamespace, err = k8sInternal.GetKubeconfigAndNamespace(*kubeconfigPath)
+	if *singleNamespace && namespace == "" {
+		namespace = kcNamespace
 	}
 	if err != nil {
 		return fmt.Errorf("failed to build the kubeconfig: %v", err)
@@ -99,8 +81,12 @@ func setup(kubeconfigPath, namespacedManPath *string, localOperator bool) error 
 		return fmt.Errorf("failed to build the kubeclient: %v", err)
 	}
 	scheme := runtime.NewScheme()
-	cgoscheme.AddToScheme(scheme)
-	extscheme.AddToScheme(scheme)
+	if err := cgoscheme.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add cgo scheme to runtime scheme: (%v)", err)
+	}
+	if err := extscheme.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add api extensions scheme to runtime scheme: (%v)", err)
+	}
 	cachedDiscoveryClient := cached.NewMemCacheClient(kubeclient.Discovery())
 	restMapper = restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscoveryClient)
 	restMapper.Reset()

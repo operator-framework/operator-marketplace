@@ -45,6 +45,8 @@ var contextPackage = "context"
 // control-flow path from the call to a return statement and that path
 // does not "use" the cancel function.  Any reference to the variable
 // counts as a use, even within a nested function literal.
+// If the variable's scope is larger than the function
+// containing the assignment, we assume that other uses exist.
 //
 // checkLostCancel analyzes a single named or literal function.
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -66,6 +68,15 @@ func run(pass *analysis.Pass) (interface{}, error) {
 }
 
 func runFunc(pass *analysis.Pass, node ast.Node) {
+	// Find scope of function node
+	var funcScope *types.Scope
+	switch v := node.(type) {
+	case *ast.FuncLit:
+		funcScope = pass.TypesInfo.Scopes[v.Type]
+	case *ast.FuncDecl:
+		funcScope = pass.TypesInfo.Scopes[v.Type]
+	}
+
 	// Maps each cancel variable to its defining ValueSpec/AssignStmt.
 	cancelvars := make(map[*types.Var]ast.Node)
 
@@ -93,32 +104,36 @@ func runFunc(pass *analysis.Pass, node ast.Node) {
 		//   ctx, cancel     = context.WithCancel(...)
 		//   var ctx, cancel = context.WithCancel(...)
 		//
-		if isContextWithCancel(pass.TypesInfo, n) && isCall(stack[len(stack)-2]) {
-			var id *ast.Ident // id of cancel var
-			stmt := stack[len(stack)-3]
-			switch stmt := stmt.(type) {
-			case *ast.ValueSpec:
-				if len(stmt.Names) > 1 {
-					id = stmt.Names[1]
-				}
-			case *ast.AssignStmt:
-				if len(stmt.Lhs) > 1 {
-					id, _ = stmt.Lhs[1].(*ast.Ident)
-				}
+		if !isContextWithCancel(pass.TypesInfo, n) || !isCall(stack[len(stack)-2]) {
+			return true
+		}
+		var id *ast.Ident // id of cancel var
+		stmt := stack[len(stack)-3]
+		switch stmt := stmt.(type) {
+		case *ast.ValueSpec:
+			if len(stmt.Names) > 1 {
+				id = stmt.Names[1]
 			}
-			if id != nil {
-				if id.Name == "_" {
-					pass.Reportf(id.Pos(),
-						"the cancel function returned by context.%s should be called, not discarded, to avoid a context leak",
-						n.(*ast.SelectorExpr).Sel.Name)
-				} else if v, ok := pass.TypesInfo.Uses[id].(*types.Var); ok {
-					cancelvars[v] = stmt
-				} else if v, ok := pass.TypesInfo.Defs[id].(*types.Var); ok {
-					cancelvars[v] = stmt
-				}
+		case *ast.AssignStmt:
+			if len(stmt.Lhs) > 1 {
+				id, _ = stmt.Lhs[1].(*ast.Ident)
 			}
 		}
-
+		if id != nil {
+			if id.Name == "_" {
+				pass.Reportf(id.Pos(),
+					"the cancel function returned by context.%s should be called, not discarded, to avoid a context leak",
+					n.(*ast.SelectorExpr).Sel.Name)
+			} else if v, ok := pass.TypesInfo.Uses[id].(*types.Var); ok {
+				// If the cancel variable is defined outside function scope,
+				// do not analyze it.
+				if funcScope.Contains(v.Pos()) {
+					cancelvars[v] = stmt
+				}
+			} else if v, ok := pass.TypesInfo.Defs[id].(*types.Var); ok {
+				cancelvars[v] = stmt
+			}
+		}
 		return true
 	})
 
@@ -132,11 +147,17 @@ func runFunc(pass *analysis.Pass, node ast.Node) {
 	var sig *types.Signature
 	switch node := node.(type) {
 	case *ast.FuncDecl:
-		g = cfgs.FuncDecl(node)
 		sig, _ = pass.TypesInfo.Defs[node.Name].Type().(*types.Signature)
+		if node.Name.Name == "main" && sig.Recv() == nil && pass.Pkg.Name() == "main" {
+			// Returning from main.main terminates the process,
+			// so there's no need to cancel contexts.
+			return
+		}
+		g = cfgs.FuncDecl(node)
+
 	case *ast.FuncLit:
-		g = cfgs.FuncLit(node)
 		sig, _ = pass.TypesInfo.Types[node.Type].Type.(*types.Signature)
+		g = cfgs.FuncLit(node)
 	}
 	if sig == nil {
 		return // missing type information
@@ -173,18 +194,22 @@ func hasImport(pkg *types.Package, path string) bool {
 // isContextWithCancel reports whether n is one of the qualified identifiers
 // context.With{Cancel,Timeout,Deadline}.
 func isContextWithCancel(info *types.Info, n ast.Node) bool {
-	if sel, ok := n.(*ast.SelectorExpr); ok {
-		switch sel.Sel.Name {
-		case "WithCancel", "WithTimeout", "WithDeadline":
-			if x, ok := sel.X.(*ast.Ident); ok {
-				if pkgname, ok := info.Uses[x].(*types.PkgName); ok {
-					return pkgname.Imported().Path() == contextPackage
-				}
-				// Import failed, so we can't check package path.
-				// Just check the local package name (heuristic).
-				return x.Name == "context"
-			}
+	sel, ok := n.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	switch sel.Sel.Name {
+	case "WithCancel", "WithTimeout", "WithDeadline":
+	default:
+		return false
+	}
+	if x, ok := sel.X.(*ast.Ident); ok {
+		if pkgname, ok := info.Uses[x].(*types.PkgName); ok {
+			return pkgname.Imported().Path() == contextPackage
 		}
+		// Import failed, so we can't check package path.
+		// Just check the local package name (heuristic).
+		return x.Name == "context"
 	}
 	return false
 }
@@ -264,29 +289,30 @@ outer:
 	var search func(blocks []*cfg.Block) *ast.ReturnStmt
 	search = func(blocks []*cfg.Block) *ast.ReturnStmt {
 		for _, b := range blocks {
-			if !seen[b] {
-				seen[b] = true
+			if seen[b] {
+				continue
+			}
+			seen[b] = true
 
-				// Prune the search if the block uses v.
-				if blockUses(pass, v, b) {
-					continue
-				}
+			// Prune the search if the block uses v.
+			if blockUses(pass, v, b) {
+				continue
+			}
 
-				// Found path to return statement?
-				if ret := b.Return(); ret != nil {
-					if debug {
-						fmt.Printf("found path to return in block %s\n", b)
-					}
-					return ret // found
+			// Found path to return statement?
+			if ret := b.Return(); ret != nil {
+				if debug {
+					fmt.Printf("found path to return in block %s\n", b)
 				}
+				return ret // found
+			}
 
-				// Recur
-				if ret := search(b.Succs); ret != nil {
-					if debug {
-						fmt.Printf(" from block %s\n", b)
-					}
-					return ret
+			// Recur
+			if ret := search(b.Succs); ret != nil {
+				if debug {
+					fmt.Printf(" from block %s\n", b)
 				}
+				return ret
 			}
 		}
 		return nil

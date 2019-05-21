@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -222,7 +222,7 @@ type TLSCARoots struct {
 	Roots []*x509.Certificate
 }
 
-func (c *TLSCertificateConfig) writeCertConfigFile(certFile, keyFile string) error {
+func (c *TLSCertificateConfig) WriteCertConfigFile(certFile, keyFile string) error {
 	// ensure parent dir
 	if err := os.MkdirAll(filepath.Dir(certFile), os.FileMode(0755)); err != nil {
 		return err
@@ -449,7 +449,7 @@ func EnsureCA(certFile, keyFile, serialFile, name string, expireDays int) (*CA, 
 	if ca, err := GetCA(certFile, keyFile, serialFile); err == nil {
 		return ca, false, err
 	}
-	ca, err := MakeCA(certFile, keyFile, serialFile, name, expireDays)
+	ca, err := MakeSelfSignedCA(certFile, keyFile, serialFile, name, expireDays)
 	return ca, true, err
 }
 
@@ -489,14 +489,14 @@ func GetCAFromBytes(certBytes, keyBytes []byte) (*CA, error) {
 }
 
 // if serialFile is empty, a RandomSerialGenerator will be used
-func MakeCA(certFile, keyFile, serialFile, name string, expireDays int) (*CA, error) {
-	glog.V(2).Infof("Generating new CA for %s cert, and key in %s, %s", name, certFile, keyFile)
+func MakeSelfSignedCA(certFile, keyFile, serialFile, name string, expireDays int) (*CA, error) {
+	klog.V(2).Infof("Generating new CA for %s cert, and key in %s, %s", name, certFile, keyFile)
 
-	caConfig, err := MakeCAConfig(name, expireDays)
+	caConfig, err := MakeSelfSignedCAConfig(name, expireDays)
 	if err != nil {
 		return nil, err
 	}
-	if err := caConfig.writeCertConfigFile(certFile, keyFile); err != nil {
+	if err := caConfig.WriteCertConfigFile(certFile, keyFile); err != nil {
 		return nil, err
 	}
 
@@ -520,7 +520,7 @@ func MakeCA(certFile, keyFile, serialFile, name string, expireDays int) (*CA, er
 	}, nil
 }
 
-func MakeCAConfig(name string, expireDays int) (*TLSCertificateConfig, error) {
+func MakeSelfSignedCAConfig(name string, expireDays int) (*TLSCertificateConfig, error) {
 	var caLifetimeInDays = DefaultCACertificateLifetimeInDays
 	if expireDays > 0 {
 		caLifetimeInDays = expireDays
@@ -532,10 +532,10 @@ func MakeCAConfig(name string, expireDays int) (*TLSCertificateConfig, error) {
 
 	caLifetime := time.Duration(caLifetimeInDays) * 24 * time.Hour
 
-	return MakeCAConfigForDuration(name, caLifetime)
+	return MakeSelfSignedCAConfigForDuration(name, caLifetime)
 }
 
-func MakeCAConfigForDuration(name string, caLifetime time.Duration) (*TLSCertificateConfig, error) {
+func MakeSelfSignedCAConfigForDuration(name string, caLifetime time.Duration) (*TLSCertificateConfig, error) {
 	// Create CA cert
 	rootcaPublicKey, rootcaPrivateKey, err := NewKeyPair()
 	if err != nil {
@@ -551,6 +551,24 @@ func MakeCAConfigForDuration(name string, caLifetime time.Duration) (*TLSCertifi
 		Key:   rootcaPrivateKey,
 	}
 	return caConfig, nil
+}
+
+func MakeCAConfigForDuration(name string, caLifetime time.Duration, issuer *CA) (*TLSCertificateConfig, error) {
+	// Create CA cert
+	signerPublicKey, signerPrivateKey, err := NewKeyPair()
+	if err != nil {
+		return nil, err
+	}
+	signerTemplate := newSigningCertificateTemplateForDuration(pkix.Name{CommonName: name}, caLifetime, time.Now)
+	signerCert, err := issuer.signCertificate(signerTemplate, signerPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	signerConfig := &TLSCertificateConfig{
+		Certs: append([]*x509.Certificate{signerCert}, issuer.Config.Certs...),
+		Key:   signerPrivateKey,
+	}
+	return signerConfig, nil
 }
 
 func (ca *CA) EnsureServerCert(certFile, keyFile string, hostnames sets.String, expireDays int) (*TLSCertificateConfig, bool, error) {
@@ -574,7 +592,7 @@ func GetServerCert(certFile, keyFile string, hostnames sets.String) (*TLSCertifi
 	missingIps := ipsNotInSlice(ips, cert.IPAddresses)
 	missingDns := stringsNotInSlice(dns, cert.DNSNames)
 	if len(missingIps) == 0 && len(missingDns) == 0 {
-		glog.V(4).Infof("Found existing server certificate in %s", certFile)
+		klog.V(4).Infof("Found existing server certificate in %s", certFile)
 		return server, nil
 	}
 
@@ -582,13 +600,13 @@ func GetServerCert(certFile, keyFile string, hostnames sets.String) (*TLSCertifi
 }
 
 func (ca *CA) MakeAndWriteServerCert(certFile, keyFile string, hostnames sets.String, expireDays int) (*TLSCertificateConfig, error) {
-	glog.V(4).Infof("Generating server certificate in %s, key in %s", certFile, keyFile)
+	klog.V(4).Infof("Generating server certificate in %s, key in %s", certFile, keyFile)
 
 	server, err := ca.MakeServerCert(hostnames, expireDays)
 	if err != nil {
 		return nil, err
 	}
-	if err := server.writeCertConfigFile(certFile, keyFile); err != nil {
+	if err := server.WriteCertConfigFile(certFile, keyFile); err != nil {
 		return server, err
 	}
 	return server, nil
@@ -647,7 +665,7 @@ func (ca *CA) EnsureClientCertificate(certFile, keyFile string, u user.Info, exp
 }
 
 func (ca *CA) MakeClientCertificate(certFile, keyFile string, u user.Info, expireDays int) (*TLSCertificateConfig, error) {
-	glog.V(4).Infof("Generating client cert in %s and key in %s", certFile, keyFile)
+	klog.V(4).Infof("Generating client cert in %s and key in %s", certFile, keyFile)
 	// ensure parent dirs
 	if err := os.MkdirAll(filepath.Dir(certFile), os.FileMode(0755)); err != nil {
 		return nil, err
@@ -776,7 +794,7 @@ func newSigningCertificateTemplateForDuration(subject pkix.Name, caLifetime time
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 }
 
