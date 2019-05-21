@@ -32,7 +32,7 @@ func init() {
 
 var Analyzer = &analysis.Analyzer{
 	Name:      "printf",
-	Doc:       "check printf-like invocations",
+	Doc:       doc,
 	Requires:  []*analysis.Analyzer{inspect.Analyzer},
 	Run:       run,
 	FactTypes: []analysis.Fact{new(isWrapper)},
@@ -43,12 +43,12 @@ const doc = `check consistency of Printf format strings and arguments
 The check applies to known functions (for example, those in package fmt)
 as well as any detected wrappers of known functions.
 
-A function that wants to avail itself of printf checking but does not
-get found by this analyzer's heuristics (for example, due to use of
+A function that wants to avail itself of printf checking but is not
+found by this analyzer's heuristics (for example, due to use of
 dynamic calls) can insert a bogus call:
 
 	if false {
-		fmt.Sprintf(format, args...) // enable printf checking
+		_ = fmt.Sprintf(format, args...) // enable printf checking
 	}
 
 The -funcs flag specifies a comma-separated list of names of additional
@@ -277,18 +277,56 @@ func checkPrintfFwd(pass *analysis.Pass, w *printfWrapper, call *ast.CallExpr, k
 // or case-insensitive identifiers such as "errorf".
 //
 // The -funcs flag adds to this set.
+//
+// The set below includes facts for many important standard library
+// functions, even though the analysis is capable of deducing that, for
+// example, fmt.Printf forwards to fmt.Fprintf. We avoid relying on the
+// driver applying analyzers to standard packages because "go vet" does
+// not do so with gccgo, and nor do some other build systems.
+// TODO(adonovan): eliminate the redundant facts once this restriction
+// is lifted.
+//
 var isPrint = stringSet{
 	"fmt.Errorf":   true,
 	"fmt.Fprint":   true,
 	"fmt.Fprintf":  true,
 	"fmt.Fprintln": true,
-	"fmt.Print":    true, // technically these three
-	"fmt.Printf":   true, // are redundant because they
-	"fmt.Println":  true, // forward to Fprint{,f,ln}
+	"fmt.Print":    true,
+	"fmt.Printf":   true,
+	"fmt.Println":  true,
 	"fmt.Sprint":   true,
 	"fmt.Sprintf":  true,
 	"fmt.Sprintln": true,
 
+	"runtime/trace.Logf": true,
+
+	"log.Print":             true,
+	"log.Printf":            true,
+	"log.Println":           true,
+	"log.Fatal":             true,
+	"log.Fatalf":            true,
+	"log.Fatalln":           true,
+	"log.Panic":             true,
+	"log.Panicf":            true,
+	"log.Panicln":           true,
+	"(*log.Logger).Fatal":   true,
+	"(*log.Logger).Fatalf":  true,
+	"(*log.Logger).Fatalln": true,
+	"(*log.Logger).Panic":   true,
+	"(*log.Logger).Panicf":  true,
+	"(*log.Logger).Panicln": true,
+	"(*log.Logger).Print":   true,
+	"(*log.Logger).Printf":  true,
+	"(*log.Logger).Println": true,
+
+	"(*testing.common).Error":  true,
+	"(*testing.common).Errorf": true,
+	"(*testing.common).Fatal":  true,
+	"(*testing.common).Fatalf": true,
+	"(*testing.common).Log":    true,
+	"(*testing.common).Logf":   true,
+	"(*testing.common).Skip":   true,
+	"(*testing.common).Skipf":  true,
 	// *testing.T and B are detected by induction, but testing.TB is
 	// an interface and the inference can't follow dynamic calls.
 	"(testing.TB).Error":  true,
@@ -415,15 +453,23 @@ func printfNameAndKind(pass *analysis.Pass, call *ast.CallExpr) (fn *types.Func,
 }
 
 // isFormatter reports whether t satisfies fmt.Formatter.
-// Unlike fmt.Stringer, it's impossible to satisfy fmt.Formatter without importing fmt.
-func isFormatter(pass *analysis.Pass, t types.Type) bool {
-	for _, imp := range pass.Pkg.Imports() {
-		if imp.Path() == "fmt" {
-			formatter := imp.Scope().Lookup("Formatter").Type().Underlying().(*types.Interface)
-			return types.Implements(t, formatter)
-		}
+// The only interface method to look for is "Format(State, rune)".
+func isFormatter(typ types.Type) bool {
+	obj, _, _ := types.LookupFieldOrMethod(typ, false, nil, "Format")
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return false
 	}
-	return false
+	sig := fn.Type().(*types.Signature)
+	return sig.Params().Len() == 2 &&
+		sig.Results().Len() == 0 &&
+		isNamed(sig.Params().At(0).Type(), "fmt", "State") &&
+		types.Identical(sig.Params().At(1).Type(), types.Typ[types.Rune])
+}
+
+func isNamed(T types.Type, pkgpath, name string) bool {
+	named, ok := T.(*types.Named)
+	return ok && named.Obj().Pkg().Path() == pkgpath && named.Obj().Name() == name
 }
 
 // formatState holds the parsed representation of a printf directive such as "%3.*[4]d".
@@ -676,7 +722,7 @@ var printVerbs = []printVerb{
 	// '#' is alternate format for several verbs.
 	// ' ' is spacer for numbers
 	{'%', noFlag, 0},
-	{'b', numFlag, argInt | argFloat | argComplex},
+	{'b', numFlag, argInt | argFloat | argComplex | argPointer},
 	{'c', "-", argRune | argInt},
 	{'d', numFlag, argInt | argPointer},
 	{'e', sharpNumFlag, argFloat | argComplex},
@@ -685,7 +731,7 @@ var printVerbs = []printVerb{
 	{'F', sharpNumFlag, argFloat | argComplex},
 	{'g', sharpNumFlag, argFloat | argComplex},
 	{'G', sharpNumFlag, argFloat | argComplex},
-	{'o', sharpNumFlag, argInt},
+	{'o', sharpNumFlag, argInt | argPointer},
 	{'p', "-#", argPointer},
 	{'q', " -+.0#", argRune | argInt | argString},
 	{'s', " -+.0", argString},
@@ -693,6 +739,7 @@ var printVerbs = []printVerb{
 	{'T', "-", anyType},
 	{'U', "-#", argRune | argInt},
 	{'v', allFlags, anyType},
+	{'w', noFlag, anyType},
 	{'x', sharpNumFlag, argRune | argInt | argString | argPointer},
 	{'X', sharpNumFlag, argRune | argInt | argString | argPointer},
 }
@@ -715,7 +762,7 @@ func okPrintfArg(pass *analysis.Pass, call *ast.CallExpr, state *formatState) (o
 	formatter := false
 	if state.argNum < len(call.Args) {
 		if tv, ok := pass.TypesInfo.Types[call.Args[state.argNum]]; ok {
-			formatter = isFormatter(pass, tv.Type)
+			formatter = isFormatter(tv.Type)
 		}
 	}
 
@@ -793,7 +840,7 @@ func recursiveStringer(pass *analysis.Pass, e ast.Expr) bool {
 	typ := pass.TypesInfo.Types[e].Type
 
 	// It's unlikely to be a recursive stringer if it has a Format method.
-	if isFormatter(pass, typ) {
+	if isFormatter(typ) {
 		return false
 	}
 
@@ -805,7 +852,30 @@ func recursiveStringer(pass *analysis.Pass, e ast.Expr) bool {
 	}
 
 	// Is the expression e within the body of that String method?
-	return stringMethod.Pkg() == pass.Pkg && stringMethod.Scope().Contains(e.Pos())
+	if stringMethod.Pkg() != pass.Pkg || !stringMethod.Scope().Contains(e.Pos()) {
+		return false
+	}
+
+	sig := stringMethod.Type().(*types.Signature)
+	if !isStringer(sig) {
+		return false
+	}
+
+	// Is it the receiver r, or &r?
+	if u, ok := e.(*ast.UnaryExpr); ok && u.Op == token.AND {
+		e = u.X // strip off & from &r
+	}
+	if id, ok := e.(*ast.Ident); ok {
+		return pass.TypesInfo.Uses[id] == sig.Recv()
+	}
+	return false
+}
+
+// isStringer reports whether the method signature matches the String() definition in fmt.Stringer.
+func isStringer(sig *types.Signature) bool {
+	return sig.Params().Len() == 0 &&
+		sig.Results().Len() == 1 &&
+		sig.Results().At(0).Type() == types.Typ[types.String]
 }
 
 // isFunctionValue reports whether the expression is a function as opposed to a function call.

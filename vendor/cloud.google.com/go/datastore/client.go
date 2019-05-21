@@ -15,12 +15,12 @@
 package datastore
 
 import (
+	"context"
 	"fmt"
 
 	"cloud.google.com/go/internal"
 	"cloud.google.com/go/internal/version"
-	gax "github.com/googleapis/gax-go"
-	"golang.org/x/net/context"
+	gax "github.com/googleapis/gax-go/v2"
 	pb "google.golang.org/genproto/googleapis/datastore/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

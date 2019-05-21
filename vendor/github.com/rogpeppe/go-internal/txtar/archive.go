@@ -33,9 +33,13 @@ package txtar
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 // An Archive is a collection of files.
@@ -87,6 +91,55 @@ func Parse(data []byte) *Archive {
 	return a
 }
 
+// NeedsQuote reports whether the given data needs to
+// be quoted before it's included as a txtar file.
+func NeedsQuote(data []byte) bool {
+	_, _, after := findFileMarker(data)
+	return after != nil
+}
+
+// Quote quotes the data so that it can be safely stored in a txtar
+// file. This copes with files that contain lines that look like txtar
+// separators.
+//
+// The original data can be recovered with Unquote. It returns an error
+// if the data cannot be quoted (for example because it has no final
+// newline or it holds unprintable characters)
+func Quote(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if data[len(data)-1] != '\n' {
+		return nil, errors.New("data has no final newline")
+	}
+	if !utf8.Valid(data) {
+		return nil, fmt.Errorf("data contains non-UTF-8 characters")
+	}
+	var nd []byte
+	prev := byte('\n')
+	for _, b := range data {
+		if prev == '\n' {
+			nd = append(nd, '>')
+		}
+		nd = append(nd, b)
+		prev = b
+	}
+	return nd, nil
+}
+
+// Unquote unquotes data as quoted by Quote.
+func Unquote(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if data[0] != '>' || data[len(data)-1] != '\n' {
+		return nil, errors.New("data does not appear to be quoted")
+	}
+	data = bytes.Replace(data, []byte("\n>"), []byte("\n"), -1)
+	data = bytes.TrimPrefix(data, []byte(">"))
+	return data, nil
+}
+
 var (
 	newlineMarker = []byte("\n-- ")
 	marker        = []byte("-- ")
@@ -120,6 +173,9 @@ func isMarker(data []byte) (name string, after []byte) {
 	}
 	if i := bytes.IndexByte(data, '\n'); i >= 0 {
 		data, after = data[:i], data[i+1:]
+		if data[i-1] == '\r' {
+			data = data[:len(data)-1]
+		}
 	}
 	if !bytes.HasSuffix(data, markerEnd) {
 		return "", nil
@@ -137,4 +193,42 @@ func fixNL(data []byte) []byte {
 	copy(d, data)
 	d[len(data)] = '\n'
 	return d
+}
+
+// Write writes each File in an Archive to the given directory, returning any
+// errors encountered. An error is also returned in the event a file would be
+// written outside of dir.
+func Write(a *Archive, dir string) error {
+	for _, f := range a.Files {
+		fp := filepath.Clean(filepath.FromSlash(f.Name))
+		if isAbs(fp) || strings.HasPrefix(fp, ".."+string(filepath.Separator)) {
+			return fmt.Errorf("%q: outside parent directory", f.Name)
+		}
+		fp = filepath.Join(dir, fp)
+
+		if err := os.MkdirAll(filepath.Dir(fp), 0777); err != nil {
+			return err
+		}
+		// Avoid overwriting existing files by using O_EXCL.
+		out, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
+		if err != nil {
+			return err
+		}
+
+		_, err = out.Write(f.Data)
+		cerr := out.Close()
+		if err != nil {
+			return err
+		}
+		if cerr != nil {
+			return cerr
+		}
+	}
+	return nil
+}
+
+func isAbs(p string) bool {
+	// Note: under Windows, filepath.IsAbs(`\foo`) returns false,
+	// so we need to check for that case specifically.
+	return filepath.IsAbs(p) || strings.HasPrefix(p, string(filepath.Separator))
 }

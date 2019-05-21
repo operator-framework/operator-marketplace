@@ -60,10 +60,15 @@ spec:
       command: # Value set by operator
       args: # Value set by operator
       image: # Value set by operator
-      imagePullPolicy: Always
+      imagePullPolicy: IfNotPresent
       securityContext:
         privileged: true
         runAsUser: 0
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
       terminationMessagePolicy: FallbackToLogsOnError
       volumeMounts:
         - mountPath: /etc/kubernetes/
@@ -76,7 +81,7 @@ spec:
   restartPolicy: Never
   priorityClassName: system-node-critical
   tolerations:
-    - operator: "Exists"
+  - operator: "Exists"
   securityContext:
     runAsUser: 0
   volumes:

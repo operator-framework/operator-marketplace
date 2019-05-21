@@ -1,89 +1,91 @@
+// Copyright 2018 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package lsp
 
 import (
-	"go/token"
-	"strconv"
+	"context"
 	"strings"
 
-	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/internal/lsp/protocol"
+	"golang.org/x/tools/internal/lsp/source"
+	"golang.org/x/tools/internal/span"
 )
 
-func (v *view) diagnostics(uri protocol.DocumentURI) (map[string][]protocol.Diagnostic, error) {
-	pkg, err := v.typeCheck(uri)
+func (s *Server) Diagnostics(ctx context.Context, view source.View, uri span.URI) {
+	if ctx.Err() != nil {
+		s.session.Logger().Errorf(ctx, "canceling diagnostics for %s: %v", uri, ctx.Err())
+		return
+	}
+	reports, err := source.Diagnostics(ctx, view, uri)
 	if err != nil {
-		return nil, err
+		s.session.Logger().Errorf(ctx, "failed to compute diagnostics for %s: %v", uri, err)
+		return
 	}
-	reports := make(map[string][]protocol.Diagnostic)
-	for _, filename := range pkg.GoFiles {
-		reports[filename] = []protocol.Diagnostic{}
-	}
-	var parseErrors, typeErrors []packages.Error
-	for _, err := range pkg.Errors {
-		switch err.Kind {
-		case packages.ParseError:
-			parseErrors = append(parseErrors, err)
-		case packages.TypeError:
-			typeErrors = append(typeErrors, err)
-		default:
-			// ignore other types of errors
+
+	s.undeliveredMu.Lock()
+	defer s.undeliveredMu.Unlock()
+
+	for uri, diagnostics := range reports {
+		if err := s.publishDiagnostics(ctx, view, uri, diagnostics); err != nil {
+			if s.undelivered == nil {
+				s.undelivered = make(map[span.URI][]source.Diagnostic)
+			}
+			s.undelivered[uri] = diagnostics
 			continue
 		}
+		// In case we had old, undelivered diagnostics.
+		delete(s.undelivered, uri)
 	}
-	// Don't report type errors if there are parse errors.
-	errors := typeErrors
-	if len(parseErrors) > 0 {
-		errors = parseErrors
+	// Anytime we compute diagnostics, make sure to also send along any
+	// undelivered ones (only for remaining URIs).
+	for uri, diagnostics := range s.undelivered {
+		err := s.publishDiagnostics(ctx, view, uri, diagnostics)
+		if err != nil {
+			s.session.Logger().Errorf(ctx, "failed to deliver diagnostic for %s: %v", uri, err)
+		}
+		// If we fail to deliver the same diagnostics twice, just give up.
+		delete(s.undelivered, uri)
 	}
-	for _, err := range errors {
-		pos := parseErrorPos(err)
-		line := float64(pos.Line) - 1
-		col := float64(pos.Column) - 1
-		diagnostic := protocol.Diagnostic{
-			// TODO(rstambler): Add support for diagnostic ranges.
-			Range: protocol.Range{
-				Start: protocol.Position{
-					Line:      line,
-					Character: col,
-				},
-				End: protocol.Position{
-					Line:      line,
-					Character: col,
-				},
-			},
-			Severity: protocol.SeverityError,
-			Source:   "LSP: Go compiler",
-			Message:  err.Msg,
+}
+
+func (s *Server) publishDiagnostics(ctx context.Context, view source.View, uri span.URI, diagnostics []source.Diagnostic) error {
+	protocolDiagnostics, err := toProtocolDiagnostics(ctx, view, diagnostics)
+	if err != nil {
+		return err
+	}
+	s.client.PublishDiagnostics(ctx, &protocol.PublishDiagnosticsParams{
+		Diagnostics: protocolDiagnostics,
+		URI:         protocol.NewURI(uri),
+	})
+	return nil
+}
+
+func toProtocolDiagnostics(ctx context.Context, v source.View, diagnostics []source.Diagnostic) ([]protocol.Diagnostic, error) {
+	reports := []protocol.Diagnostic{}
+	for _, diag := range diagnostics {
+		_, m, err := getSourceFile(ctx, v, diag.Span.URI())
+		if err != nil {
+			return nil, err
 		}
-		if _, ok := reports[pos.Filename]; ok {
-			reports[pos.Filename] = append(reports[pos.Filename], diagnostic)
+		var severity protocol.DiagnosticSeverity
+		switch diag.Severity {
+		case source.SeverityError:
+			severity = protocol.SeverityError
+		case source.SeverityWarning:
+			severity = protocol.SeverityWarning
 		}
+		rng, err := m.Range(diag.Span)
+		if err != nil {
+			return nil, err
+		}
+		reports = append(reports, protocol.Diagnostic{
+			Message:  strings.TrimSpace(diag.Message), // go list returns errors prefixed by newline
+			Range:    rng,
+			Severity: severity,
+			Source:   diag.Source,
+		})
 	}
 	return reports, nil
-}
-
-func parseErrorPos(pkgErr packages.Error) (pos token.Position) {
-	remainder1, first, hasLine := chop(pkgErr.Pos)
-	remainder2, second, hasColumn := chop(remainder1)
-	if hasLine && hasColumn {
-		pos.Filename = remainder2
-		pos.Line = second
-		pos.Column = first
-	} else if hasLine {
-		pos.Filename = remainder1
-		pos.Line = first
-	}
-	return pos
-}
-
-func chop(text string) (remainder string, value int, ok bool) {
-	i := strings.LastIndex(text, ":")
-	if i < 0 {
-		return text, 0, false
-	}
-	v, err := strconv.ParseInt(text[i+1:], 10, 64)
-	if err != nil {
-		return text, 0, false
-	}
-	return text[:i], int(v), true
 }
