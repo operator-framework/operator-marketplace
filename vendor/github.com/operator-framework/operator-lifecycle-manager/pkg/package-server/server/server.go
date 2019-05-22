@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	genericapiserver "k8s.io/apiserver/pkg/server"
+	genericserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -19,7 +19,7 @@ import (
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/queueinformer"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apiserver"
-	genericpackagemanifests "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apiserver/generic"
+	genericpackageserver "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apiserver/generic"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/provider"
 )
 
@@ -81,7 +81,7 @@ type PackageServerOptions struct {
 func NewPackageServerOptions(out, errOut io.Writer) *PackageServerOptions {
 	o := &PackageServerOptions{
 
-		SecureServing:  genericoptions.WithLoopback(genericoptions.NewSecureServingOptions()),
+		SecureServing:  genericoptions.NewSecureServingOptions().WithLoopback(),
 		Authentication: genericoptions.NewDelegatingAuthenticationOptions(),
 		Authorization:  genericoptions.NewDelegatingAuthorizationOptions(),
 		Features:       genericoptions.NewFeatureOptions(),
@@ -108,8 +108,8 @@ func (o *PackageServerOptions) Config() (*apiserver.Config, error) {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 
-	serverConfig := genericapiserver.NewConfig(genericpackagemanifests.Codecs)
-	if err := o.SecureServing.ApplyTo(serverConfig); err != nil {
+	serverConfig := genericserver.NewConfig(genericpackageserver.Codecs)
+	if err := o.SecureServing.ApplyTo(&serverConfig.SecureServing, &serverConfig.LoopbackClientConfig); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +124,7 @@ func (o *PackageServerOptions) Config() (*apiserver.Config, error) {
 
 	return &apiserver.Config{
 		GenericConfig:  serverConfig,
-		ProviderConfig: genericpackagemanifests.ProviderConfig{},
+		ProviderConfig: genericpackageserver.ProviderConfig{},
 	}, nil
 }
 
@@ -184,7 +184,7 @@ func (o *PackageServerOptions) Run(stopCh <-chan struct{}) error {
 
 	// Ensure that provider stops after the apiserver gracefully shuts down
 	provCh := make(chan struct{})
-	ready, done := sourceProvider.Run(provCh)
+	ready, done, _ := sourceProvider.Run(provCh)
 	<-ready
 
 	err = server.GenericAPIServer.PrepareRun().Run(stopCh)

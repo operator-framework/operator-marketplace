@@ -81,6 +81,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:dafc9bfdb2d9816587ca63844a722b36525183e14423b1f356fd9a8a805b6230"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
+
+[[projects]]
   digest = "1:13af3d205c774ec0bbda45fee1a4089f3cd9a55c5367b527698b34550ec15e71"
   name = "github.com/census-instrumentation/opencensus-proto"
   packages = [
@@ -94,14 +102,6 @@
   pruneopts = "NT"
   revision = "a105b96453fe85139acc07b68de48f2cbdd71249"
   version = "v0.2.0"
-
-[[projects]]
-  digest = "1:e29f05b742d9ccbfb65faca82ec43da7742cb7b039469640823c64b639b91b92"
-  name = "github.com/coreos/go-semver"
-  packages = ["semver"]
-  pruneopts = "NT"
-  revision = "e214231b295a8ea9479f11b70b35d5acf3556d9b"
-  version = "v0.3.0"
 
 [[projects]]
   digest = "1:4b8b5811da6970495e04d1f4e98bb89518cc3cfc3b3f456bdb876ed7b6c74049"
@@ -517,14 +517,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:db06254ecbf3dd993113bc510501bf64f198a79684fdd788377c2e0ec9ac8fdc"
+  digest = "1:994aada7f56f25aa47c3c1c02d7132c7c59ba92a8d0c82194c647451978a25ff"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
     "operator/v1",
   ]
   pruneopts = "NT"
-  revision = "d5b34b957e91dbf64013a866951c3ed5770db0b5"
+  revision = "924343028ee3dc875057861a5faa5b817ec87f5b"
 
 [[projects]]
   branch = "master"
@@ -565,15 +565,16 @@
   revision = "f2aef88446f2a736fcb18db8ae57d708c52fdad0"
 
 [[projects]]
-  digest = "1:e5cf9bf3290e7d29c2487607dea04d98856e8850e26bae0d0d5a77e50fc77bf3"
+  digest = "1:f7ae6c03d841a86e643a619468752e9d30497c90ef2c72c196f42fe918ddb80a"
   name = "github.com/operator-framework/operator-lifecycle-manager"
   packages = [
-    "pkg/api/apis/operators",
     "pkg/api/apis/operators/v1alpha1",
     "pkg/lib/signals",
+    "pkg/lib/version",
   ]
   pruneopts = "NT"
-  revision = "e40d4f4f2ae47d20af1dd07572245b91dd4a5d50"
+  revision = "7b2b397ad0cc161eed4409484a0bc496ec823046"
+  version = "0.10.0"
 
 [[projects]]
   digest = "1:ce4e43d2eef4a4c40c6e8439c724e34e6fd7e48959a340038e3cd02762cdb437"
@@ -655,7 +656,7 @@
   revision = "fd36f4220a901265f90734c3183c5f0c91daa0b8"
 
 [[projects]]
-  digest = "1:d58e080134e5ca08ba6beebade31362d5f56e64fdb6dd649ec8b5e52445e8489"
+  digest = "1:70a61f24e419a65b6f030b73f66b620da038e57089165577bdf945f3c3bb8b51"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
@@ -663,19 +664,19 @@
     "model",
   ]
   pruneopts = "NT"
-  revision = "1ba88736f028e37bc17328369e94a537ae9e0234"
-  version = "v0.4.0"
+  revision = "17f5ca1748182ddf24fc33a5a7caaaf790a52fcc"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:3f4a8f134a956a6b9938ceebeda89c64c8fbdb5c933afb0252a629cd445f580d"
+  digest = "1:81a4e665f43471355867db3ae395c3d366980c09196a3b4d31a06999cff149c5"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
     "internal/fs",
   ]
   pruneopts = "NT"
-  revision = "9935e8e0588d26307d1d4a07bed7bd47271b6bbd"
+  revision = "bc1a522cf7b161885c0c3ae8080f59bf38a6e9e7"
 
 [[projects]]
   digest = "1:a4644e85e1f29f9825a4e61dcdd8244fe7c4db02eead3f508d5a5bdf7924dbbd"
@@ -803,7 +804,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6b9e4ade15a95f867cf9f5b37cdc94c39443f9ed168316d95e36568f324560f"
+  digest = "1:30d8f385239d18f0d559d3d6ce8211cfd004e6499bd26aa87c37a01111736bcd"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -816,7 +817,7 @@
     "trace",
   ]
   pruneopts = "NT"
-  revision = "018c4d40a106a7ae83689758294fcd8d23850745"
+  revision = "f3200d17e092c607f615320ecaad13d87ad9a2b3"
 
 [[projects]]
   branch = "master"
@@ -842,14 +843,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b87d30f6e8044b6adbb64736e81ab3f002093a498f8df0ca7c2fd932645085dc"
+  digest = "1:b3aca9b1adae331876495dc56e56553eb8543375c6604729af902151d3cbbfe1"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NT"
-  revision = "c432e742b0af385916e013f6a34e9e73d139cf82"
+  revision = "8097e1b27ff5e40620836729a9584e91b094b062"
 
 [[projects]]
   digest = "1:348fa8283a7c60b5b71ce04d27b37f7c0fce552d4d0b463b5b3ebbd1840d3f1a"
@@ -887,7 +888,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:37c56970788d1b90039c82366b16ccb34fc9ff300c7b23b28fd12d282dfdbffa"
+  digest = "1:33826c683bcb5dab3a177927e7e736efe8f9ff179fab63f5bc74cdc3f959bc69"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -904,7 +905,7 @@
     "internal/semver",
   ]
   pruneopts = "NT"
-  revision = "26647e34d3c04fd3eaef6fb824493b00af7b1b26"
+  revision = "521d6ed310dd2348b2d3c64b91c55df233c52860"
 
 [[projects]]
   digest = "1:dcac8e614409010171dcb258c4d90d1ecc553d591fcc6dde328b6f7408bbd5bf"
@@ -935,7 +936,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:84ef6052443021b4116fbac5e457e262f1284f010147d1eff9cc669da835f85c"
+  digest = "1:d696400fb97825caf354c374df8c773912660be10260b5d2fd3ff9570622df1a"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/httpbody",
@@ -943,10 +944,10 @@
     "protobuf/field_mask",
   ]
   pruneopts = "NT"
-  revision = "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9"
+  revision = "c2c4e71fbf6989c3e46a18d65cb88c288f8a3a55"
 
 [[projects]]
-  digest = "1:5761833c144990cd4ce4136a99284f5323116c9c063a1953f0bda38483a9c3cb"
+  digest = "1:f96fe2ef361530a59bb330f40cf34723e8b46e1dcded4f2f37e6d4d3efaebbd1"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -983,8 +984,8 @@
     "tap",
   ]
   pruneopts = "NT"
-  revision = "25c4f928eaa6d96443009bd842389fb4fa48664e"
-  version = "v1.20.1"
+  revision = "869adfc8d5a43efc0d05780ad109106f457f51e4"
+  version = "v1.21.0"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -1307,12 +1308,12 @@
   revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
 [[projects]]
-  digest = "1:300621bb4f98c1440b7298b376058928baf1fceb221a7f4520a92b7b9919bb3d"
+  digest = "1:5a5a14a4e74d8d662f394d877b26262d24304c039fab9b61c8041cf6a6b71e9a"
   name = "k8s.io/klog"
   packages = ["."]
   pruneopts = "NT"
-  revision = "e531227889390a39d9533dde61f590fe9f4b0035"
-  version = "v0.3.0"
+  revision = "89e63fd5117f8c20208186ef85f096703a280c20"
+  version = "v0.3.1"
 
 [[projects]]
   digest = "1:c48a795cd7048bb1888273bc604b6e69b22f9b8089c3df65f77cc527757b515c"

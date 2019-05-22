@@ -50,25 +50,24 @@ func (e *NamespaceGenerationEvolver) Evolve(add map[OperatorSourceInfo]struct{})
 }
 
 func (e *NamespaceGenerationEvolver) checkForUpdates() error {
-	for _, op := range e.gen.Operators() {
+	// take a snapshot of the current generation so that we don't update the same operator twice in one resolution
+	for _, op := range e.gen.Operators().Snapshot() {
 		// only check for updates if we have sourceinfo
 		if op.SourceInfo() == &ExistingOperator {
 			continue
 		}
 
-		bundle, key, err := e.querier.FindReplacement(op.Identifier(), op.SourceInfo().Package, op.SourceInfo().Channel, op.SourceInfo().Catalog)
+		bundle, key, err := e.querier.FindReplacement(op.Version(), op.Identifier(), op.SourceInfo().Package, op.SourceInfo().Channel, op.SourceInfo().Catalog)
 		if err != nil || bundle == nil {
 			continue
 		}
 
-		o, err := NewOperatorFromBundle(bundle, op.SourceInfo().StartingCSV, *key)
+		o, err := NewOperatorFromBundle(bundle, op.Identifier(), op.SourceInfo().StartingCSV, *key)
 		if err != nil {
 			return errors.Wrap(err, "error parsing bundle")
 		}
 		if err := e.gen.AddOperator(o); err != nil {
-			if err != nil {
-				return errors.Wrap(err, "error calculating generation changes due to new bundle")
-			}
+			return errors.Wrap(err, "error calculating generation changes due to new bundle")
 		}
 		e.gen.RemoveOperator(op)
 	}
@@ -90,7 +89,7 @@ func (e *NamespaceGenerationEvolver) addNewOperators(add map[OperatorSourceInfo]
 			return errors.Wrapf(err, "%s not found", s)
 		}
 
-		o, err := NewOperatorFromBundle(bundle, s.StartingCSV, *key)
+		o, err := NewOperatorFromBundle(bundle, "", s.StartingCSV, *key)
 		if err != nil {
 			return errors.Wrap(err, "error parsing bundle")
 		}
@@ -116,7 +115,7 @@ func (e *NamespaceGenerationEvolver) queryForRequiredAPIs() error {
 		// attempt to find a bundle that provides that api
 		if bundle, key, err := e.querier.FindProvider(*api); err == nil {
 			// add a bundle that provides the api to the generation
-			o, err := NewOperatorFromBundle(bundle, "", *key)
+			o, err := NewOperatorFromBundle(bundle, "", "", *key)
 			if err != nil {
 				return errors.Wrap(err, "error parsing bundle")
 			}

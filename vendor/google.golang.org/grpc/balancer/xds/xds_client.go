@@ -30,18 +30,19 @@ import (
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
+	"google.golang.org/grpc/balancer/xds/internal"
 	cdspb "google.golang.org/grpc/balancer/xds/internal/proto/envoy/api/v2/cds"
 	basepb "google.golang.org/grpc/balancer/xds/internal/proto/envoy/api/v2/core/base"
 	discoverypb "google.golang.org/grpc/balancer/xds/internal/proto/envoy/api/v2/discovery"
 	edspb "google.golang.org/grpc/balancer/xds/internal/proto/envoy/api/v2/eds"
-	adspb "google.golang.org/grpc/balancer/xds/internal/proto/envoy/service/discovery/v2/ads"
+	adsgrpc "google.golang.org/grpc/balancer/xds/internal/proto/envoy/service/discovery/v2/ads"
+	"google.golang.org/grpc/balancer/xds/lrs"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal/backoff"
 	"google.golang.org/grpc/internal/channelz"
 )
 
 const (
-	grpcHostname     = "com.googleapis.trafficdirector.grpc_hostname"
 	cdsType          = "type.googleapis.com/envoy.api.v2.Cluster"
 	edsType          = "type.googleapis.com/envoy.api.v2.ClusterLoadAssignment"
 	endpointRequired = "endpoints_required"
@@ -59,7 +60,7 @@ var (
 type client struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
-	cli          adspb.AggregatedDiscoveryServiceClient
+	cli          adsgrpc.AggregatedDiscoveryServiceClient
 	opts         balancer.BuildOptions
 	balancerName string // the traffic director name
 	serviceName  string // the user dial target name
@@ -68,6 +69,9 @@ type client struct {
 	loseContact  func(ctx context.Context)
 	cleanup      func()
 	backoff      backoff.Strategy
+
+	loadStore      lrs.Store
+	loadReportOnce sync.Once
 
 	mu sync.Mutex
 	cc *grpc.ClientConn
@@ -131,7 +135,7 @@ func (c *client) newCDSRequest() *discoverypb.DiscoveryRequest {
 		Node: &basepb.Node{
 			Metadata: &structpb.Struct{
 				Fields: map[string]*structpb.Value{
-					grpcHostname: {
+					internal.GrpcHostname: {
 						Kind: &structpb.Value_StringValue{StringValue: c.serviceName},
 					},
 				},
@@ -160,7 +164,7 @@ func (c *client) newEDSRequest() *discoverypb.DiscoveryRequest {
 }
 
 func (c *client) makeADSCall() {
-	c.cli = adspb.NewAggregatedDiscoveryServiceClient(c.cc)
+	c.cli = adsgrpc.NewAggregatedDiscoveryServiceClient(c.cc)
 	retryCount := 0
 	var doRetry bool
 
@@ -205,11 +209,13 @@ func (c *client) adsCallAttempt() (firstRespReceived bool) {
 	if c.enableCDS {
 		if err := st.Send(c.newCDSRequest()); err != nil {
 			// current stream is broken, start a new one.
+			grpclog.Infof("xds: ads RPC failed due to err: %v, when sending the CDS request ", err)
 			return
 		}
 	}
 	if err := st.Send(c.newEDSRequest()); err != nil {
 		// current stream is broken, start a new one.
+		grpclog.Infof("xds: ads RPC failed due to err: %v, when sending the EDS request", err)
 		return
 	}
 	expectCDS := c.enableCDS
@@ -217,6 +223,7 @@ func (c *client) adsCallAttempt() (firstRespReceived bool) {
 		resp, err := st.Recv()
 		if err != nil {
 			// current stream is broken, start a new one.
+			grpclog.Infof("xds: ads RPC failed due to err: %v, when receiving the response", err)
 			return
 		}
 		firstRespReceived = true
@@ -249,18 +256,29 @@ func (c *client) adsCallAttempt() (firstRespReceived bool) {
 			grpclog.Warningf("xds: processing new ADS message failed due to %v.", err)
 			return
 		}
+		// Only start load reporting after ADS resp is received.
+		//
+		// Also, newADS() will close the previous load reporting stream, so we
+		// don't have double reporting.
+		c.loadReportOnce.Do(func() {
+			if c.loadStore != nil {
+				go c.loadStore.ReportTo(c.ctx, c.cc)
+			}
+		})
 	}
 }
-func newXDSClient(balancerName string, serviceName string, enableCDS bool, opts balancer.BuildOptions, newADS func(context.Context, proto.Message) error, loseContact func(ctx context.Context), exitCleanup func()) *client {
+
+func newXDSClient(balancerName string, enableCDS bool, opts balancer.BuildOptions, loadStore lrs.Store, newADS func(context.Context, proto.Message) error, loseContact func(ctx context.Context), exitCleanup func()) *client {
 	c := &client{
 		balancerName: balancerName,
-		serviceName:  serviceName,
+		serviceName:  opts.Target.Endpoint,
 		enableCDS:    enableCDS,
 		opts:         opts,
 		newADS:       newADS,
 		loseContact:  loseContact,
 		cleanup:      exitCleanup,
 		backoff:      defaultBackoffConfig,
+		loadStore:    loadStore,
 	}
 
 	c.ctx, c.cancel = context.WithCancel(context.Background())

@@ -76,7 +76,7 @@ required = [
 # Marketplace specific constraints
 [[constraint]]
   name = "github.com/operator-framework/operator-lifecycle-manager"
-  revision = "e40d4f4f2ae47d20af1dd07572245b91dd4a5d50"
+  version = "v0.10.0"
 
 [[constraint]]
   branch = "master"

@@ -2,13 +2,15 @@ package resolver
 
 import (
 	"fmt"
-	"strings"
+	"hash/fnv"
 	"sort"
+	"strings"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	
+	"github.com/blang/semver"
 	opregistry "github.com/operator-framework/operator-registry/pkg/registry"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 )
 
 type CatalogKey struct {
@@ -57,6 +59,14 @@ func GVKStringToProvidedAPISet(gvksStr string) APISet {
 func APIKeyToGVKString(key opregistry.APIKey) string {
 	// TODO: Add better validation of GVK
 	return strings.Join([]string{key.Kind, key.Version, key.Group}, ".")
+}
+
+func APIKeyToGVKHash(key opregistry.APIKey) (string, error) {
+	hash := fnv.New64a()
+	if _, err := hash.Write([]byte(APIKeyToGVKString(key))); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", hash.Sum64()), nil
 }
 
 func (s APISet) String() string {
@@ -147,6 +157,15 @@ func EmptyOperatorSet() OperatorSet {
 	return map[string]OperatorSurface{}
 }
 
+// Snapshot returns a new set, pointing to the same values
+func (o OperatorSet) Snapshot() OperatorSet {
+	out := make(map[string]OperatorSurface)
+	for key, val := range o {
+		out[key] = val
+	}
+	return out
+}
+
 type APIMultiOwnerSet map[opregistry.APIKey]OperatorSet
 
 func EmptyAPIMultiOwnerSet() APIMultiOwnerSet {
@@ -198,6 +217,7 @@ type OperatorSurface interface {
 	RequiredAPIs() APISet
 	Identifier() string
 	Replaces() string
+	Version() *semver.Version
 	SourceInfo() *OperatorSourceInfo
 	Bundle() *opregistry.Bundle
 }
@@ -207,13 +227,14 @@ type Operator struct {
 	replaces     string
 	providedAPIs APISet
 	requiredAPIs APISet
+	version      *semver.Version
 	bundle       *opregistry.Bundle
 	sourceInfo   *OperatorSourceInfo
 }
 
 var _ OperatorSurface = &Operator{}
 
-func NewOperatorFromBundle(bundle *opregistry.Bundle, startingCSV string, sourceKey CatalogKey) (*Operator, error) {
+func NewOperatorFromBundle(bundle *opregistry.Bundle, replaces string, startingCSV string, sourceKey CatalogKey) (*Operator, error) {
 	csv, err := bundle.ClusterServiceVersion()
 	if err != nil {
 		return nil, err
@@ -226,9 +247,14 @@ func NewOperatorFromBundle(bundle *opregistry.Bundle, startingCSV string, source
 	if err != nil {
 		return nil, err
 	}
+	r := replaces
+	if r == "" {
+		r = csv.Spec.Replaces
+	}
 	return &Operator{
 		name:         csv.GetName(),
-		replaces:     csv.Spec.Replaces,
+		replaces:     r,
+		version:      &csv.Spec.Version.Version,
 		providedAPIs: providedAPIs,
 		requiredAPIs: requiredAPIs,
 		bundle:       bundle,
@@ -241,7 +267,7 @@ func NewOperatorFromBundle(bundle *opregistry.Bundle, startingCSV string, source
 	}, nil
 }
 
-func NewOperatorFromCSV(csv *v1alpha1.ClusterServiceVersion) (*Operator, error) {
+func NewOperatorFromV1Alpha1CSV(csv *v1alpha1.ClusterServiceVersion) (*Operator, error) {
 	providedAPIs := EmptyAPISet()
 	for _, crdDef := range csv.Spec.CustomResourceDefinitions.Owned {
 		parts := strings.SplitN(crdDef.Name, ".", 2)
@@ -268,6 +294,7 @@ func NewOperatorFromCSV(csv *v1alpha1.ClusterServiceVersion) (*Operator, error) 
 
 	return &Operator{
 		name:         csv.GetName(),
+		version:      &csv.Spec.Version.Version,
 		replaces:     csv.Spec.Replaces,
 		providedAPIs: providedAPIs,
 		requiredAPIs: requiredAPIs,
@@ -301,4 +328,8 @@ func (o *Operator) SourceInfo() *OperatorSourceInfo {
 
 func (o *Operator) Bundle() *opregistry.Bundle {
 	return o.bundle
+}
+
+func (o *Operator) Version() *semver.Version {
+	return o.version
 }
