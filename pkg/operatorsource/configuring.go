@@ -16,16 +16,16 @@ import (
 // NewConfiguringReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Configuring" phase.
 func NewConfiguringReconciler(logger *log.Entry, datastore datastore.Writer, client client.Client) Reconciler {
-	return NewReconcilerWithInterfaceClient(logger, datastore, interface_client.NewClient(client))
+	return NewConfiguringReconcilerWithInterfaceClient(logger, datastore, interface_client.NewClient(client))
 }
 
-// NewReconcilerWithInterfaceClient returns a configuring Reconciler
-// that reconciles an OperatorSource object in "Configuring" phase.
-// It uses the Client interface which is a wrapper to the raw client
-// provided by the operator-sdk, instead of the raw client itself.
+// NewConfiguringReconcilerWithInterfaceClient returns a configuring
+// Reconciler that reconciles an OperatorSource object in "Configuring"
+// phase. It uses the Client interface which is a wrapper to the raw
+// client provided by the operator-sdk, instead of the raw client itself.
 // Using this interface facilitates mocking of kube client interaction
 // with the cluster, while using fakeclient during unit testing.
-func NewReconcilerWithInterfaceClient(logger *log.Entry, datastore datastore.Writer, client interface_client.Client) Reconciler {
+func NewConfiguringReconcilerWithInterfaceClient(logger *log.Entry, datastore datastore.Writer, client interface_client.Client) Reconciler {
 	return &configuringReconciler{
 		logger:    logger,
 		datastore: datastore,

@@ -32,7 +32,7 @@ func TestReconcile_ScheduledForDownload_Success(t *testing.T) {
 	fakeclient := NewFakeClient()
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewDownloadingReconciler(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	reconciler := operatorsource.NewDownloadingReconcilerWithInterfaceClient(helperGetContextLogger(), factory, writer, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.OperatorSourceDownloading)

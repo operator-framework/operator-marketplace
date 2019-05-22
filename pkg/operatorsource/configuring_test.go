@@ -116,7 +116,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	datastore := mocks.NewDatastoreWriter(controller)
 	kubeclient := mocks.NewClient(controller)
 
-	reconciler := operatorsource.NewReconcilerWithInterfaceClient(helperGetContextLogger(), datastore, kubeclient)
+	reconciler := operatorsource.NewConfiguringReconcilerWithInterfaceClient(helperGetContextLogger(), datastore, kubeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
