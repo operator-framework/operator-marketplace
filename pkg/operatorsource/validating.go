@@ -40,7 +40,7 @@ type validatingReconciler struct {
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
 //
-// On success, it returns "Downloading" as the next phase.
+// On success, it returns "Configuring" as the next phase.
 // On error, it returns "Failed" as the next phase.
 func (r *validatingReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourceValidating {
@@ -56,12 +56,12 @@ func (r *validatingReconciler) Reconcile(ctx context.Context, in *marketplace.Op
 	if err != nil {
 		// This needs manual intervention. So flag it as 'Failed'.
 		nextPhase = phase.GetNextWithMessage(phase.Failed,
-			fmt.Sprintf("Invalid operator source endpoint - %s", err.Error()))
+			fmt.Sprintf("Invalid OperatorSource endpoint - %s", err.Error()))
 		return
 	}
 
-	r.logger.Info("Scheduling for download")
+	r.logger.Info("Scheduling for configuration")
 
-	nextPhase = phase.GetNext(phase.OperatorSourceDownloading)
+	nextPhase = phase.GetNext(phase.Configuring)
 	return
 }

@@ -21,7 +21,7 @@ type PhaseReconcilerFactory interface {
 	// The following chain shows how an OperatorSource object progresses through
 	// a series of transitions from the initial phase to complete reconciled state.
 	//
-	//  Initial --> Validating --> Downloading --> Configuring --> Succeeded
+	//  Initial --> Validating --> Configuring --> Succeeded
 	//     ^
 	//     |
 	//  Purging
@@ -59,11 +59,8 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *ma
 	case phase.OperatorSourceValidating:
 		return NewValidatingReconciler(logger, s.datastore), nil
 
-	case phase.OperatorSourceDownloading:
-		return NewDownloadingReconciler(logger, s.registryClientFactory, s.datastore, s.client, s.refresher), nil
-
 	case phase.Configuring:
-		return NewConfiguringReconciler(logger, s.datastore, s.client), nil
+		return NewConfiguringReconciler(logger, s.registryClientFactory, s.datastore, s.client, s.refresher), nil
 
 	case phase.OperatorSourcePurging:
 		return NewPurgingReconciler(logger, s.datastore, s.client), nil
