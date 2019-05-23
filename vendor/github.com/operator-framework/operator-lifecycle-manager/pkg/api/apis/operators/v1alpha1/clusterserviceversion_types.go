@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/coreos/go-semver/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 )
 
 const (
-	ClusterServiceVersionAPIVersion     = operators.GroupName + "/" + GroupVersion
+	ClusterServiceVersionAPIVersion     = GroupName + "/" + GroupVersion
 	ClusterServiceVersionKind           = "ClusterServiceVersion"
 	OperatorGroupNamespaceAnnotationKey = "olm.operatorNamespace"
 )
@@ -23,20 +22,13 @@ const (
 type InstallModeType string
 
 const (
-	// InstallModeTypeOwnNamespace indicates that the operator can be configured
-	// to watch the namespace it is installed into.
+	// InstallModeTypeOwnNamespace indicates that the operator can be a member of an `OperatorGroup` that selects its own namespace.
 	InstallModeTypeOwnNamespace InstallModeType = "OwnNamespace"
-	// InstallModeTypeSingleNamespace indicates that the operator can be
-	// configured to watch a single namespace, which is configurable via
-	// OperatorGroups' spec.targetNamespaces field.
+	// InstallModeTypeSingleNamespace indicates that the operator can be a member of an `OperatorGroup` that selects one namespace.
 	InstallModeTypeSingleNamespace InstallModeType = "SingleNamespace"
-	// InstallModeTypeMultiNamespace indicates that the operator can be
-	// configured to watch multiple namespaces via the OperatorGroup's
-	// spec.targetNamespaces field.
+	// InstallModeTypeMultiNamespace indicates that the operator can be a member of an `OperatorGroup` that selects more than one namespace.
 	InstallModeTypeMultiNamespace InstallModeType = "MultiNamespace"
-	// InstallModeTypeAllNamespaces indicates that the operator can configured
-	// to wwatch all namespaces by setting the OperatorGroup's
-	// spec.targetNamespaces field to "NamespaceAll".
+	// InstallModeTypeAllNamespaces indicates that the operator can be a member of an `OperatorGroup` that selects all namespaces (target namespace set is the empty string "").
 	InstallModeTypeAllNamespaces InstallModeType = "AllNamespaces"
 )
 
@@ -58,6 +50,7 @@ type NamedInstallStrategy struct {
 }
 
 // StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+// +k8s:openapi-gen=true
 type StatusDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -67,6 +60,7 @@ type StatusDescriptor struct {
 }
 
 // SpecDescriptor describes a field in a spec block of a CRD so that OLM can consume it
+// +k8s:openapi-gen=true
 type SpecDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -76,6 +70,7 @@ type SpecDescriptor struct {
 }
 
 // ActionDescriptor describes a declarative action that can be performed on a custom resource instance
+// +k8s:openapi-gen=true
 type ActionDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -85,6 +80,7 @@ type ActionDescriptor struct {
 }
 
 // CRDDescription provides details to OLM about the CRDs
+// +k8s:openapi-gen=true
 type CRDDescription struct {
 	Name              string                 `json:"name"`
 	Version           string                 `json:"version"`
@@ -98,6 +94,7 @@ type CRDDescription struct {
 }
 
 // APIServiceDescription provides details to OLM about apis provided via aggregation
+// +k8s:openapi-gen=true
 type APIServiceDescription struct {
 	Name              string                 `json:"name"`
 	Group             string                 `json:"group"`
@@ -114,16 +111,23 @@ type APIServiceDescription struct {
 }
 
 // APIResourceReference is a Kubernetes resource type used by a custom resource
+// +k8s:openapi-gen=true
 type APIResourceReference struct {
 	Name    string `json:"name"`
 	Kind    string `json:"kind"`
 	Version string `json:"version"`
 }
 
+// GetName returns the name of an APIService as derived from its group and version.
+func (d APIServiceDescription) GetName() string {
+	return fmt.Sprintf("%s.%s", d.Version, d.Group)
+}
+
 // CustomResourceDefinitions declares all of the CRDs managed or required by
 // an operator being ran by ClusterServiceVersion.
 //
 // If the CRD is present in the Owned list, it is implicitly required.
+// +k8s:openapi-gen=true
 type CustomResourceDefinitions struct {
 	Owned    []CRDDescription `json:"owned,omitempty"`
 	Required []CRDDescription `json:"required,omitempty"`
@@ -131,6 +135,7 @@ type CustomResourceDefinitions struct {
 
 // APIServiceDefinitions declares all of the extension apis managed or required by
 // an operator being ran by ClusterServiceVersion.
+// +k8s:openapi-gen=true
 type APIServiceDefinitions struct {
 	Owned    []APIServiceDescription `json:"owned,omitempty"`
 	Required []APIServiceDescription `json:"required,omitempty"`
@@ -140,7 +145,7 @@ type APIServiceDefinitions struct {
 // that can manage apps for a given version.
 type ClusterServiceVersionSpec struct {
 	InstallStrategy           NamedInstallStrategy      `json:"install"`
-	Version                   semver.Version            `json:"version,omitempty"`
+	Version                   version.OperatorVersion   `json:"version,omitempty"`
 	Maturity                  string                    `json:"maturity,omitempty"`
 	CustomResourceDefinitions CustomResourceDefinitions `json:"customresourcedefinitions,omitempty"`
 	APIServiceDefinitions     APIServiceDefinitions     `json:"apiservicedefinitions,omitempty"`
@@ -476,7 +481,7 @@ func (csv ClusterServiceVersion) GetRequiredAPIServiceDescriptions() []APIServic
 func (csv ClusterServiceVersion) GetOwnedAPIServiceDescriptions() []APIServiceDescription {
 	set := make(map[string]APIServiceDescription)
 	for _, owned := range csv.Spec.APIServiceDefinitions.Owned {
-		name := fmt.Sprintf("%s.%s", owned.Version, owned.Group)
+		name := owned.GetName()
 		set[name] = owned
 	}
 

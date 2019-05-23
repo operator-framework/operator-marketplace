@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -26,8 +26,13 @@ type configMapCatalogSourceDecorator struct {
 	*v1alpha1.CatalogSource
 }
 
+const (
+	// ConfigMapServerPostfix is a postfix appended to the names of resources generated for a ConfigMap server.
+	ConfigMapServerPostfix string = "-configmap-server"
+)
+
 func (s *configMapCatalogSourceDecorator) serviceAccountName() string {
-	return s.GetName() + "-configmap-server"
+	return s.GetName() + ConfigMapServerPostfix
 }
 
 func (s *configMapCatalogSourceDecorator) roleName() string {
@@ -36,16 +41,21 @@ func (s *configMapCatalogSourceDecorator) roleName() string {
 
 func (s *configMapCatalogSourceDecorator) Selector() map[string]string {
 	return map[string]string{
-		"olm.catalogSource": s.GetName(),
+		CatalogSourceLabelKey: s.GetName(),
 	}
 }
 
+const (
+	// ConfigMapRVLabelKey is the key for a label used to track the resource version of a related ConfigMap.
+	ConfigMapRVLabelKey string = "olm.configMapResourceVersion"
+)
+
 func (s *configMapCatalogSourceDecorator) Labels() map[string]string {
 	labels := map[string]string{
-		"olm.catalogSource": s.GetName(),
+		CatalogSourceLabelKey: s.GetName(),
 	}
 	if s.Spec.SourceType == v1alpha1.SourceTypeInternal || s.Spec.SourceType == v1alpha1.SourceTypeConfigmap {
-		labels["olm.configMapResourceVersion"] = s.Status.ConfigMapResource.ResourceVersion
+		labels[ConfigMapRVLabelKey] = s.Status.ConfigMapResource.ResourceVersion
 	}
 	return labels
 }
@@ -123,7 +133,7 @@ func (s *configMapCatalogSourceDecorator) Pod(image string) *v1.Pod {
 					Operator: v1.TolerationOpExists,
 				},
 			},
-			ServiceAccountName: s.GetName() + "-configmap-server",
+			ServiceAccountName: s.GetName() + ConfigMapServerPostfix,
 		},
 	}
 	ownerutil.AddOwner(pod, s.CatalogSource, false, false)
@@ -189,6 +199,8 @@ type ConfigMapRegistryReconciler struct {
 	Image    string
 }
 
+var _ RegistryEnsurer = &ConfigMapRegistryReconciler{}
+var _ RegistryChecker = &ConfigMapRegistryReconciler{}
 var _ RegistryReconciler = &ConfigMapRegistryReconciler{}
 
 func (c *ConfigMapRegistryReconciler) currentService(source configMapCatalogSourceDecorator) *v1.Service {
@@ -257,7 +269,7 @@ func (c *ConfigMapRegistryReconciler) currentPodsWithCorrectResourceVersion(sour
 	return pods
 }
 
-// Ensure that all components of registry server are up to date.
+// EnsureRegistryServer ensures that all components of registry server are up to date.
 func (c *ConfigMapRegistryReconciler) EnsureRegistryServer(catalogSource *v1alpha1.CatalogSource) error {
 	source := configMapCatalogSourceDecorator{catalogSource}
 
@@ -402,4 +414,49 @@ func (c *ConfigMapRegistryReconciler) ensureService(source configMapCatalogSourc
 	}
 	_, err := c.OpClient.CreateService(service)
 	return err
+}
+
+// CheckRegistryServer returns true if the given CatalogSource is considered healthy; false otherwise.
+func (c *ConfigMapRegistryReconciler) CheckRegistryServer(catalogSource *v1alpha1.CatalogSource) (healthy bool, err error) {
+	source := configMapCatalogSourceDecorator{catalogSource}
+
+	image := c.Image
+	if source.Spec.SourceType == "grpc" {
+		image = source.Spec.Image
+	}
+	if image == "" {
+		err = fmt.Errorf("no image for registry")
+		return
+	}
+
+	if source.Spec.SourceType == v1alpha1.SourceTypeConfigmap || source.Spec.SourceType == v1alpha1.SourceTypeInternal {
+		configMap, err := c.Lister.CoreV1().ConfigMapLister().ConfigMaps(source.GetNamespace()).Get(source.Spec.ConfigMap)
+		if err != nil {
+			return false, fmt.Errorf("unable to get configmap %s/%s from cache", source.GetNamespace(), source.Spec.ConfigMap)
+		}
+
+		if source.ConfigMapChanges(configMap) {
+			return false, nil
+		}
+
+		// recreate the pod if no existing pod is serving the latest image
+		if len(c.currentPodsWithCorrectResourceVersion(source, image)) == 0 {
+			return false, nil
+		}
+	}
+
+	// Check on registry resources
+	// TODO: more complex checks for resources
+	// TODO: add gRPC health check
+	if c.currentServiceAccount(source) == nil ||
+		c.currentRole(source) == nil ||
+		c.currentRoleBinding(source) == nil ||
+		c.currentService(source) == nil ||
+		len(c.currentPods(source, c.Image)) < 1 {
+		healthy = false
+		return
+	}
+
+	healthy = true
+	return
 }

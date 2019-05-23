@@ -72,6 +72,7 @@ func RBACForClusterServiceVersion(csv *v1alpha1.ClusterServiceVersion) (map[stri
 		// Create ServiceAccount if necessary
 		if _, ok := permissions[permission.ServiceAccountName]; !ok {
 			serviceAccount := &corev1.ServiceAccount{}
+			serviceAccount.SetNamespace(csv.GetNamespace())
 			serviceAccount.SetName(permission.ServiceAccountName)
 			ownerutil.AddNonBlockingOwner(serviceAccount, csv)
 
@@ -84,7 +85,7 @@ func RBACForClusterServiceVersion(csv *v1alpha1.ClusterServiceVersion) (map[stri
 				Name:            generateName(csv.GetName()),
 				Namespace:       csv.GetNamespace(),
 				OwnerReferences: []metav1.OwnerReference{ownerutil.NonBlockingOwner(csv)},
-				Labels:          ownerutil.OwnerLabel(csv),
+				Labels:          ownerutil.OwnerLabel(csv, v1alpha1.ClusterServiceVersionKind),
 			},
 			Rules: permission.Rules,
 		}
@@ -96,7 +97,7 @@ func RBACForClusterServiceVersion(csv *v1alpha1.ClusterServiceVersion) (map[stri
 				Name:            generateName(fmt.Sprintf("%s-%s", role.GetName(), permission.ServiceAccountName)),
 				Namespace:       csv.GetNamespace(),
 				OwnerReferences: []metav1.OwnerReference{ownerutil.NonBlockingOwner(csv)},
-				Labels:          ownerutil.OwnerLabel(csv),
+				Labels:          ownerutil.OwnerLabel(csv, v1alpha1.ClusterServiceVersionKind),
 			},
 			RoleRef: rbacv1.RoleRef{
 				Kind:     "Role",
@@ -127,7 +128,7 @@ func RBACForClusterServiceVersion(csv *v1alpha1.ClusterServiceVersion) (map[stri
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            generateName(csv.GetName()),
 				OwnerReferences: []metav1.OwnerReference{ownerutil.NonBlockingOwner(csv)},
-				Labels:          ownerutil.OwnerLabel(csv),
+				Labels:          ownerutil.OwnerLabel(csv, v1alpha1.ClusterServiceVersionKind),
 			},
 			Rules: permission.Rules,
 		}
@@ -139,7 +140,7 @@ func RBACForClusterServiceVersion(csv *v1alpha1.ClusterServiceVersion) (map[stri
 				Name:            generateName(fmt.Sprintf("%s-%s", role.GetName(), permission.ServiceAccountName)),
 				Namespace:       csv.GetNamespace(),
 				OwnerReferences: []metav1.OwnerReference{ownerutil.NonBlockingOwner(csv)},
-				Labels:          ownerutil.OwnerLabel(csv),
+				Labels:          ownerutil.OwnerLabel(csv, v1alpha1.ClusterServiceVersionKind),
 			},
 			RoleRef: rbacv1.RoleRef{
 				Kind:     "ClusterRole",
