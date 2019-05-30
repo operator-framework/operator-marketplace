@@ -30,7 +30,7 @@ func InvalidOpSrc(t *testing.T) {
 }
 
 // Create OperatorSource with invalid endpoint
-// Expected result: OperatorSource stuck in downloading state
+// Expected result: OperatorSource stuck in configuring state
 func testOpSrcWithInvalidEndpoint(t *testing.T) {
 	opSrcName := "invalid-endpoint-opsrc"
 	// invalidEndpoint is the invalid endpoint for the OperatorSource
@@ -63,9 +63,9 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 	err = helpers.CreateRuntimeObject(client, ctx, invalidURLOperatorSource)
 	require.NoError(t, err, "Could not create OperatorSource")
 
-	// Check that OperatorSource is in "Downloading" state with appropriate message
+	// Check that OperatorSource is in "Configuring" state with appropriate message
 	resultOperatorSource := &operator.OperatorSource{}
-	expectedPhase := "Downloading"
+	expectedPhase := "Configuring"
 	err = wait.Poll(helpers.RetryInterval, helpers.Timeout, func() (bool, error) {
 		err = helpers.WaitForResult(client, resultOperatorSource, namespace, opSrcName)
 		if err != nil {
@@ -123,7 +123,7 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 			return false, err
 		}
 		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "Invalid operator source endpoint") {
+			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "Invalid OperatorSource endpoint") {
 			return true, nil
 		}
 		return false, nil
@@ -177,7 +177,7 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 			return false, err
 		}
 		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "The operator source endpoint returned an empty manifest list") {
+			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "The OperatorSource endpoint returned an empty manifest list") {
 			return true, nil
 		}
 		return false, nil
