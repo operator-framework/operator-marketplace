@@ -6,6 +6,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
+	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +29,7 @@ func Add(mgr manager.Manager) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
+func newReconciler(mgr manager.Manager) (*ReconcileCatalogSourceConfig, error) {
 	// The default client serves read requests from the cache which contains
 	// objects only from the namespace the operator is watching. Given we need
 	// to query other namespaces for CatalogSources, we create our own client
@@ -45,12 +46,12 @@ func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
 
 	return &ReconcileCatalogSourceConfig{
 		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr, client),
-		client: client,
+		client:                     client,
 	}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r *ReconcileCatalogSourceConfig) error {
 	// Create a new controller
 	c, err := controller.New("catalogsourceconfig-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -59,6 +60,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource CatalogSourceConfig
 	err = c.Watch(&source.Kind{Type: &v2.CatalogSourceConfig{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return err
+	}
+
+	// Watch for child resource deletions
+	err = watches.WatchChildResourcesDeletionEvents(c, r.client, v2.CatalogSourceConfigKind)
 	if err != nil {
 		return err
 	}

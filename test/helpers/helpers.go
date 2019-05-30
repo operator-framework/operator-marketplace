@@ -40,6 +40,13 @@ const (
 	// TestOperatorSourceLabelValue is a label value added to the opeator source returned
 	// by the CreateOperatorSource function.
 	TestOperatorSourceLabelValue string = "Community"
+
+	// TestCatalogSourceConfigName is the name of the test CatalogSourceConfig.
+	TestCatalogSourceConfigName = "test-csc"
+
+	// TestCatalogSourceConfigTargetNamespace is the target namespace used in the test
+	// CatalogSourceConfig.
+	TestCatalogSourceConfigTargetNamespace = "default"
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -212,6 +219,25 @@ func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
 			RegistryNamespace: "marketplace_e2e",
 		},
 	}
+}
+
+// CreateCatalogSourceConfigDefinition returns an CatalogSourceConfig definition that can
+// be turned into a runtime object for tests that rely on an CatalogSourceConfig
+func CreateCatalogSourceConfigDefinition(name, namespace, target string) *v2.CatalogSourceConfig {
+	return &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind: v2.CatalogSourceConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			TargetNamespace: target,
+			Packages:        "camel-k-marketplace-e2e-tests",
+		},
+	}
+
 }
 
 // checkOwnerLabels verifies that the correct owner labels have been set

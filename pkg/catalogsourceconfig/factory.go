@@ -79,7 +79,7 @@ func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, csc *v2.C
 		return NewConfiguringReconciler(log, f.reader, f.client, f.cache), nil
 
 	case phase.Succeeded:
-		return NewSucceededReconciler(log), nil
+		return NewSucceededReconciler(log, f.client), nil
 
 	case phase.Failed:
 		return NewFailedReconciler(log), nil

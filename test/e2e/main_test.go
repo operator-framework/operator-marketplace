@@ -30,7 +30,7 @@ func TestMarketplace(t *testing.T) {
 	if coAPIPresent {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	}
-	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
+	t.Run("opsrc-csc-test-group", testgroups.OpSrcCscTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
 
