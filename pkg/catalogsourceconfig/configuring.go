@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
-
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +27,16 @@ var RegistryServerImage string
 // NewConfiguringReconciler returns a Reconciler that reconciles a
 // CatalogSourceConfig object in the "Configuring" phase.
 func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader, client client.Client, cache Cache) Reconciler {
+	return NewConfiguringReconcilerWithClientInterface(log, reader, wrapper.NewClient(client), cache)
+}
+
+// NewConfiguringReconcilerWithClientInterface returns a configuring
+// Reconciler that reconciles an CatalogSourceConfig object in "Configuring"
+// phase. It uses the Client interface which is a wrapper to the raw
+// client provided by the operator-sdk, instead of the raw client itself.
+// Using this interface facilitates mocking of kube client interaction
+// with the cluster, while using fakeclient during unit testing.
+func NewConfiguringReconcilerWithClientInterface(log *logrus.Entry, reader datastore.Reader, client wrapper.Client, cache Cache) Reconciler {
 	return &configuringReconciler{
 		log:    log,
 		reader: reader,
@@ -40,7 +50,7 @@ func NewConfiguringReconciler(log *logrus.Entry, reader datastore.Reader, client
 type configuringReconciler struct {
 	log    *logrus.Entry
 	reader datastore.Reader
-	client client.Client
+	client wrapper.Client
 	cache  Cache
 }
 

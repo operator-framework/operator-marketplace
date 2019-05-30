@@ -6,6 +6,7 @@ import (
 	"time"
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/sirupsen/logrus"
 	apps "k8s.io/api/apps/v1"
@@ -40,7 +41,7 @@ func (c *catalogSourceConfigWrapper) key() client.ObjectKey {
 
 type registry struct {
 	log     *logrus.Entry
-	client  client.Client
+	client  wrapper.Client
 	reader  datastore.Reader
 	csc     catalogSourceConfigWrapper
 	image   string
@@ -55,7 +56,7 @@ type Registry interface {
 }
 
 // NewRegistry returns an initialized instance of Registry
-func NewRegistry(log *logrus.Entry, client client.Client, reader datastore.Reader, csc *marketplace.CatalogSourceConfig, image string) Registry {
+func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, csc *marketplace.CatalogSourceConfig, image string) Registry {
 	return &registry{
 		log:    log,
 		client: client,

@@ -33,7 +33,7 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	fakeclient := NewFakeClient()
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconcilerWithInterfaceClient(helperGetContextLogger(), factory, writer, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -269,7 +269,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 	kubeclient := mocks.NewClient(controller)
 
-	reconciler := operatorsource.NewConfiguringReconcilerWithInterfaceClient(helperGetContextLogger(), factory, writer, kubeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, kubeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)

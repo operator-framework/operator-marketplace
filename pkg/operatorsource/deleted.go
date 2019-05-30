@@ -4,6 +4,7 @@ import (
 	"context"
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,15 @@ import (
 // NewDeletedReconciler returns a Reconciler that reconciles
 // an OperatorSource that has been marked for deletion.
 func NewDeletedReconciler(logger *log.Entry, datastore datastore.Writer, client client.Client) Reconciler {
+	return NewDeletedReconcilerWithClientInterface(logger, datastore, wrapper.NewClient(client))
+}
+
+// NewDeletedReconcilerWithClientInterface returns a Reconciler that reconciles
+// an OperatorSource that has been marked for deletion. It uses the Client
+// interface which is a wrapper to the raw client provided by the operator-sdk,
+// instead of the raw client itself. Using this interface facilitates mocking of
+// kube client interaction with the cluster, while using fakeclient during unit testing.
+func NewDeletedReconcilerWithClientInterface(logger *log.Entry, datastore datastore.Writer, client wrapper.Client) Reconciler {
 	return &deletedReconciler{
 		logger:    logger,
 		datastore: datastore,
@@ -26,7 +36,7 @@ func NewDeletedReconciler(logger *log.Entry, datastore datastore.Writer, client 
 type deletedReconciler struct {
 	logger    *log.Entry
 	datastore datastore.Writer
-	client    client.Client
+	client    wrapper.Client
 }
 
 // Reconcile reconciles an OperatorSource object that is marked for deletion.

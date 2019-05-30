@@ -5,6 +5,7 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	apps "k8s.io/api/apps/v1"
@@ -18,6 +19,15 @@ import (
 // NewDeletedReconciler returns a Reconciler that reconciles
 // a CatalogSourceConfig that has been marked for deletion.
 func NewDeletedReconciler(logger *log.Entry, cache Cache, client client.Client) Reconciler {
+	return NewDeletedReconcilerWithClientInterface(logger, cache, wrapper.NewClient(client))
+}
+
+// NewDeletedReconcilerWithClientInterface returns a Reconciler that reconciles
+// an CatalogSourceConfig that has been marked for deletion. It uses the Client
+// interface which is a wrapper to the raw client provided by the operator-sdk,
+// instead of the raw client itself. Using this interface facilitates mocking of
+// kube client interaction with the cluster, while using fakeclient during unit testing.
+func NewDeletedReconcilerWithClientInterface(logger *log.Entry, cache Cache, client wrapper.Client) Reconciler {
 	return &deletedReconciler{
 		logger: logger,
 		cache:  cache,
@@ -30,7 +40,7 @@ func NewDeletedReconciler(logger *log.Entry, cache Cache, client client.Client) 
 type deletedReconciler struct {
 	logger *log.Entry
 	cache  Cache
-	client client.Client
+	client wrapper.Client
 }
 
 // Reconcile reconciles a CatalogSourceConfig object that is marked for deletion.
