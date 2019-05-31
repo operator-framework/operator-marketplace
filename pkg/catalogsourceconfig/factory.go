@@ -49,8 +49,9 @@ func (f *phaseReconcilerFactory) GetPhaseReconciler(log *logrus.Entry, csc *mark
 	// Check if the cache is stale. A stale cache entry is an indicator that the
 	// object has changed and requires updating. Only do this when the object has
 	// already been created (not in the initial phase) and when it is not already
-	// attempting to configure (which will populate the cache).
-	if csc.Status.CurrentPhase.Name != phase.Initial && csc.Status.CurrentPhase.Name != phase.Configuring {
+	// attempting to configure (which will populate the cache) or if it is in the
+	// failed state.
+	if csc.Status.CurrentPhase.Name != phase.Initial && csc.Status.CurrentPhase.Name != phase.Configuring && csc.Status.CurrentPhase.Name != phase.Failed {
 		pkgStale, targetStale := f.cache.IsEntryStale(csc)
 		if pkgStale || targetStale {
 			return NewUpdateReconciler(log, f.client, f.cache, targetStale), nil

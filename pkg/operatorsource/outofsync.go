@@ -56,8 +56,8 @@ func (r *outOfSyncCacheReconciler) Reconcile(ctx context.Context, in *marketplac
 	// OperatorSource CR or the user dropped the status field of an existing CR.
 	// In either case, bail out and let the regular phased reconciler handle
 	// the specified OperatorSource object.
-	// If the OperatorSource object is in "Purging" phase, then return.
-	if currentPhase == phase.Initial || currentPhase == phase.OperatorSourcePurging {
+	// If the OperatorSource object is in "Purging" or "Failed" phase, then return.
+	if currentPhase == phase.Initial || currentPhase == phase.OperatorSourcePurging || currentPhase == phase.Failed {
 		return
 	}
 
