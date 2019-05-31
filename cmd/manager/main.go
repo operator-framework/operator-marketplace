@@ -60,7 +60,11 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
+	// Even though we are asking to watch all namespaces, we only handle events
+	// from the operator's namespace. The reason for watching all namespaces is
+	// watch for CatalogSources in targetNamespaces being deleted and recreate
+	// them.
+	mgr, err := manager.New(cfg, manager.Options{Namespace: ""})
 	if err != nil {
 		log.Fatal(err)
 	}

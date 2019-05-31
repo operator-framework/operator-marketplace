@@ -72,7 +72,7 @@ func configuringStateWhenPackageNameDoesNotExist(t *testing.T) {
 	// configuring phase with the expected message
 	expectedPhase := "Configuring"
 	expectedMessage := fmt.Sprintf("Unable to resolve the source - no source contains the requested package(s) [%s]", nonExistingPackageName)
-	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	assert.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached expected phase/message, expected %v/%v", expectedPhase, expectedMessage))
 }
 
@@ -224,7 +224,7 @@ func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage s
 
 	// Check that the CatalogSourceConfig with an non-existing targetNamespace eventually reaches the
 	// configuring phase with the expected message.
-	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	if err != nil {
 		return err
 	}

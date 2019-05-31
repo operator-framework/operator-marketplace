@@ -27,4 +27,5 @@ func OperatorSourceTestGroup(t *testing.T) {
 	t.Run("opsrc-creation-test-suite", testsuites.OpSrcCreation)
 	t.Run("csc-target-namespace-test-suite", testsuites.CscTargetNamespace)
 	t.Run("packages-test-suite", testsuites.PackageTests)
+	t.Run("csc-invalid-tests", testsuites.CscInvalid)
 }

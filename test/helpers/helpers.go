@@ -85,29 +85,34 @@ func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment apps.De
 // WaitForCscExpectedPhaseAndMessage checks if a CatalogSourceConfig with the given name exists in the namespace
 // and makes sure that the phase and message matches the expected values.
 // If expectedMessage is an empty string, only the expectedPhase is checked.
-func WaitForCscExpectedPhaseAndMessage(client test.FrameworkClient, cscName, namespace, expectedPhase, expectedMessage string) error {
+func WaitForCscExpectedPhaseAndMessage(client test.FrameworkClient, cscName, namespace, expectedPhase, expectedMessage string) (*v2.CatalogSourceConfig, error) {
 	// Check that the CatalogSourceConfig exists.
 	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
-	return wait.PollImmediate(RetryInterval, Timeout, func() (bool, error) {
+	err := wait.PollImmediate(RetryInterval, Timeout, func() (bool, error) {
 		err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
 		if err != nil {
 			return false, err
 		}
+		// log.Infof("Csc: %+v", resultCatalogSourceConfig)
 		// Check for the expected phase
 		if resultCatalogSourceConfig.Status.CurrentPhase.Name == expectedPhase {
-			// If the expected message is not empty make sure that it matches the actual message
-			if expectedMessage == "" || resultCatalogSourceConfig.Status.CurrentPhase.Message == expectedMessage {
+			// If the expected message is not empty make sure that it contains the actual message
+			if expectedMessage == "" || strings.Contains(resultCatalogSourceConfig.Status.CurrentPhase.Message, expectedMessage) {
 				return true, nil
 			}
 			return false, nil
 		}
 		return false, nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return resultCatalogSourceConfig, nil
 }
 
-// WaitForOpSrcExpectedPhaseAndMessage checks if a OperatorSource with the given name exists in the namespace
-// and makes sure that the phase and message matches the expected values.
-func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName, namespace, expectedPhase, expectedMessage string) error {
+// WaitForOpSrcExpectedPhaseAndMessage checks if an OperatorSource with the given name exists in the namespace
+// and makes sure that the phase and message matches the expected values. It also returns the OperatorSource object.
+func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName string, namespace string, expectedPhase string, expectedMessage string) (*v1.OperatorSource, error) {
 	resultOperatorSource := &v1.OperatorSource{}
 	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
 		err := WaitForResult(client, resultOperatorSource, namespace, opSrcName)
@@ -121,9 +126,9 @@ func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName,
 		return false, nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return resultOperatorSource, nil
 }
 
 // WaitForNotFound polls the cluster for a particular resource name and namespace
@@ -177,6 +182,14 @@ func DeleteRuntimeObject(client test.FrameworkClient, obj runtime.Object) error 
 	return client.Delete(
 		context.TODO(),
 		obj)
+}
+
+// UpdateRuntimeObject updates a runtime object using the test framework
+func UpdateRuntimeObject(client test.FrameworkClient, obj runtime.Object) error {
+	return client.Update(
+		context.TODO(),
+		obj,
+	)
 }
 
 // CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into

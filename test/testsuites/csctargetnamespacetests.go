@@ -74,7 +74,7 @@ func configuringStateWhenTargetNamespaceDoesNotExist(t *testing.T) {
 	// configuring phase with the expected message.
 	expectedPhase := "Configuring"
 	expectedMessage := fmt.Sprintf("namespaces \"%s\" not found", targetNamespace)
-	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	assert.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached expected phase/message, expected %v/%v", expectedPhase, expectedMessage))
 }
 
@@ -88,7 +88,7 @@ func succeededStateAfterTargetNamespaceCreated(t *testing.T) {
 	// Now that the targetNamespace has been created, periodically check that the CatalogSourceConfig
 	// has reached the Succeeded phase.
 	expectedPhase := "Succeeded"
-	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, "")
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, "")
 	assert.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached expected phase, expected %v", expectedPhase))
 }
 

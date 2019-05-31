@@ -7,32 +7,6 @@ rules:
   - operators.coreos.com
   resources:
   - catalogsources
-  verbs:
-  - get
-  - create
-  - delete
-  - update
-  - list
-- apiGroups:
-  - config.openshift.io
-  resources:
-  - clusteroperators
-  - clusteroperators/status
-  verbs:
-  - create
-  - get
-  - update
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: marketplace-operator
-  namespace: openshift-marketplace
-rules:
-- apiGroups:
-  - operators.coreos.com
-  resources:
-  - catalogsources
   - catalogsourceconfigs
   - operatorsources
   verbs:
@@ -43,13 +17,51 @@ rules:
   - list
   - watch
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - clusteroperators
+  - clusteroperators/status
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - services
+  - serviceaccounts
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - list
+  - watch
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: marketplace-operator
+  namespace: openshift-marketplace
+rules:
+- apiGroups:
   - ""
   resources:
   - secrets
   verbs:
   - get
-  - list
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -60,8 +72,6 @@ rules:
   - create
   - delete
   - update
-  - list
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -84,8 +94,6 @@ rules:
   - create
   - delete
   - update
-  - list
-  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -96,5 +104,3 @@ rules:
   - create
   - delete
   - update
-  - list
-  - watch
