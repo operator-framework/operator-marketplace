@@ -156,13 +156,13 @@ func DeleteRuntimeObject(client test.FrameworkClient, obj runtime.Object) error 
 
 // CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into
 // a runtime object for tests that rely on an OperatorSource
-func CreateOperatorSourceDefinition(namespace string) *marketplace.OperatorSource {
+func CreateOperatorSourceDefinition(name string, namespace string) *marketplace.OperatorSource {
 	return &marketplace.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind: marketplace.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      TestOperatorSourceName,
+			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				TestOperatorSourceLabelKey: TestOperatorSourceLabelValue,
@@ -175,6 +175,7 @@ func CreateOperatorSourceDefinition(namespace string) *marketplace.OperatorSourc
 		},
 	}
 }
+
 // CheckCscChildResourcesCreated checks that a CatalogSourceConfig's
 // child resources were deployed.
 func CheckCscChildResourcesCreated(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
