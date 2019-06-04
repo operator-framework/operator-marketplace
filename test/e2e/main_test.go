@@ -15,6 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var coAPINotPresent = true
+
 func TestMain(m *testing.M) {
 	test.MainEntry(m)
 }
@@ -24,7 +26,9 @@ func TestMarketplace(t *testing.T) {
 	initTestingFramework(t)
 
 	// Run Test Groups
-	t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
+	if coAPINotPresent {
+		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
+	}
 	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
@@ -74,8 +78,13 @@ func initTestingFramework(t *testing.T) {
 				configv1.SchemeGroupVersion.Group, configv1.SchemeGroupVersion.Version),
 		},
 	}
+
+	// We are assuming that ClusterOperator API will always be added successfully
+	// on an OpenShift cluster. This is to allow the tests be run on non-OpenSHift
+	// clusters
 	err = test.AddToFrameworkScheme(configv1.Install, clusterOperator)
 	if err != nil {
-		t.Fatalf("failed to add ClusterOperator custom resource scheme to framework: %v", err)
+		t.Logf("failed to add ClusterOperator custom resource scheme to framework: %v. ClusterOperator test will not run.", err)
+		coAPINotPresent = false
 	}
 }
