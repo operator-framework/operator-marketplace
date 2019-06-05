@@ -11,7 +11,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -27,7 +28,7 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &v1.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -116,7 +117,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 	assert.Error(t, errGot)
 
-	nextPhaseWant := &v1.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Failed,
 		Message: errGot.Error(),
 	}
@@ -132,7 +133,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &v1.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -189,7 +190,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
-	cscWant.Spec = v1.CatalogSourceConfigSpec{
+	cscWant.Spec = v2.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
@@ -210,7 +211,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	defer controller.Finish()
 
 	namespace, name := "marketplace", "foo"
-	nextPhaseWant := &v1.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -283,7 +284,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	namespace, name := "marketplace", "foo"
 
 	updateError := k8s_errors.NewServerTimeout(schema.GroupResource{}, "operation", 1)
-	nextPhaseWant := &v1.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Configuring,
 		Message: updateError.Error(),
 	}

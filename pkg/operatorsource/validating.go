@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -42,7 +43,7 @@ type validatingReconciler struct {
 //
 // On success, it returns "Configuring" as the next phase.
 // On error, it returns "Failed" as the next phase.
-func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *v1.Phase, err error) {
+func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourceValidating {
 		err = phase.ErrWrongReconcilerInvoked
 		return

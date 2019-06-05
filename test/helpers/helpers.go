@@ -7,6 +7,7 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +85,7 @@ func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment apps.De
 // If expectedMessage is an empty string, only the expectedPhase is checked.
 func WaitForExpectedPhaseAndMessage(client test.FrameworkClient, cscName string, namespace string, expectedPhase, expectedMessage string) error {
 	// Check that the CatalogSourceConfig exists.
-	resultCatalogSourceConfig := &v1.CatalogSourceConfig{}
+	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	return wait.PollImmediate(RetryInterval, Timeout, func() (bool, error) {
 		err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
 		if err != nil {
@@ -260,7 +261,7 @@ func CheckCscChildResourcesDeleted(client test.FrameworkClient, cscName string, 
 // and it's child resources were deployed.
 func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
 	// Check that the CatalogSourceConfig was created.
-	resultCatalogSourceConfig := &v1.CatalogSourceConfig{}
+	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
 	if err != nil {
 		return err
@@ -279,7 +280,7 @@ func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, nam
 // and it's child resources were deleted.
 func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
 	// Check that the CatalogSourceConfig was deleted.
-	resultCatalogSourceConfig := &v1.CatalogSourceConfig{}
+	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
 	if err != nil {
 		return err

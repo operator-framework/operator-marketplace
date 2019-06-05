@@ -1,9 +1,9 @@
 // NOTE: Boilerplate only.  Ignore this file.
 
-// Package v1 contains API Schema definitions for the marketplace v1 API group
+// Package v2 contains API Schema definitions for the operators v2 API group
 // +k8s:deepcopy-gen=package,register
 // +groupName=operators.coreos.com
-package v1
+package v2
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -12,10 +12,10 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "operators.coreos.com", Version: "v1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: "operators.coreos.com", Version: "v2"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 
-	OperatorSourceKind = "OperatorSource"
+	CatalogSourceConfigKind = "CatalogSourceConfig"
 )

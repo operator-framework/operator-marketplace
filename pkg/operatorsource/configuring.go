@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
@@ -67,7 +68,7 @@ type configuringReconciler struct {
 //
 // If the corresponding CatalogSourceConfig object already exists
 // then no further action is taken.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *v1.Phase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.Configuring {
 		err = phase.ErrWrongReconcilerInvoked
 		return

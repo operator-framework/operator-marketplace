@@ -8,6 +8,7 @@ import (
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -44,11 +45,11 @@ func initTestingFramework(t *testing.T) {
 				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
 		},
 	}
-	catalogSourceConfig := &v1.CatalogSourceConfig{
+	catalogSourceConfig := &v2.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind: v1.CatalogSourceConfigKind,
+			Kind: v2.CatalogSourceConfigKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
+				v2.SchemeGroupVersion.Group, v2.SchemeGroupVersion.Version),
 		},
 	}
 	err := test.AddToFrameworkScheme(apis.AddToScheme, operatorSource)

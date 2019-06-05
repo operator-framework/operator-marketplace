@@ -3,6 +3,7 @@ package operatorsource
 import (
 	"context"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -95,7 +96,7 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSourc
 	return h.transition(ctx, logger, out, status, err)
 }
 
-func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entry, opsrc *v1.OperatorSource, nextPhase *v1.Phase, reconciliationErr error) error {
+func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entry, opsrc *v1.OperatorSource, nextPhase *shared.Phase, reconciliationErr error) error {
 	// If reconciliation threw an error, we can't quit just yet. We need to
 	// figure out whether the OperatorSource object needs to be updated.
 

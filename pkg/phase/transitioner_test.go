@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,11 +14,11 @@ import (
 )
 
 var (
-	phaseWantValidating = v1.Phase{
+	phaseWantValidating = shared.Phase{
 		Name:    "Validating",
 		Message: "Scheduled for validation",
 	}
-	nextPhaseAfterValidating = &v1.Phase{
+	nextPhaseAfterValidating = &shared.Phase{
 		Name:    phaseWantValidating.Name,
 		Message: phaseWantValidating.Message,
 	}
@@ -32,7 +33,7 @@ func TestTransitionInto_IdenticalPhase_FalseExpected(t *testing.T) {
 
 	opsrcIn := &v1.OperatorSource{
 		Status: v1.OperatorSourceStatus{
-			CurrentPhase: v1.ObjectPhase{
+			CurrentPhase: shared.ObjectPhase{
 				Phase: phaseWantValidating,
 			},
 		},
@@ -56,8 +57,8 @@ func TestTransitionInto_BothPhaseAndMessageAreDifferent_TrueExpected(t *testing.
 
 	opsrcIn := &v1.OperatorSource{
 		Status: v1.OperatorSourceStatus{
-			CurrentPhase: v1.ObjectPhase{
-				Phase: v1.Phase{
+			CurrentPhase: shared.ObjectPhase{
+				Phase: shared.Phase{
 					Name:    "Initial",
 					Message: "Not validated",
 				},
@@ -82,15 +83,15 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 	clock := clock.NewFakeClock(now)
 	transitioner := phase.NewTransitionerWithClock(clock)
 
-	phaseWant := v1.Phase{
+	phaseWant := shared.Phase{
 		Name:    "Failed",
 		Message: "Second try- reason 2",
 	}
 
 	opsrcIn := &v1.OperatorSource{
 		Status: v1.OperatorSourceStatus{
-			CurrentPhase: v1.ObjectPhase{
-				Phase: v1.Phase{
+			CurrentPhase: shared.ObjectPhase{
+				Phase: shared.Phase{
 					Name:    phaseWant.Name,
 					Message: "First try- reason 1",
 				},
@@ -98,7 +99,7 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 		},
 	}
 
-	nextPhase := &v1.Phase{
+	nextPhase := &shared.Phase{
 		Name:    phaseWant.Name,
 		Message: phaseWant.Message,
 	}

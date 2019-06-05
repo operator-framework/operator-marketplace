@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -47,7 +47,7 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 		return fmt.Errorf("GrpcCatalog.reader is not defined")
 	}
 	// Ensure that the packages in the spec are available in the datastore
-	err := r.reader.CheckPackages(v1.GetValidPackageSliceFromString(packages))
+	err := r.reader.CheckPackages(v2.GetValidPackageSliceFromString(packages))
 	if err != nil {
 		return err
 	}

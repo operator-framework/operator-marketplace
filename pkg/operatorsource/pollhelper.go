@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
@@ -92,7 +93,7 @@ func (h *pollHelper) TriggerPurge(source *datastore.OperatorSourceKey) (deleted 
 	instance.EnsureGVK()
 
 	// We want to purge the OperatorSource object so that the cache can rebuild.
-	nextPhase := &v1.Phase{
+	nextPhase := &shared.Phase{
 		Name:    phase.OperatorSourcePurging,
 		Message: "Remote registry has been updated",
 	}

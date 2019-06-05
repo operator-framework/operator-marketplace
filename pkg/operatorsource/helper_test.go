@@ -5,7 +5,9 @@ import (
 
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,8 +58,8 @@ func helperNewOperatorSourceWithPhase(namespace, name, phase string) *v1.Operato
 		},
 
 		Status: v1.OperatorSourceStatus{
-			CurrentPhase: v1.ObjectPhase{
-				Phase: v1.Phase{
+			CurrentPhase: shared.ObjectPhase{
+				Phase: shared.Phase{
 					Name: phase,
 				},
 			},
@@ -65,12 +67,12 @@ func helperNewOperatorSourceWithPhase(namespace, name, phase string) *v1.Operato
 	}
 }
 
-func helperNewCatalogSourceConfig(namespace, name string) *v1.CatalogSourceConfig {
-	return &v1.CatalogSourceConfig{
+func helperNewCatalogSourceConfig(namespace, name string) *v2.CatalogSourceConfig {
+	return &v2.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: fmt.Sprintf("%s/%s",
-				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
-			Kind: v1.CatalogSourceConfigKind,
+				v2.SchemeGroupVersion.Group, v2.SchemeGroupVersion.Version),
+			Kind: v2.CatalogSourceConfigKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -79,7 +81,7 @@ func helperNewCatalogSourceConfig(namespace, name string) *v1.CatalogSourceConfi
 	}
 }
 
-func helperNewCatalogSourceConfigWithLabels(namespace, name string, opsrcLabels map[string]string) *v1.CatalogSourceConfig {
+func helperNewCatalogSourceConfigWithLabels(namespace, name string, opsrcLabels map[string]string) *v2.CatalogSourceConfig {
 	csc := helperNewCatalogSourceConfig(namespace, name)
 
 	// This is the default label that should get added to CatalogSourceConfig.
@@ -102,7 +104,7 @@ func NewFakeClient() client.Client {
 	return fake.NewFakeClientWithScheme(scheme)
 }
 
-func NewFakeClientWithCSC(csc *v1.CatalogSourceConfig) client.Client {
+func NewFakeClientWithCSC(csc *v2.CatalogSourceConfig) client.Client {
 	objs := []runtime.Object{
 		csc,
 	}
