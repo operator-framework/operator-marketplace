@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
@@ -30,7 +30,7 @@ type PhaseReconcilerFactory interface {
 	// opsrc represents the given OperatorSource object
 	//
 	// On error, the object is transitioned into "Failed" phase.
-	GetPhaseReconciler(logger *log.Entry, opsrc *marketplace.OperatorSource) (Reconciler, error)
+	GetPhaseReconciler(logger *log.Entry, opsrc *v1.OperatorSource) (Reconciler, error)
 }
 
 // phaseReconcilerFactory implements PhaseReconcilerFactory interface.
@@ -41,7 +41,7 @@ type phaseReconcilerFactory struct {
 	refresher             PackageRefreshNotificationSender
 }
 
-func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *marketplace.OperatorSource) (Reconciler, error) {
+func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1.OperatorSource) (Reconciler, error) {
 	currentPhase := opsrc.GetCurrentPhaseName()
 
 	// If the object has a deletion timestamp, it means it has been marked for

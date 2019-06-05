@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -73,7 +73,7 @@ type Writer interface {
 	// successfully processed and stored in datastore.
 	// err will be set to nil if there was no error and all manifests were
 	// processed and stored successfully.
-	Write(opsrc *marketplace.OperatorSource, rawManifests []*RegistryMetadata) (count int, err error)
+	Write(opsrc *v1.OperatorSource, rawManifests []*RegistryMetadata) (count int, err error)
 
 	// RemoveOperatorSource removes everything associated with a given operator
 	// source from the underlying datastore.
@@ -83,7 +83,7 @@ type Writer interface {
 
 	// AddOperatorSource registers a new OperatorSource object with the
 	// the underlying datastore.
-	AddOperatorSource(opsrc *marketplace.OperatorSource)
+	AddOperatorSource(opsrc *v1.OperatorSource)
 
 	// GetOperatorSource returns the Spec of the OperatorSource object
 	// associated with the UID specified in opsrcUID.
@@ -150,7 +150,7 @@ func (ds *memoryDatastore) ReadRepositoryVersion(packageID string) (version stri
 	return
 }
 
-func (ds *memoryDatastore) Write(opsrc *marketplace.OperatorSource, registryMetas []*RegistryMetadata) (count int, err error) {
+func (ds *memoryDatastore) Write(opsrc *v1.OperatorSource, registryMetas []*RegistryMetadata) (count int, err error) {
 	if opsrc == nil || registryMetas == nil {
 		err = errors.New("invalid argument")
 		return
@@ -235,7 +235,7 @@ func (ds *memoryDatastore) CheckPackages(packageIDs []string) error {
 	return nil
 }
 
-func (ds *memoryDatastore) AddOperatorSource(opsrc *marketplace.OperatorSource) {
+func (ds *memoryDatastore) AddOperatorSource(opsrc *v1.OperatorSource) {
 	ds.rows.AddEmpty(opsrc)
 }
 

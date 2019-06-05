@@ -3,7 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
@@ -32,7 +32,7 @@ type updateReconciler struct {
 
 // Reconcile reconciles an CatalogSourceConfig object that needs to be updated.
 // It returns "Configuring" as the next desired phase.
-func (r *updateReconciler) Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error) {
+func (r *updateReconciler) Reconcile(ctx context.Context, in *v1.CatalogSourceConfig) (out *v1.CatalogSourceConfig, nextPhase *v1.Phase, err error) {
 	out = in.DeepCopy()
 
 	// The TargetNamespace of the CatalogSourceConfig object has changed
@@ -48,7 +48,7 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *marketplace.Catalo
 	r.cache.Evict(in)
 
 	// Drop existing Status field so that reconciliation can start anew.
-	out.Status = marketplace.CatalogSourceConfigStatus{}
+	out.Status = v1.CatalogSourceConfigStatus{}
 	nextPhase = phase.GetNext(phase.Configuring)
 
 	r.log.Info("Spec has changed, scheduling for configuring")
@@ -59,7 +59,7 @@ func (r *updateReconciler) Reconcile(ctx context.Context, in *marketplace.Catalo
 // deleteObjects attempts to delete the CatalogSource in the old TargetNamespace.
 // This is just an attempt, because if we are not aware of the the old namespace
 // we will not be able to succeed.
-func (r *updateReconciler) deleteObjects(in *marketplace.CatalogSourceConfig) {
+func (r *updateReconciler) deleteObjects(in *v1.CatalogSourceConfig) {
 	cachedCSCSpec, found := r.cache.Get(in)
 	// This generally won't happen as it is because the cached Spec has changed
 	// when we are in the update reconciler.

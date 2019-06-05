@@ -5,7 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -55,7 +55,7 @@ type deletedReconciler struct {
 //
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
-func (r *deletedReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
+func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *v1.Phase, err error) {
 	out = in
 
 	// Delete the operator source manifests.

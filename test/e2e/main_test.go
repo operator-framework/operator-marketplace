@@ -7,7 +7,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -37,18 +37,18 @@ func TestMarketplace(t *testing.T) {
 // olm CatalogSource type to the framework scheme.
 func initTestingFramework(t *testing.T) {
 	// Add marketplace types to test framework scheme.
-	operatorSource := &marketplace.OperatorSource{
+	operatorSource := &v1.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: marketplace.OperatorSourceKind,
+			Kind: v1.OperatorSourceKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-				marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
 		},
 	}
-	catalogSourceConfig := &marketplace.CatalogSourceConfig{
+	catalogSourceConfig := &v1.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind: marketplace.CatalogSourceConfigKind,
+			Kind: v1.CatalogSourceConfigKind,
 			APIVersion: fmt.Sprintf("%s/%s",
-				marketplace.SchemeGroupVersion.Group, marketplace.SchemeGroupVersion.Version),
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
 		},
 	}
 	err := test.AddToFrameworkScheme(apis.AddToScheme, operatorSource)

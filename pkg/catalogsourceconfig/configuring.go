@@ -3,7 +3,7 @@ package catalogsourceconfig
 import (
 	"context"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
@@ -49,7 +49,7 @@ type configuringReconciler struct {
 // Upon success, it returns "Succeeded" as the next and final desired phase.
 // On error, the function returns "Failed" as the next desired phase
 // and Message is set to the appropriate error message.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.CatalogSourceConfig) (out *v1.CatalogSourceConfig, nextPhase *v1.Phase, err error) {
 	if in.Status.CurrentPhase.Name != phase.Configuring {
 		err = phase.ErrWrongReconcilerInvoked
 		return
@@ -85,7 +85,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.C
 // field is updated at the end of the configuring phase if successful. It iterates
 // over the list of packages and creates a new map of PackageName:Version for each
 // package in the spec.
-func (r *configuringReconciler) EnsurePackagesInStatus(csc *marketplace.CatalogSourceConfig) {
+func (r *configuringReconciler) EnsurePackagesInStatus(csc *v1.CatalogSourceConfig) {
 	newPackageRepositioryVersions := make(map[string]string)
 	packageIDs := csc.GetPackageIDs()
 	for _, packageID := range packageIDs {
