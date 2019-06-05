@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -99,6 +100,27 @@ func WaitForExpectedPhaseAndMessage(client test.FrameworkClient, cscName string,
 		}
 		return false, nil
 	})
+}
+
+// WaitForOpSrcExpectedPhaseAndMessage checks if a OperatorSource with the given name exists in the namespace
+// and makes sure that the phase and message matches the expected values.
+func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName string, namespace string, expectedPhase string, expectedMessage string) error {
+	resultOperatorSource := &marketplace.OperatorSource{}
+	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
+		err := WaitForResult(client, resultOperatorSource, namespace, opSrcName)
+		if err != nil {
+			return false, err
+		}
+		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
+			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, expectedMessage) {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // WaitForNotFound polls the cluster for a particular resource name and namespace

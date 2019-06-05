@@ -2,7 +2,6 @@ package testsuites
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	operator "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -11,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -64,19 +62,8 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource is in "Configuring" state with appropriate message
-	resultOperatorSource := &operator.OperatorSource{}
 	expectedPhase := "Configuring"
-	err = wait.Poll(helpers.RetryInterval, helpers.Timeout, func() (bool, error) {
-		err = helpers.WaitForResult(client, resultOperatorSource, namespace, opSrcName)
-		if err != nil {
-			return false, err
-		}
-		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "no such host") {
-			return true, nil
-		}
-		return false, nil
-	})
+	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "no such host")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }
 
@@ -115,19 +102,8 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource reaches "Failed" state eventually
-	resultOperatorSource := &operator.OperatorSource{}
 	expectedPhase := "Failed"
-	err = wait.Poll(helpers.RetryInterval, helpers.Timeout, func() (bool, error) {
-		err = helpers.WaitForResult(client, resultOperatorSource, namespace, opSrcName)
-		if err != nil {
-			return false, err
-		}
-		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "Invalid OperatorSource endpoint") {
-			return true, nil
-		}
-		return false, nil
-	})
+	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "Invalid OperatorSource endpoint")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }
 
@@ -169,18 +145,7 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 	require.NoError(t, err, "Could not create OperatorSource")
 
 	// Check that OperatorSource reaches "Failed" state eventually
-	resultOperatorSource := &operator.OperatorSource{}
 	expectedPhase := "Failed"
-	err = wait.Poll(helpers.RetryInterval, helpers.Timeout, func() (bool, error) {
-		err = helpers.WaitForResult(client, resultOperatorSource, namespace, opSrcName)
-		if err != nil {
-			return false, err
-		}
-		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, "The OperatorSource endpoint returned an empty manifest list") {
-			return true, nil
-		}
-		return false, nil
-	})
+	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "The OperatorSource endpoint returned an empty manifest list")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 }
