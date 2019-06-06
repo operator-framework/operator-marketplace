@@ -250,7 +250,7 @@ func (s *status) updateStatus(previousStatus *configv1.ClusterOperatorStatus) er
 		// Log Conditions
 		log.Infof("[status] Attempting to set the ClusterOperator status conditions to:")
 		for _, statusCondition := range s.clusterOperator.Status.Conditions {
-			log.Infof("[status] ConditionType: %v ConditionStatus: ConditionMessage: %v", statusCondition.Type, statusCondition.Status, statusCondition.Message)
+			log.Infof("[status] ConditionType: %v ConditionStatus: %v ConditionMessage: %v", statusCondition.Type, statusCondition.Status, statusCondition.Message)
 		}
 
 		_, err := s.configClient.ClusterOperators().UpdateStatus(s.clusterOperator)
