@@ -9,9 +9,11 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	cohelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
+	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
@@ -156,7 +158,7 @@ func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string
 // cluster
 func (s *status) ensureClusterOperator() error {
 	var err error
-	s.clusterOperator, err = s.configClient.ClusterOperators().Get(clusterOperatorName, v1.GetOptions{})
+	s.clusterOperator, err = s.configClient.ClusterOperators().Get(clusterOperatorName, metav1.GetOptions{})
 
 	if err == nil {
 		log.Debug("[status] Found existing ClusterOperator")
@@ -167,12 +169,15 @@ func (s *status) ensureClusterOperator() error {
 		return fmt.Errorf("Error %v getting ClusterOperator", err)
 	}
 
-	s.clusterOperator, err = s.configClient.ClusterOperators().Create(&configv1.ClusterOperator{
-		ObjectMeta: v1.ObjectMeta{
+	clusterOperator := &configv1.ClusterOperator{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterOperatorName,
 			Namespace: s.namespace,
 		},
-	})
+	}
+	s.setRelatedObjects()
+
+	s.clusterOperator, err = s.configClient.ClusterOperators().Create(clusterOperator)
 	if err != nil {
 		return fmt.Errorf("Error %v creating ClusterOperator", err)
 	}
@@ -242,6 +247,15 @@ func (s *status) updateStatus(previousStatus *configv1.ClusterOperatorStatus) er
 			}
 		}
 
+		// Log Conditions
+		log.Infof("[status] Attempting to set the ClusterOperator status conditions to:")
+		for _, statusCondition := range s.clusterOperator.Status.Conditions {
+			log.Infof("[status] ConditionType: %v ConditionStatus: %v ConditionMessage: %v", statusCondition.Type, statusCondition.Status, statusCondition.Message)
+		}
+
+		// Always update RelatedObjects to account for the upgrade case.
+		s.setRelatedObjects()
+
 		_, err := s.configClient.ClusterOperators().UpdateStatus(s.clusterOperator)
 		if err != nil {
 			return fmt.Errorf("Error %v updating ClusterOperator", err)
@@ -253,6 +267,36 @@ func (s *status) updateStatus(previousStatus *configv1.ClusterOperatorStatus) er
 		}
 	}
 	return err
+}
+
+// setRelatedObjects populates RelatedObjects in the ClusterOperator.Status.
+// RelatedObjects are consumed by https://github.com/openshift/must-gather
+func (s *status) setRelatedObjects() {
+	objectReferences := []configv1.ObjectReference{
+		// Add the operator's namespace which will result in core resources
+		// being gathered
+		{
+			Resource: "namespaces",
+			Name:     s.namespace,
+		},
+		// Add the non-core resources we care about
+		{
+			Group:     marketplace.SchemeGroupVersion.Group,
+			Resource:  marketplace.OperatorSourceKind,
+			Namespace: s.namespace,
+		},
+		{
+			Group:     marketplace.SchemeGroupVersion.Group,
+			Resource:  marketplace.CatalogSourceConfigKind,
+			Namespace: s.namespace,
+		},
+		{
+			Group:     olm.GroupName,
+			Resource:  olm.CatalogSourceKind,
+			Namespace: s.namespace,
+		},
+	}
+	s.clusterOperator.Status.RelatedObjects = objectReferences
 }
 
 // syncChannelReceiver will listen on the sync channel and update the status
