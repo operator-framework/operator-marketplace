@@ -1,11 +1,13 @@
-package catalogsourceconfig
+package registry
 
 import (
 	"context"
 	"strconv"
 	"time"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/sirupsen/logrus"
 	apps "k8s.io/api/apps/v1"
@@ -13,9 +15,9 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -27,24 +29,22 @@ const (
 
 var action = []string{"grpc_health_probe", "-addr=localhost:50051"}
 
-type catalogSourceConfigWrapper struct {
-	*marketplace.CatalogSourceConfig
-}
+// DefaultServerImage is the registry image to be used in the absence of
+// the command line parameter.
+const DefaultServerImage = "quay.io/openshift/origin-operator-registry"
 
-func (c *catalogSourceConfigWrapper) key() client.ObjectKey {
-	return client.ObjectKey{
-		Name:      c.GetName(),
-		Namespace: c.GetNamespace(),
-	}
-}
+// ServerImage is the image used for creating the operator registry pod.
+// This gets set in the cmd/manager/main.go.
+var ServerImage string
 
 type registry struct {
-	log     *logrus.Entry
-	client  client.Client
-	reader  datastore.Reader
-	csc     catalogSourceConfigWrapper
-	image   string
-	address string
+	log      *logrus.Entry
+	client   wrapper.Client
+	reader   datastore.Reader
+	packages string
+	key      types.NamespacedName
+	image    string
+	address  string
 }
 
 // Registry contains the method that ensures a registry-pod deployment and its
@@ -55,13 +55,14 @@ type Registry interface {
 }
 
 // NewRegistry returns an initialized instance of Registry
-func NewRegistry(log *logrus.Entry, client client.Client, reader datastore.Reader, csc *marketplace.CatalogSourceConfig, image string) Registry {
+func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, key types.NamespacedName, packages, image string) Registry {
 	return &registry{
-		log:    log,
-		client: client,
-		reader: reader,
-		csc:    catalogSourceConfigWrapper{csc},
-		image:  image,
+		log:      log,
+		client:   client,
+		reader:   reader,
+		packages: packages,
+		key:      key,
+		image:    image,
 	}
 }
 
@@ -103,9 +104,9 @@ func (r *registry) GetAddress() string {
 // and the pod requires a Service Account with the Role that allows it to access
 // secrets.
 func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount bool) error {
-	registryCommand := getCommand(r.csc.GetPackages(), appRegistries)
-	deployment := new(DeploymentBuilder).WithTypeMeta().Deployment()
-	if err := r.client.Get(context.TODO(), r.csc.key(), deployment); err != nil {
+	registryCommand := getCommand(r.packages, appRegistries)
+	deployment := new(builders.DeploymentBuilder).WithTypeMeta().Deployment()
+	if err := r.client.Get(context.TODO(), r.key, deployment); err != nil {
 		deployment = r.newDeployment(registryCommand, needServiceAccount)
 		err = r.client.Create(context.TODO(), deployment)
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -146,8 +147,8 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 // ensureRole ensure that the Role required to access secrets from the registry
 // Deployment is present.
 func (r *registry) ensureRole() error {
-	role := new(RoleBuilder).WithTypeMeta().Role()
-	if err := r.client.Get(context.TODO(), r.csc.key(), role); err != nil {
+	role := new(builders.RoleBuilder).WithTypeMeta().Role()
+	if err := r.client.Get(context.TODO(), r.key, role); err != nil {
 		role = r.newRole()
 		err = r.client.Create(context.TODO(), role)
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -171,9 +172,9 @@ func (r *registry) ensureRole() error {
 // ensureRoleBinding ensures that the RoleBinding bound to the Role previously
 // created is present.
 func (r *registry) ensureRoleBinding() error {
-	roleBinding := new(RoleBindingBuilder).WithTypeMeta().RoleBinding()
-	if err := r.client.Get(context.TODO(), r.csc.key(), roleBinding); err != nil {
-		roleBinding = r.newRoleBinding(r.csc.GetName())
+	roleBinding := new(builders.RoleBindingBuilder).WithTypeMeta().RoleBinding()
+	if err := r.client.Get(context.TODO(), r.key, roleBinding); err != nil {
+		roleBinding = r.newRoleBinding(r.key.Name)
 		err = r.client.Create(context.TODO(), roleBinding)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			r.log.Errorf("Failed to create RoleBinding %s: %v", roleBinding.GetName(), err)
@@ -182,7 +183,7 @@ func (r *registry) ensureRoleBinding() error {
 		r.log.Infof("Created RoleBinding %s", roleBinding.GetName())
 	} else {
 		// Update the Rules to be on the safe side
-		roleBinding.RoleRef = NewRoleRef(r.csc.GetName())
+		roleBinding.RoleRef = builders.NewRoleRef(r.key.Name)
 		err = r.client.Update(context.TODO(), roleBinding)
 		if err != nil {
 			r.log.Errorf("Failed to update RoleBinding %s : %v", roleBinding.GetName(), err)
@@ -195,9 +196,9 @@ func (r *registry) ensureRoleBinding() error {
 
 // ensureService ensure that the Service for the registry deployment is present.
 func (r *registry) ensureService() error {
-	service := new(ServiceBuilder).WithTypeMeta().Service()
+	service := new(builders.ServiceBuilder).WithTypeMeta().Service()
 	// Delete the Service so that we get a new ClusterIP
-	if err := r.client.Get(context.TODO(), r.csc.key(), service); err == nil {
+	if err := r.client.Get(context.TODO(), r.key, service); err == nil {
 		r.log.Infof("Service %s is present", service.GetName())
 		err := r.client.Delete(context.TODO(), service)
 		if err != nil {
@@ -221,8 +222,8 @@ func (r *registry) ensureService() error {
 // ensureServiceAccount ensure that the ServiceAccount required to be associated
 // with the Deployment is present.
 func (r *registry) ensureServiceAccount() error {
-	serviceAccount := new(ServiceAccountBuilder).WithTypeMeta().ServiceAccount()
-	if err := r.client.Get(context.TODO(), r.csc.key(), serviceAccount); err != nil {
+	serviceAccount := new(builders.ServiceAccountBuilder).WithTypeMeta().ServiceAccount()
+	if err := r.client.Get(context.TODO(), r.key, serviceAccount); err != nil {
 		serviceAccount = r.newServiceAccount()
 		err = r.client.Create(context.TODO(), serviceAccount)
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -239,7 +240,7 @@ func (r *registry) ensureServiceAccount() error {
 // getLabels returns the label that must match between the Deployment's
 // LabelSelector and the Pod template's label
 func (r *registry) getLabel() map[string]string {
-	return map[string]string{"marketplace.catalogSourceConfig": r.csc.GetName()}
+	return map[string]string{"marketplace.catalogSourceConfig": r.key.Name}
 }
 
 // getAppRegistries returns a list of app registries in the format
@@ -247,7 +248,8 @@ func (r *registry) getLabel() map[string]string {
 // |<secret namespace/secret name} will be present only for private repositories,
 // in which case secretIsPresent will be true.
 func (r *registry) getAppRegistries() (appRegistries []string, secretIsPresent bool) {
-	for _, packageID := range r.csc.Spec.GetPackageIDs() {
+	packageIDs := v1.GetValidPackageSliceFromString(r.packages)
+	for _, packageID := range packageIDs {
 		opsrcMeta, err := r.reader.Read(packageID)
 		if err != nil {
 			r.log.Errorf("Error %v reading package %s", err, packageID)
@@ -279,8 +281,8 @@ func (r *registry) getSubjects() []rbac.Subject {
 	return []rbac.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      r.csc.GetName(),
-			Namespace: r.csc.GetNamespace(),
+			Name:      r.key.Name,
+			Namespace: r.key.Namespace,
 		},
 	}
 }
@@ -288,9 +290,9 @@ func (r *registry) getSubjects() []rbac.Subject {
 // newDeployment() returns a Deployment object that can be used to bring up a
 // registry deployment
 func (r *registry) newDeployment(registryCommand []string, needServiceAccount bool) *apps.Deployment {
-	return new(DeploymentBuilder).
-		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwnerLabel(r.csc.CatalogSourceConfig).
+	return new(builders.DeploymentBuilder).
+		WithMeta(r.key.Name, r.key.Namespace).
+		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand, needServiceAccount)).
 		Deployment()
 }
@@ -300,14 +302,14 @@ func (r *registry) newDeployment(registryCommand []string, needServiceAccount bo
 func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccount bool) core.PodTemplateSpec {
 	podTemplateSpec := core.PodTemplateSpec{
 		ObjectMeta: meta.ObjectMeta{
-			Name:      r.csc.GetName(),
-			Namespace: r.csc.GetNamespace(),
+			Name:      r.key.Name,
+			Namespace: r.key.Namespace,
 			Labels:    r.getLabel(),
 		},
 		Spec: core.PodSpec{
 			Containers: []core.Container{
 				{
-					Name:    r.csc.GetName(),
+					Name:    r.key.Name,
 					Image:   r.image,
 					Command: registryCommand,
 					Ports: []core.ContainerPort{
@@ -339,7 +341,7 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 		},
 	}
 	if needServiceAccount {
-		podTemplateSpec.Spec.ServiceAccountName = r.csc.GetName()
+		podTemplateSpec.Spec.ServiceAccountName = r.key.Name
 	}
 	return podTemplateSpec
 }
@@ -347,18 +349,18 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 // newRole returns a Role object with the rules set to access secrets from the
 // registry pod
 func (r *registry) newRole() *rbac.Role {
-	return new(RoleBuilder).
-		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwnerLabel(r.csc.CatalogSourceConfig).
+	return new(builders.RoleBuilder).
+		WithMeta(r.key.Name, r.key.Namespace).
+		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		WithRules(getRules()).
 		Role()
 }
 
 // newRoleBinding returns a RoleBinding object RoleRef set to the given Role.
 func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
-	return new(RoleBindingBuilder).
-		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwnerLabel(r.csc.CatalogSourceConfig).
+	return new(builders.RoleBindingBuilder).
+		WithMeta(r.key.Name, r.key.Namespace).
+		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		WithSubjects(r.getSubjects()).
 		WithRoleRef(roleName).
 		RoleBinding()
@@ -366,18 +368,18 @@ func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
 
 // newService returns a new Service object.
 func (r *registry) newService() *core.Service {
-	return new(ServiceBuilder).
-		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwnerLabel(r.csc.CatalogSourceConfig).
+	return new(builders.ServiceBuilder).
+		WithMeta(r.key.Name, r.key.Namespace).
+		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		WithSpec(r.newServiceSpec()).
 		Service()
 }
 
 // newServiceAccount returns a new ServiceAccount object.
 func (r *registry) newServiceAccount() *core.ServiceAccount {
-	return new(ServiceAccountBuilder).
-		WithMeta(r.csc.GetName(), r.csc.GetNamespace()).
-		WithOwnerLabel(r.csc.CatalogSourceConfig).
+	return new(builders.ServiceAccountBuilder).
+		WithMeta(r.key.Name, r.key.Namespace).
+		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		ServiceAccount()
 }
 
@@ -399,7 +401,7 @@ func (r *registry) newServiceSpec() core.ServiceSpec {
 func (r *registry) waitForDeploymentScaleDown(retryInterval, timeout time.Duration) (*apps.Deployment, error) {
 	deployment := apps.Deployment{}
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		err = r.client.Get(context.TODO(), r.csc.key(), &deployment)
+		err = r.client.Get(context.TODO(), r.key, &deployment)
 		if err != nil {
 			r.log.Errorf("Deployment %s not found: %v", deployment.GetName(), err)
 			return false, err
@@ -437,6 +439,6 @@ func getCommand(packages string, appRegistries []string) []string {
 // getRules returns the PolicyRule needed to access secrets from the registry pod
 func getRules() []rbac.PolicyRule {
 	return []rbac.PolicyRule{
-		NewRule([]string{"get"}, []string{""}, []string{"secrets"}, nil),
+		builders.NewRule([]string{"get"}, []string{""}, []string{"secrets"}, nil),
 	}
 }

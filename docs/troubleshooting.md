@@ -36,20 +36,7 @@ redhat-operators      appregistry   https://quay.io/cnr   redhat-operators      
 If the status of any of the OperatorSource is anything other than `Succeeded`, you can investigate the OperatorSource with 
 `oc describe opsrc <Name-of-OperatorSource> -n openshift-marketplace`. [This section](#operatorSource-failing-to-connect-to-the-datastore) and [the following section](#operators-in-an-operatorsource-fail-to-show-up-in-the-ui) of the doc also contains helpful information about debugging an OperatorSource. 
 
-If the OperatorSources look healthy, check that the CatalogSourceConfigs for the corresponding OperatorSources were created.
-
-```
-$ oc get csc -n openshift-marketplace
-
-NAME                  STATUS      MESSAGE                                       AGE
-certified-operators   Succeeded   The object has been successfully reconciled   23h
-community-operators   Succeeded   The object has been successfully reconciled   23h
-redhat-operators      Succeeded   The object has been successfully reconciled   23h
-```
-
-If the status of any of the CatalogSourceConfigs is anything other than `Succeeded`, inspect the CatalogSourceConfig with `oc describe csc <Name-of-CatalogSourceConfig>`. 
-
-If the CatalogSourceConfigs look healthy, make sure that there's a pod corresponding to each CatalogSourceConfig and that they are in the `Running` state.
+If the OperatorSources look healthy, make sure that there's a pod corresponding to each OperatorSource and that they are in the `Running` state.
 
 ```
 $ oc get pods -n openshift-marketplace

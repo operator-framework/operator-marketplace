@@ -65,6 +65,10 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 	expectedPhase := "Configuring"
 	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "no such host")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
+
+	// Delete the OperatorSource
+	err = helpers.DeleteRuntimeObject(client, invalidURLOperatorSource)
+	require.NoError(t, err, "Could not delete OperatorSource")
 }
 
 // Create OperatorSource with invalid URL
@@ -105,6 +109,10 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 	expectedPhase := "Failed"
 	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "Invalid OperatorSource endpoint")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
+
+	// Delete the OperatorSource
+	err = helpers.DeleteRuntimeObject(client, invalidURLOperatorSource)
+	require.NoError(t, err, "Could not delete OperatorSource")
 }
 
 // Create OperatorSource with valid URL but non-existent registry namespace
@@ -148,4 +156,8 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 	expectedPhase := "Failed"
 	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "The OperatorSource endpoint returned an empty manifest list")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
+
+	// Delete the OperatorSource
+	err = helpers.DeleteRuntimeObject(client, nonexistentRegistryNamespaceOperatorSource)
+	require.NoError(t, err, "Could not delete OperatorSource")
 }

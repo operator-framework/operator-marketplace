@@ -6,10 +6,10 @@ import (
 
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
+	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PollHelper is an interface that can be used to check whether a remote registry
@@ -41,7 +41,7 @@ type PollHelper interface {
 type pollHelper struct {
 	factory      appregistry.ClientFactory
 	datastore    datastore.Writer
-	client       client.Client
+	client       wrapper.Client
 	transitioner phase.Transitioner
 }
 

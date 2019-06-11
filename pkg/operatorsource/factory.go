@@ -60,7 +60,7 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *ma
 		return NewValidatingReconciler(logger, s.datastore), nil
 
 	case phase.Configuring:
-		return NewConfiguringReconciler(logger, s.registryClientFactory, s.datastore, s.client, s.refresher), nil
+		return NewConfiguringReconciler(logger, s.registryClientFactory, s.datastore, datastore.Cache, s.client, s.refresher), nil
 
 	case phase.OperatorSourcePurging:
 		return NewPurgingReconciler(logger, s.datastore, s.client), nil

@@ -103,6 +103,6 @@ func testOpSrcWithConflictingPackages(t *testing.T) {
 	assert.NoError(t, err, "Could not create operator source")
 
 	// Confirm child resources were created without errors.
-	err = helpers.CheckCscSuccessfulCreation(client, opSrcName, namespace, namespace)
+	err = helpers.CheckCscChildResourcesCreated(client, opSrcName, namespace, namespace)
 	assert.NoError(t, err, "Child resources not created")
 }

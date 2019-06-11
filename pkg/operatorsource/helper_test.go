@@ -3,9 +3,12 @@ package operatorsource_test
 import (
 	"fmt"
 
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -117,6 +120,18 @@ func NewFakeClientWithOpsrc(opsrc *marketplace.OperatorSource) client.Client {
 	objs := []runtime.Object{
 		opsrc,
 	}
+
+	return fake.NewFakeClientWithScheme(scheme, objs...)
+}
+
+func NewFakeClientWithChildResources(deployment *v1.Deployment, service *corev1.Service, cs *v1alpha1.CatalogSource) client.Client {
+	objs := []runtime.Object{
+		deployment,
+	}
+
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(v1.SchemeGroupVersion, deployment, service, cs)
+	apis.AddToScheme(scheme)
 
 	return fake.NewFakeClientWithScheme(scheme, objs...)
 }
