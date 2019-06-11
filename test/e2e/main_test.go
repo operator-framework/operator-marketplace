@@ -7,8 +7,8 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -32,6 +32,7 @@ func TestMarketplace(t *testing.T) {
 	}
 	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
+	t.Run("migration-test-group", testgroups.MigrationTestGroup)
 }
 
 // initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the

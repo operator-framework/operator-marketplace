@@ -12,6 +12,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
@@ -19,6 +20,7 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -91,6 +93,18 @@ func main() {
 
 	log.Print("Starting the Cmd.")
 	stopCh := signals.SetupSignalHandler()
+
+	// set ClusterOperator status to report Migration
+	status.ReportMigration(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)
+
+	client, err := client.New(cfg, client.Options{})
+	if err != nil {
+		exit(err)
+	}
+
+	// Perform migration logic to upgrade cluster from 4.1.x to 4.2.0
+	migrator := migrator.NewMigrator(client)
+	migrator.Migrate(namespace)
 
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)

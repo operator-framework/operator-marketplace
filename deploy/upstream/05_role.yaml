@@ -13,6 +13,14 @@ rules:
   - delete
   - update
   - list
+- apiGroups:
+  - operators.coreos.com
+  resources:
+  - subscriptions
+  verbs:
+  - get
+  - update
+  - list
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1

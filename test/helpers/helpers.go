@@ -2,12 +2,15 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +41,19 @@ const (
 	// TestOperatorSourceLabelValue is a label value added to the opeator source returned
 	// by the CreateOperatorSource function.
 	TestOperatorSourceLabelValue string = "Community"
+
+	// TestDatastoreCscName is the name of a CatalogSourceConfig that is returned by
+	// the CreateDatastoreCsc function.
+	TestDatastoreCscName string = "test-operators"
+
+	// TestInstalledCscPublisherName is the publisher name part of a installed CatalogSourceConfig
+	// that is returned by the CreateDatastoreCsc function. This publisher name part should be
+	// apened with a namespace to generate the full installed CatalogSourceConfig name.
+	TestInstalledCscPublisherName string = "installed-test-"
+
+	// TestSubscriptionName is the name of a Subscription that is returned by
+	// the CreateSubscription function.
+	TestSubscriptionName string = "test-operators"
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -351,4 +367,105 @@ func CheckOpsrcChildResourcesDeleted(client test.FrameworkClient, opsrcName stri
 		return err
 	}
 	return nil
+}
+
+// RestartMarketplace scales the marketplace deployment down to zero and then scales
+// it back up to it's original number of replicas, and waits for a successful deployment.
+func RestartMarketplace(client test.FrameworkClient, namespace string) error {
+	marketplace := &apps.Deployment{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	if err != nil {
+		return err
+	}
+	replicas := marketplace.Spec.Replicas
+	zero := int32(0)
+	marketplace.Spec.Replicas = &zero
+	err = client.Update(context.TODO(), marketplace)
+	if err != nil {
+		return err
+	}
+	err = client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	if err != nil {
+		return err
+	}
+	marketplace.Spec.Replicas = replicas
+	err = client.Update(context.TODO(), marketplace)
+	if err != nil {
+		return err
+	}
+	err = WaitForSuccessfulDeployment(client, *marketplace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateDatastoreCsc returns a newly built CatalogSourceConfig
+func CreateDatastoreCsc(name, namespace string) *v2.CatalogSourceConfig {
+	lables := make(map[string]string)
+	lables[datastore.DatastoreLabel] = "true"
+
+	return &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
+			Kind: v2.CatalogSourceConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    lables,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			TargetNamespace: namespace,
+			Packages:        "",
+		},
+	}
+}
+
+// CreateInstalledCsc returns a newly built CatalogSourceConfig
+func CreateInstalledCsc(namespace string) *v2.CatalogSourceConfig {
+	name := TestInstalledCscPublisherName + namespace
+	return &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
+			Kind: v2.CatalogSourceConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			TargetNamespace: namespace,
+			Packages:        "",
+		},
+	}
+}
+
+// CreateSubscription returns a newly built Subscription with the lables
+// `csc-owner-name` and `csc-owner-namespace`
+func CreateSubscription(name, namespace string) *olm.Subscription {
+	labels := make(map[string]string)
+	specSource := TestInstalledCscPublisherName + namespace
+	labels[builders.OwnerNameLabel] = specSource
+	labels[builders.OwnerNamespaceLabel] = namespace
+
+	return &olm.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				olm.SchemeGroupVersion.Group, olm.SchemeGroupVersion.Version),
+			Kind: olm.SubscriptionKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: &olm.SubscriptionSpec{
+			CatalogSource:          specSource,
+			CatalogSourceNamespace: namespace,
+			Channel:                "alpha",
+		},
+	}
 }
