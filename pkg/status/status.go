@@ -408,3 +408,16 @@ func (s *status) monitorClusterStatus() {
 		}
 	}
 }
+
+// ReportMigration sets the clusterOperator status to signal that migration logic is in progress,
+// while upgrading from openshift 4.1.z to openshift 4.2.z
+func ReportMigration(cfg *rest.Config, mgr manager.Manager, namespace string, version string, stopCh <-chan struct{}) error {
+	instance = new(cfg, mgr, namespace, version, stopCh)
+	conditionListBuilder := clusterStatusListBuilder()
+	conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Performing migration logic to progress towards release version: %s", instance.version), "Upgrading")
+	msg := fmt.Sprintf("Determining status")
+	conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, "Upgrading")
+	conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, "Upgrading")
+	statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, "Upgrading")
+	return instance.setStatus(statusConditions)
+}

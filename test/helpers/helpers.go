@@ -10,6 +10,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,15 +43,36 @@ const (
 	TestOperatorSourceLabelValue string = "Community"
 
 	// TestCatalogSourceConfigName is the name of the test CatalogSourceConfig.
-	TestCatalogSourceConfigName = "test-csc"
+	TestCatalogSourceConfigName string = "test-csc"
 
 	// TestCatalogSourceConfigTargetNamespace is the target namespace used in the test
 	// CatalogSourceConfig.
-	TestCatalogSourceConfigTargetNamespace = "default"
+	TestCatalogSourceConfigTargetNamespace string = "default"
 
 	// DefaultsDir is the relative path to the defaults directory
-	DefaultsDir = "./defaults"
+	DefaultsDir string = "./defaults"
+
+	// TestDatastoreCscName is the name of a CatalogSourceConfig that is returned by
+	// the CreateDatastoreCscDefinition function.
+	TestDatastoreCscName string = "test-operators"
+
+	// TestInstalledCscPublisherName is the publisher name part of a installed CatalogSourceConfig
+	// that is returned by the CreateDatastoreCscDefinition function. This publisher name part should be
+	// apened with a namespace to generate the full installed CatalogSourceConfig name.
+	TestInstalledCscPublisherName string = "installed-test-"
+
+	// TestUISubscriptionName is the name of a Subscription that is returned by
+	// the CreateUISubscriptionDefinition function.
+	TestUISubscriptionName string = "test-operators-ui-created"
+
+	// TestUserCreatedSubscriptionName is the name of a Subscription that is returned by
+	// the CreateUserSubscriptionDefinition function.
+	TestUserCreatedSubscriptionName string = "test-operators"
 )
+
+// TestUserCreatedSubscriptionResourceVersion is the resourceversion of the user
+// created subscription. This is set when this subscription is created.
+var TestUserCreatedSubscriptionResourceVersion string
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
 // If the request fails because of an IsNotFound error it retries until the specified timeout.
@@ -374,5 +396,149 @@ func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName, namespace,
 		return err
 	}
 
+	return nil
+}
+
+// WaitForDeploymentScaled waits Timeout amount of time for the given deployment to be updated
+// with the specified number of replicas.
+func WaitForDeploymentScaled(client test.FrameworkClient, name, namespace string, replicas int32) error {
+	result := &apps.Deployment{}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	err := wait.Poll(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, result)
+		if err != nil {
+			return false, err
+		}
+		if *result.Spec.Replicas == replicas {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RestartMarketplace scales the marketplace deployment down to zero and then scales
+// it back up to it's original number of replicas, and waits for a successful deployment.
+func RestartMarketplace(client test.FrameworkClient, namespace string) error {
+	marketplace := &apps.Deployment{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	if err != nil {
+		return err
+	}
+	replicas := marketplace.Spec.Replicas
+	zero := int32(0)
+	marketplace.Spec.Replicas = &zero
+	err = client.Update(context.TODO(), marketplace)
+	if err != nil {
+		return err
+	}
+	// Wait for deployment to scale down
+	err = WaitForDeploymentScaled(client, "marketplace-operator", namespace, zero)
+	if err != nil {
+		return err
+	}
+	err = client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	if err != nil {
+		return err
+	}
+	marketplace.Spec.Replicas = replicas
+	err = client.Update(context.TODO(), marketplace)
+	if err != nil {
+		return err
+	}
+	err = WaitForSuccessfulDeployment(client, *marketplace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateDatastoreCscDefinition returns a newly built CatalogSourceConfig
+func CreateDatastoreCscDefinition(name, namespace string) *v2.CatalogSourceConfig {
+	labels := make(map[string]string)
+	labels[datastore.DatastoreLabel] = "true"
+
+	return &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
+			Kind: v2.CatalogSourceConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			TargetNamespace: namespace,
+			Packages:        "",
+		},
+	}
+}
+
+// CreateInstalledCscDefinition returns a newly built CatalogSourceConfig
+func CreateInstalledCscDefinition(namespace string) *v2.CatalogSourceConfig {
+	name := TestInstalledCscPublisherName + namespace
+	return &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
+			Kind: v2.CatalogSourceConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			TargetNamespace: namespace,
+			Packages:        "",
+		},
+	}
+}
+
+// CreateSubscriptionDefinition returns a newly built Subscription with the labels
+// `csc-owner-name` and `csc-owner-namespace` and the expected name
+func CreateSubscriptionDefinition(name, namespace string, isCreatedByUI bool) *olm.Subscription {
+	labels := make(map[string]string)
+	specSource := TestInstalledCscPublisherName + namespace
+	if isCreatedByUI {
+		labels[builders.CscOwnerNameLabel] = specSource
+		labels[builders.CscOwnerNamespaceLabel] = namespace
+	}
+
+	return &olm.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s",
+				olm.SchemeGroupVersion.Group, olm.SchemeGroupVersion.Version),
+			Kind: olm.SubscriptionKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: &olm.SubscriptionSpec{
+			CatalogSource:          specSource,
+			CatalogSourceNamespace: namespace,
+			Channel:                "alpha",
+		},
+	}
+}
+
+// CheckSubscriptionNotUpdated checks that a user created subscription
+// was not updated during migration.
+func CheckSubscriptionNotUpdated(client test.FrameworkClient, name, namespace string) error {
+	subscription := &olm.Subscription{}
+	specSource := TestInstalledCscPublisherName + namespace
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, subscription)
+	if err != nil {
+		return err
+	}
+	if subscription.Spec.CatalogSource != specSource {
+		return fmt.Errorf("User created Subscription %s Spec.CatalogSource has changed. Spec.CatalogSource was %s and is now %s", subscription.GetName(), subscription.Spec.CatalogSource, specSource)
+	}
 	return nil
 }

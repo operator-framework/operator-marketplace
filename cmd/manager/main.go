@@ -15,6 +15,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
@@ -147,6 +148,21 @@ func main() {
 	}
 
 	stopCh := signals.SetupSignalHandler()
+
+	// set ClusterOperator status to report Migration
+	status.ReportMigration(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)
+
+	client, err := client.New(cfg, client.Options{})
+	if err != nil {
+		exit(err)
+	}
+
+	// Perform migration logic to upgrade cluster from 4.1.z to 4.2.z
+	migrator := migrator.NewMigrator(client)
+	err = migrator.Migrate(namespace)
+	if err != nil {
+		exit(err)
+	}
 
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)

@@ -33,6 +33,7 @@ func TestMarketplace(t *testing.T) {
 	}
 	t.Run("opsrc-csc-test-group", testgroups.OpSrcCscTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
+	t.Run("migration-test-group", testgroups.MigrationTestGroup)
 }
 
 // initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the
