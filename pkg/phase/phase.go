@@ -3,7 +3,7 @@ package phase
 import (
 	"errors"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 )
 
 // The following list is the set of phases a Marketplace object can be in while
@@ -69,11 +69,11 @@ func GetMessage(phaseName string) string {
 }
 
 // GetNext returns a Phase object with the given phase name and default message
-func GetNext(name string) *marketplace.Phase {
-	return marketplace.NewPhase(name, GetMessage(name))
+func GetNext(name string) *shared.Phase {
+	return shared.NewPhase(name, GetMessage(name))
 }
 
 // GetNextWithMessage returns a Phase object with the given phase name and default message
-func GetNextWithMessage(name string, message string) *marketplace.Phase {
-	return marketplace.NewPhase(name, message)
+func GetNextWithMessage(name string, message string) *shared.Phase {
+	return shared.NewPhase(name, message)
 }

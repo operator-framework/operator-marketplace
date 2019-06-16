@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	operator "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -34,14 +34,14 @@ func testCscWithNonExistingPackage(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Create a new catalogsourceconfig with a non-existing Package
-	nonExistingPackageCSC := &operator.CatalogSourceConfig{
+	nonExistingPackageCSC := &v2.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.CatalogSourceConfigKind,
+			Kind: v2.CatalogSourceConfigKind,
 		}, ObjectMeta: metav1.ObjectMeta{
 			Name:      cscName,
 			Namespace: namespace,
 		},
-		Spec: operator.CatalogSourceConfigSpec{
+		Spec: v2.CatalogSourceConfigSpec{
 			TargetNamespace: namespace,
 			Packages:        nonExistingPackageName,
 		}}

@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -27,7 +28,7 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &marketplace.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -35,7 +36,7 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	writer := mocks.NewDatastoreWriter(controller)
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
-	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
 	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
@@ -116,7 +117,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 	assert.Error(t, errGot)
 
-	nextPhaseWant := &marketplace.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Failed,
 		Message: errGot.Error(),
 	}
@@ -132,7 +133,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	nextPhaseWant := &marketplace.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -141,7 +142,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	registryClient := mocks.NewAppRegistryClient(controller)
-	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
 	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
@@ -189,7 +190,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
-	cscWant.Spec = marketplace.CatalogSourceConfigSpec{
+	cscWant.Spec = v2.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
 	}
@@ -210,7 +211,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	defer controller.Finish()
 
 	namespace, name := "marketplace", "foo"
-	nextPhaseWant := &marketplace.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
@@ -263,7 +264,7 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	// Then we expect a read to the datastore
 	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
-	fakeclient := NewFakeClientWithChildResources(&v1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 
 	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
@@ -283,7 +284,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	namespace, name := "marketplace", "foo"
 
 	updateError := k8s_errors.NewServerTimeout(schema.GroupResource{}, "operation", 1)
-	nextPhaseWant := &marketplace.Phase{
+	nextPhaseWant := &shared.Phase{
 		Name:    phase.Configuring,
 		Message: updateError.Error(),
 	}

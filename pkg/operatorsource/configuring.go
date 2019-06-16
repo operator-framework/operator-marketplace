@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -67,7 +68,7 @@ type configuringReconciler struct {
 //
 // If the corresponding CatalogSourceConfig object already exists
 // then no further action is taken.
-func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.OperatorSource) (out *marketplace.OperatorSource, nextPhase *marketplace.Phase, err error) {
+func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
 	if in.GetCurrentPhaseName() != phase.Configuring {
 		err = phase.ErrWrongReconcilerInvoked
 		return
@@ -139,7 +140,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *marketplace.O
 // It returns the list of packages to be written to the OperatorSource status. error is set
 // when there is an issue downloading the metadata. In that case the list of packages
 // will be empty.
-func (r *configuringReconciler) getManifestMetadata(spec *marketplace.OperatorSourceSpec, namespace string) ([]*datastore.RegistryMetadata, error) {
+func (r *configuringReconciler) getManifestMetadata(spec *v1.OperatorSourceSpec, namespace string) ([]*datastore.RegistryMetadata, error) {
 
 	metadata := make([]*datastore.RegistryMetadata, 0)
 
@@ -166,7 +167,7 @@ func (r *configuringReconciler) getManifestMetadata(spec *marketplace.OperatorSo
 // this is a new OperatorSource and in this case we should force all
 // CatalogSourceConfigs to compare their versions to what's in the datastore
 // after we update it. The function returns the whether a resync is needed and an error
-func (r *configuringReconciler) writeMetadataToDatastore(in *marketplace.OperatorSource, out *marketplace.OperatorSource, metadata []*datastore.RegistryMetadata) (bool, error) {
+func (r *configuringReconciler) writeMetadataToDatastore(in *v1.OperatorSource, out *v1.OperatorSource, metadata []*datastore.RegistryMetadata) (bool, error) {
 
 	preUpdateDatastorePackageList := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
 

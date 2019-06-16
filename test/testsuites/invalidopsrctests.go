@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	operator "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -44,15 +44,15 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
-	invalidURLOperatorSource := &operator.OperatorSource{
+	invalidURLOperatorSource := &v1.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: v1.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opSrcName,
 			Namespace: namespace,
 		},
-		Spec: operator.OperatorSourceSpec{
+		Spec: v1.OperatorSourceSpec{
 			Type:              endpointType,
 			Endpoint:          invalidEndpoint,
 			RegistryNamespace: marketplaceRegistryNamespace,
@@ -88,15 +88,15 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
-	invalidURLOperatorSource := &operator.OperatorSource{
+	invalidURLOperatorSource := &v1.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: v1.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opSrcName,
 			Namespace: namespace,
 		},
-		Spec: operator.OperatorSourceSpec{
+		Spec: v1.OperatorSourceSpec{
 			Type:              endpointType,
 			Endpoint:          invalidURL,
 			RegistryNamespace: marketplaceRegistryNamespace,
@@ -135,15 +135,15 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 	// Get test namespace
 	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
-	nonexistentRegistryNamespaceOperatorSource := &operator.OperatorSource{
+	nonexistentRegistryNamespaceOperatorSource := &v1.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind: operator.OperatorSourceKind,
+			Kind: v1.OperatorSourceKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opSrcName,
 			Namespace: namespace,
 		},
-		Spec: operator.OperatorSourceSpec{
+		Spec: v1.OperatorSourceSpec{
 			Type:              endpointType,
 			Endpoint:          validURL,
 			RegistryNamespace: nonexistentRegistryNamespace,

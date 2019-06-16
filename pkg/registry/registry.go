@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
@@ -248,7 +248,7 @@ func (r *registry) getLabel() map[string]string {
 // |<secret namespace/secret name} will be present only for private repositories,
 // in which case secretIsPresent will be true.
 func (r *registry) getAppRegistries() (appRegistries []string, secretIsPresent bool) {
-	packageIDs := v1.GetValidPackageSliceFromString(r.packages)
+	packageIDs := v2.GetValidPackageSliceFromString(r.packages)
 	for _, packageID := range packageIDs {
 		opsrcMeta, err := r.reader.Read(packageID)
 		if err != nil {

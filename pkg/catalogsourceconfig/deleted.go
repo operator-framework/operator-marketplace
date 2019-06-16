@@ -3,7 +3,8 @@ package catalogsourceconfig
 import (
 	"context"
 
-	marketplace "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
@@ -53,7 +54,7 @@ type deletedReconciler struct {
 //
 // nextPhase represents the next desired phase for the given CatalogSourceConfig
 // object. If nil is returned, it implies that no phase transition is expected.
-func (r *deletedReconciler) Reconcile(ctx context.Context, in *marketplace.CatalogSourceConfig) (out *marketplace.CatalogSourceConfig, nextPhase *marketplace.Phase, err error) {
+func (r *deletedReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourceConfig) (out *v2.CatalogSourceConfig, nextPhase *shared.Phase, err error) {
 	out = in
 
 	// Evict the catalogsourceconfig data from the cache.

@@ -1,8 +1,9 @@
-package v1
+package v2
 
 import (
 	"strings"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,7 +54,7 @@ type CatalogSourceConfigSpec struct {
 // CatalogSourceConfigStatus defines the observed state of CatalogSourceConfig
 type CatalogSourceConfigStatus struct {
 	// Current phase of the CatalogSourceConfig object.
-	CurrentPhase ObjectPhase `json:"currentPhase,omitempty"`
+	CurrentPhase shared.ObjectPhase `json:"currentPhase,omitempty"`
 
 	// Map of packages (key) and their app registry package version (value)
 	PackageRepositioryVersions map[string]string `json:"packageRepositioryVersions,omitempty"`
@@ -79,13 +80,13 @@ func (csc *CatalogSourceConfig) EnsureGVK() {
 // RemoveFinalizer removes the operator source finalizer from the
 // CatatalogSourceConfig ObjectMeta.
 func (csc *CatalogSourceConfig) RemoveFinalizer() {
-	removeFinalizer(&csc.ObjectMeta, CSCFinalizer)
+	shared.RemoveFinalizer(&csc.ObjectMeta, CSCFinalizer)
 }
 
 // EnsureFinalizer ensures that the CatatalogSourceConfig finalizer is included
 // in the ObjectMeta.
 func (csc *CatalogSourceConfig) EnsureFinalizer() {
-	ensureFinalizer(&csc.ObjectMeta, CSCFinalizer)
+	shared.EnsureFinalizer(&csc.ObjectMeta, CSCFinalizer)
 }
 
 func (csc *CatalogSourceConfig) EnsureDisplayName() {
