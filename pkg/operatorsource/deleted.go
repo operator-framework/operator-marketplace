@@ -64,7 +64,7 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource
 	grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
 
 	// Delete the owned registry resources.
-	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Namespace)
+	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Namespace, v1.OperatorSourceKind)
 
 	if err != nil {
 		// Something went wrong before we removed the finalizer, let's retry.

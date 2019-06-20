@@ -1,21 +1,45 @@
 package builders
 
-// OwnerNameLabel is the label used to mark ownership over a given resources.
-// When this label is set, the reconciler should handle these resources when the owner
-// is deleted.
-const OwnerNameLabel string = "csc-owner-name"
+import (
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+)
 
-// OwnerNamespaceLabel is the label used to mark ownership over a given resources.
-// When this label is set, the reconciler should handle these resources when the owner
-// is deleted.
-const OwnerNamespaceLabel string = "csc-owner-namespace"
+// CscOwnerNameLabel is the label used to indicate the name of the CatalogSourceConfig
+// that owns this resources. When this label is set, the reconciler should handle these
+// resources when the CatalogSourceConfig is deleted.
+const CscOwnerNameLabel string = "csc-owner-name"
 
-// OpsrcOwnerNameLabel is the label used to mark ownership over resources
-// that are owned by the OperatorSource. When this label is set, the reconciler
-// should handle these resources when the OperatorSource is deleted.
+// CscOwnerNamespaceLabel is the label used to indicate the namespace of the CatalogSourceConfig
+// that owns this resources. When this label is set, the reconciler should handle these
+// resources when the CatalogSourceConfig is deleted.
+const CscOwnerNamespaceLabel string = "csc-owner-namespace"
+
+// OpsrcOwnerNameLabel is the label used to indicate the name of the OperatorSource
+// that owns this resources. When this label is set, the reconciler should handle these
+// resources when the OperatorSource is deleted.
 const OpsrcOwnerNameLabel string = "opsrc-owner-name"
 
-// OpsrcOwnerNamespaceLabel is the label used to mark ownership over resources
-// that are owned by the OperatorSource. When this label is set, the reconciler
-// should handle these resources when the OperatorSource is deleted.
+// OpsrcOwnerNamespaceLabel is the label used to indicate the namespace of the OperatorSource
+// that owns this resources. When this label is set, the reconciler should handle these
+// resources when the OperatorSource is deleted.
 const OpsrcOwnerNamespaceLabel string = "opsrc-owner-namespace"
+
+// GetOwnerLabel returns a map with either the CatalogSourceConfig or the OperatorSource owner
+// name and namespace labels depending what kind is the owner
+func GetOwnerLabel(name, namespace, owner string) map[string]string {
+	switch owner {
+	case v1.OperatorSourceKind:
+		return map[string]string{
+			OpsrcOwnerNameLabel:      name,
+			OpsrcOwnerNamespaceLabel: namespace,
+		}
+	case v2.CatalogSourceConfigKind:
+		return map[string]string{
+			CscOwnerNameLabel:      name,
+			CscOwnerNamespaceLabel: namespace,
+		}
+	default:
+		return map[string]string{}
+	}
+}

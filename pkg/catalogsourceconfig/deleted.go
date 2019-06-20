@@ -62,7 +62,7 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourceC
 
 	// Delete all created resources
 	grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
-	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Spec.TargetNamespace)
+	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Spec.TargetNamespace, v2.CatalogSourceConfigKind)
 
 	if err != nil {
 		// Something went wrong before we removed the finalizer, let's retry.

@@ -14,7 +14,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -150,12 +149,10 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 
-	labelsWant := map[string]string{
-		"opsrc-group":                     "Community",
-		builders.OpsrcOwnerNameLabel:      "foo",
-		builders.OpsrcOwnerNamespaceLabel: "marketplace",
+	labelsNeed := map[string]string{
+		"opsrc-group": "Community",
 	}
-	opsrcIn.SetLabels(labelsWant)
+	opsrcIn.SetLabels(labelsNeed)
 
 	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
 	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
@@ -189,7 +186,7 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	// Then we expect a read to the datastore
 	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
-	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
+	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsNeed)
 	cscWant.Spec = v2.CatalogSourceConfigSpec{
 		TargetNamespace: opsrcIn.Namespace,
 		Packages:        packages,
@@ -225,15 +222,13 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase(namespace, name, phase.Configuring)
 
-	labelsWant := map[string]string{
-		"opsrc-group":                     "Community",
-		builders.OpsrcOwnerNameLabel:      "foo",
-		builders.OpsrcOwnerNamespaceLabel: "marketplace",
-	}
-	opsrcIn.SetLabels(labelsWant)
-
 	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
 	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
+
+	labelsNeed := map[string]string{
+		"opsrc-group": "Community",
+	}
+	opsrcIn.SetLabels(labelsNeed)
 
 	// We expect the remote registry to return a non-empty list of manifest(s).
 	manifestExpected := []*datastore.RegistryMetadata{

@@ -84,7 +84,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v2.CatalogSou
 		Name:      in.Name,
 		Namespace: in.Namespace,
 	}
-	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Spec.TargetNamespace, in.Spec.Source, in.Spec.Packages, in.Labels)
+	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Spec.TargetNamespace, in.Spec.Source, in.Spec.Packages, v2.CatalogSourceConfigKind, in.Labels)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return

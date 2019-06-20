@@ -35,13 +35,26 @@ func (b *RoleBindingBuilder) WithMeta(name, namespace string) *RoleBindingBuilde
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the RoleBinding object to the given owner.
-func (b *RoleBindingBuilder) WithOwnerLabel(name, namespace string) *RoleBindingBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the RoleBinding object to the given owner.
+func (b *RoleBindingBuilder) WithOpsrcOwnerLabel(name, namespace string) *RoleBindingBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.rb.GetLabels() {
+		labels[key] = value
 	}
 
+	b.rb.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the RoleBinding object to the given owner.
+func (b *RoleBindingBuilder) WithCscOwnerLabel(name, namespace string) *RoleBindingBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.rb.GetLabels() {
 		labels[key] = value
 	}

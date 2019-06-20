@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -108,7 +109,7 @@ func testOpSrcWithIdenticalPackages(t *testing.T) {
 	assert.NoError(t, err, "Could not create operator source")
 
 	// Check that the child resources were created.
-	err = helpers.CheckChildResourcesCreated(client, opSrcName, namespace, namespace)
+	err = helpers.CheckChildResourcesCreated(client, opSrcName, namespace, namespace, v1.OperatorSourceKind)
 	assert.NoError(t, err)
 
 	t.Run("resolved-multiple-sources", resolvedMultipleSources)

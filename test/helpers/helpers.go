@@ -2,12 +2,14 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -199,12 +201,38 @@ func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
 	}
 }
 
+// checkOwnerLabels verifies that the correct owner labels have been set
+func checkOwnerLabels(labels map[string]string, owner string) error {
+	switch owner {
+	case v1.OperatorSourceKind:
+		_, hasNameLabel := labels[builders.OpsrcOwnerNameLabel]
+		_, hasNamespaceLabel := labels[builders.OpsrcOwnerNamespaceLabel]
+		if !hasNameLabel || !hasNamespaceLabel {
+			return fmt.Errorf("Created child resource does not have correct %v owner labels", owner)
+		}
+	case v2.CatalogSourceConfigKind:
+		_, hasNameLabel := labels[builders.CscOwnerNameLabel]
+		_, hasNamespaceLabel := labels[builders.CscOwnerNamespaceLabel]
+		if !hasNameLabel || !hasNamespaceLabel {
+			return fmt.Errorf("Created child resource does not have correct %v owner labels", owner)
+		}
+	}
+	return nil
+}
+
 // CheckChildResourcesCreated checks that a CatalogSourceConfig's
 // child resources were deployed.
-func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
+func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace, targetNamespace, owner string) error {
+
 	// Check that the CatalogSource was created.
 	resultCatalogSource := &olm.CatalogSource{}
 	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check owner labels are correctly set.
+	err = checkOwnerLabels(resultCatalogSource.Labels, owner)
 	if err != nil {
 		return err
 	}
@@ -216,9 +244,21 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 		return err
 	}
 
+	// Check owner labels are correctly set.
+	err = checkOwnerLabels(resultService.Labels, owner)
+	if err != nil {
+		return err
+	}
+
 	// Check that the Deployment was created.
 	resultDeployment := &apps.Deployment{}
 	err = WaitForResult(client, resultDeployment, namespace, cscName)
+	if err != nil {
+		return err
+	}
+
+	// Check owner labels are correctly set.
+	err = checkOwnerLabels(resultDeployment.Labels, owner)
 	if err != nil {
 		return err
 	}
@@ -268,7 +308,7 @@ func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName, namespace,
 	}
 
 	// Check that all child resources were created.
-	err = CheckChildResourcesCreated(client, cscName, namespace, targetNamespace)
+	err = CheckChildResourcesCreated(client, cscName, namespace, targetNamespace, v2.CatalogSourceConfigKind)
 	if err != nil {
 		return err
 	}

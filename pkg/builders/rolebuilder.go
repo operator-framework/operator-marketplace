@@ -35,13 +35,26 @@ func (b *RoleBuilder) WithMeta(name, namespace string) *RoleBuilder {
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the Role object to the given owner.
-func (b *RoleBuilder) WithOwnerLabel(name, namespace string) *RoleBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the Role object to the given owner.
+func (b *RoleBuilder) WithOpsrcOwnerLabel(name, namespace string) *RoleBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.role.GetLabels() {
+		labels[key] = value
 	}
 
+	b.role.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the Role object to the given owner.
+func (b *RoleBuilder) WithCscOwnerLabel(name, namespace string) *RoleBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.role.GetLabels() {
 		labels[key] = value
 	}
