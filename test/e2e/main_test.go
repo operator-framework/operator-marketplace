@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var coAPINotPresent = true
+var coAPIPresent = true
 
 func TestMain(m *testing.M) {
 	test.MainEntry(m)
@@ -27,7 +27,7 @@ func TestMarketplace(t *testing.T) {
 	initTestingFramework(t)
 
 	// Run Test Groups
-	if coAPINotPresent {
+	if coAPIPresent {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	}
 	t.Run("operator-source-test-group", testgroups.OperatorSourceTestGroup)
@@ -86,6 +86,6 @@ func initTestingFramework(t *testing.T) {
 	err = test.AddToFrameworkScheme(configv1.Install, clusterOperator)
 	if err != nil {
 		t.Logf("failed to add ClusterOperator custom resource scheme to framework: %v. ClusterOperator test will not run.", err)
-		coAPINotPresent = false
+		coAPIPresent = false
 	}
 }
