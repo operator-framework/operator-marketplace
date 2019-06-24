@@ -67,15 +67,18 @@ type poller struct {
 
 func (p *poller) Initialize() {
 	log.Info("[sync] sending initial package update notification on start.")
-	p.refresher.SendRefresh()
+	for _, opSrcKey := range p.datastore.GetAllOperatorSources() {
+		p.refresher.SendRefresh(opSrcKey.Name.Name)
+	}
 }
 
 func (p *poller) Poll() {
 	sources := p.datastore.GetAllOperatorSources()
 
-	aggregator := datastore.NewPackageUpdateAggregator()
+	aggregators := []*datastore.PackageUpdateAggregator{}
 
 	for _, source := range sources {
+		aggregator := datastore.NewPackageUpdateAggregator(source.Name.Name)
 		result, err := p.helper.HasUpdate(source)
 		if err != nil {
 			log.Errorf("[sync] error checking for updates [%s] - %v", source.Name, err)
@@ -92,20 +95,21 @@ func (p *poller) Poll() {
 		if err := p.trigger(source, result); err != nil {
 			log.Errorf("%v", err)
 		}
-	}
 
-	// We have a list of operator(s) that have either been removed or have new
-	// version(s). We should kick off CatalogSourceConfig reconciliation.
-	if !aggregator.IsUpdatedOrRemoved() {
-		return
+		// We have a list of operator(s) that have either been removed or have new
+		// version(s). We should kick off CatalogSourceConfig reconciliation.
+		if aggregator.IsUpdatedOrRemoved() {
+			aggregators = append(aggregators, aggregator)
+		}
 	}
 
 	// TODO: This is a stop gap measure. We should not need this any longer when
 	// CatalogSourceConfig has the version stored.
 	<-time.After(p.updateNotificationSendWait)
-
-	log.Infof("[sync] sending package update notification - %s", aggregator)
-	p.sender.Send(aggregator)
+	for _, aggregator := range aggregators {
+		log.Infof("[sync] sending package update notification - %s", aggregator)
+		p.sender.Send(aggregator)
+	}
 }
 
 func (p *poller) trigger(source *datastore.OperatorSourceKey, result *datastore.UpdateResult) error {

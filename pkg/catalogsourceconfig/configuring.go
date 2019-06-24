@@ -2,6 +2,7 @@ package catalogsourceconfig
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
@@ -62,13 +63,28 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v2.CatalogSou
 	// in case of a failure.
 	r.cache.Set(out)
 
+	// If a source is not specified, check if there is an OperatorSource
+	// that contains all packages.
+	if out.Spec.Source == "" {
+		var newSource string
+		newSource, err = r.reader.SearchForSource(out.GetPackageIDs())
+		if err != nil {
+			nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
+			return
+		}
+		out.Spec.Source = newSource
+	} else if !r.reader.DoesSourceExist(out.Spec.Source) {
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, fmt.Sprintf("Provided source (%s) does not exist", out.Spec.Source))
+		return
+	}
+
 	grpcCatalog := grpccatalog.New(r.log, r.reader, r.client)
 
 	key := client.ObjectKey{
 		Name:      in.Name,
 		Namespace: in.Namespace,
 	}
-	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Spec.TargetNamespace, in.Spec.Packages, in.Labels)
+	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Spec.TargetNamespace, in.Spec.Source, in.Spec.Packages, in.Labels)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return
@@ -90,7 +106,7 @@ func (r *configuringReconciler) EnsurePackagesInStatus(csc *v2.CatalogSourceConf
 	newPackageRepositioryVersions := make(map[string]string)
 	packageIDs := csc.GetPackageIDs()
 	for _, packageID := range packageIDs {
-		version, err := r.reader.ReadRepositoryVersion(packageID)
+		version, err := r.reader.ReadRepositoryVersion(csc.Spec.Source, packageID)
 		if err != nil {
 			r.log.Errorf("Failed to find package: %v", err)
 			version = "-1"

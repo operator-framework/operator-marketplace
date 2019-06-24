@@ -33,7 +33,7 @@ type PackageUpdateNotificationSender interface {
 // blocking operation. When this notification is sent, all non datastore
 // catalogsourceconfigs check their version map in the status against the datastore.
 type PackageRefreshNotificationSender interface {
-	SendRefresh()
+	SendRefresh(opSrc string)
 }
 
 // RegistrySyncer is an interface that wraps the Sync method.

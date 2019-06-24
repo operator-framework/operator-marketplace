@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,12 @@ import (
 // PackageTests is a test suite that ensures that package behave as intended
 func PackageTests(t *testing.T) {
 	t.Run("csc-with-non-existing-package", testCscWithNonExistingPackage)
-	t.Run("opsrc-with-conflicting-packages", testOpSrcWithConflictingPackages)
+	t.Run("opsrc-with-identical-packages", testOpSrcWithIdenticalPackages)
+
+	t.Run("resolve-missing-source", resolveMissingSource)
+	t.Run("unresolved-missing-source", unresolvedMissingSource)
+	t.Run("non-existing-source", nonExistingSource)
+	t.Run("source-missing-packages", sourceMissingPackages)
 }
 
 // testCscWithNonExistingPackage tests that a csc with a non-existing package
@@ -64,7 +70,7 @@ func configuringStateWhenPackageNameDoesNotExist(t *testing.T) {
 	// Check that the catalogsourceconfig with an non-existing package eventually reaches the
 	// configuring phase with the expected message
 	expectedPhase := "Configuring"
-	expectedMessage := fmt.Sprintf("Still resolving package(s) - %v. Please make sure these are valid packages.", nonExistingPackageName)
+	expectedMessage := fmt.Sprintf("Unable to resolve the source - no source contains the requested package(s) [%s]", nonExistingPackageName)
 	err = helpers.WaitForExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	assert.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached expected phase/message, expected %v/%v", expectedPhase, expectedMessage))
 }
@@ -81,10 +87,9 @@ func childResourcesNotCreated(t *testing.T) {
 	assert.NoError(t, err, "Child resources of CatalogSourceConfig were unexpectedly created")
 }
 
-// testOpSrcWithConflictingPackages ensures that an OperatorSource and its child resources
-// are successfully rolled out regardless of whether or not there is a
-// package conflict with an exiting OperatorSource.
-func testOpSrcWithConflictingPackages(t *testing.T) {
+// testOpSrcWithIdenticalPackages ensures that an OperatorSource and its child resources
+// are successfully rolled out even if another OperatorSource contains identical packages.
+func testOpSrcWithIdenticalPackages(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
 
@@ -102,7 +107,133 @@ func testOpSrcWithConflictingPackages(t *testing.T) {
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateOperatorSourceDefinition(opSrcName, namespace))
 	assert.NoError(t, err, "Could not create operator source")
 
-	// Confirm child resources were created without errors.
-	err = helpers.CheckCscChildResourcesCreated(client, opSrcName, namespace, namespace)
-	assert.NoError(t, err, "Child resources not created")
+	// Check that the child resources were created.
+	err = helpers.CheckOpsrcChildResourcesCreated(client, opSrcName, namespace)
+	assert.NoError(t, err)
+
+	t.Run("resolved-multiple-sources", resolvedMultipleSources)
+}
+
+// resolvedMultipleSources checks that a CatalogSourceConfig with an unspecified source
+// is resolved if its packages exist within two OperatorSources.
+func resolvedMultipleSources(t *testing.T) {
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	assert.NoError(t, err)
+
+	// Check that a CSC with an unspecified source is resolved if its
+	// packages exist in two OperatorSources.
+	err = runSourceTest(namespace,
+		"",
+		"camel-k-marketplace-e2e-tests",
+		"Succeeded",
+		"The object has been successfully reconciled",
+	)
+	assert.NoError(t, err)
+}
+
+// resolveMissingSource ensures that if no source is given, the CatalogSourceConfig is
+// placed in the Succeeded phase if a source exists that contains the provided packages.
+func resolveMissingSource(t *testing.T) {
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	assert.NoError(t, err)
+
+	err = runSourceTest(namespace,
+		"",
+		"camel-k-marketplace-e2e-tests",
+		"Succeeded",
+		"The object has been successfully reconciled",
+	)
+	assert.NoError(t, err)
+}
+
+// unresolvedMissingSource ensures that if no source is given, the CatalogSourceConfig is
+// placed in the Configuring phase if marketplace cannot identify a source that contains the
+// provided packages.
+func unresolvedMissingSource(t *testing.T) {
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	assert.NoError(t, err)
+
+	packages := "camel-k-marketplace-e2e-tests-k,missing-package"
+	err = runSourceTest(namespace,
+		"",
+		packages,
+		"Configuring",
+		fmt.Sprintf("Unable to resolve the source - no source contains the requested package(s) [%s]", strings.Replace(packages, ",", " ", -1)),
+	)
+	assert.NoError(t, err)
+}
+
+// nonExistingSource ensures that if the provided source does not exist the CatalogSourceConfig
+// will be placed in the Configuring phase with the expected messages.
+func nonExistingSource(t *testing.T) {
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	assert.NoError(t, err)
+
+	source := "bad-source"
+	err = runSourceTest(namespace,
+		source,
+		"camel-k-marketplace-e2e-tests",
+		"Configuring",
+		fmt.Sprintf("Provided source (%s) does not exist", source),
+	)
+	assert.NoError(t, err)
+}
+
+// sourceMissingPackages ensures that if the provided source does not contain the expected
+// packages the CatalogSourceConfig will be placed in the Configuring phase with the expected
+// messages.
+func sourceMissingPackages(t *testing.T) {
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	assert.NoError(t, err)
+
+	err = runSourceTest(namespace,
+		"test-operators",
+		"camel-k-marketplace-e2e-tests,missing-package",
+		"Configuring",
+		"Still resolving package(s) - missing-package. Please make sure these are valid packages within the test-operators OperatorSource.",
+	)
+	assert.NoError(t, err)
+}
+
+func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage string) error {
+	// Get global framework variables.
+	client := test.Global.Client
+
+	// Create a new CatalogSourceConfig with a non-existing targetNamespace.
+	csc := &v2.CatalogSourceConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind: v2.CatalogSourceConfigKind,
+		}, ObjectMeta: metav1.ObjectMeta{
+			Name:      cscName,
+			Namespace: namespace,
+		},
+		Spec: v2.CatalogSourceConfigSpec{
+			Source:          source,
+			TargetNamespace: "openshift-marketplace",
+			Packages:        packages,
+		}}
+
+	// Create the CatalogSourceConfig and if an error occurs do not run tests that
+	// rely on the existence of the CatalogSourceConfig.
+	// The CatalogSourceConfig is created with nil ctx and must be deleted manually before test suite exits.
+	err := helpers.CreateRuntimeObject(client, nil, csc)
+	if err != nil {
+		return err
+	}
+
+	// Check that the CatalogSourceConfig with an non-existing targetNamespace eventually reaches the
+	// configuring phase with the expected message.
+	err = helpers.WaitForExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	if err != nil {
+		return err
+	}
+
+	// Delete the CatalogSourceConfig.
+	err = helpers.DeleteRuntimeObject(client, csc)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the CatalogSourceConfig to be deleted.
+	return helpers.WaitForNotFound(client, csc, namespace, cscName)
 }

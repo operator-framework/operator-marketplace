@@ -41,19 +41,19 @@ type GrpcCatalog struct {
 // EnsureResources creates a GRPC CatalogSource if one does not already
 // exists otherwise it updates an existing one. It then creates/updates all the
 // resources it requires.
-func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, publisher, targetNamespace, packages string, labels map[string]string) error {
+func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, publisher, targetNamespace, source, packages string, labels map[string]string) error {
 	// Ensure reader is not nil
 	if r.reader == nil {
 		return fmt.Errorf("GrpcCatalog.reader is not defined")
 	}
 	// Ensure that the packages in the spec are available in the datastore
-	err := r.reader.CheckPackages(v2.GetValidPackageSliceFromString(packages))
+	err := r.reader.CheckPackages(source, v2.GetValidPackageSliceFromString(packages))
 	if err != nil {
 		return err
 	}
 
 	// Ensure that a registry deployment is available
-	registry := registry.NewRegistry(r.log, r.client, r.reader, key, packages, registry.ServerImage)
+	registry := registry.NewRegistry(r.log, r.client, r.reader, key, source, packages, registry.ServerImage)
 	err = registry.Ensure()
 	if err != nil {
 		return err

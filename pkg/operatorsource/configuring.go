@@ -108,7 +108,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 	// If it is, let's force a resync for CatalogSourceConfig.
 	if isResyncNeeded {
 		r.logger.Info("New opsrc detected. Refreshing catalogsourceconfigs.")
-		r.refresher.SendRefresh()
+		r.refresher.SendRefresh(out.Name)
 	}
 
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())
@@ -126,7 +126,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 	for key, value := range in.Labels {
 		labels[key] = value
 	}
-	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, packages, labels)
+	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, in.Name, packages, labels)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return

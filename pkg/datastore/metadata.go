@@ -40,6 +40,9 @@ type Repository struct {
 // OpsrcRef defines the endpoint, registry namespace and secret for a given
 // OperatorSource.
 type OpsrcRef struct {
+	// Name is the name of the OperatorSource.
+	Name string
+
 	// Endpoint points to the remote app registry server from
 	// where operator manifests can be fetched.
 	Endpoint string

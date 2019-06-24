@@ -62,6 +62,11 @@ func (c *cache) IsEntryStale(csc *v2.CatalogSourceConfig) (bool, bool) {
 		return true, true
 	}
 
+	// If the source has changed, packages are stale.
+	if spec.Source != csc.Spec.Source {
+		return true, false
+	}
+
 	cachedPackages := spec.GetPackageIDs()
 	inPackageIDs := csc.GetPackageIDs()
 
@@ -90,6 +95,7 @@ func (c *cache) Evict(csc *v2.CatalogSourceConfig) {
 
 func (c *cache) Set(csc *v2.CatalogSourceConfig) {
 	c.entries[csc.ObjectMeta.UID] = &v2.CatalogSourceConfigSpec{
+		Source:          csc.Spec.Source,
 		Packages:        csc.GetPackages(),
 		TargetNamespace: csc.Spec.TargetNamespace,
 	}

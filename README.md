@@ -35,15 +35,19 @@ The creation of an `OperatorSource` results in the creation of an OLM `CatalogSo
 
 #### CatalogSourceConfig
 
-`CatalogSourceConfig` is used to create OLM `CatalogSources` consisting of operators from one or more `OperatorSources` so that these operators can then be managed by OLM.
+`CatalogSourceConfig` is used to create OLM `CatalogSources` consisting of operators from one `OperatorSource` so that these operators can then be managed by OLM.
 
 Here is a description of the spec fields:
 
 - `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated.
 
+- `source` is the name of the `OperatorSource` that the packages originate from.
+
 - `packages` is a comma separated list of operators.
 
 - `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays.
+
+To learn more about how the Marketplace Operator resolves source and package combinations, please review [this doc](docs/csc-source-resolution.md).
 
 Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
 
