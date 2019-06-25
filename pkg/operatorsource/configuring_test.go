@@ -70,16 +70,16 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("")
 
 	// Then we expect to call send refresh, because the package list was empty.
-	refresher.EXPECT().SendRefresh()
+	refresher.EXPECT().SendRefresh(gomock.Any())
 
 	// We expect datastore to return the specified list of packages.
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(opsrcWant.Status.Packages)
 
 	// Then we expect to read the packages
-	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+	reader.EXPECT().CheckPackages(gomock.Any(), gomock.Any()).Return(nil)
 
 	// Then we expect a read to the datastore
-	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
@@ -178,16 +178,16 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("")
 
 	// Then we expect to call send refresh, because the package list was empty.
-	refresher.EXPECT().SendRefresh()
+	refresher.EXPECT().SendRefresh(gomock.Any())
 
 	packages := "a,b,c"
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
 	// Then we expect to read the packages
-	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+	reader.EXPECT().CheckPackages(gomock.Any(), gomock.Any()).Return(nil)
 
 	// Then we expect a read to the datastore
-	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	cscWant := helperNewCatalogSourceConfigWithLabels(opsrcIn.Namespace, opsrcIn.Name, labelsWant)
 	cscWant.Spec = v2.CatalogSourceConfigSpec{
@@ -253,16 +253,16 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("")
 
 	// Then we expect to call send refresh, because the package list was empty.
-	refresher.EXPECT().SendRefresh()
+	refresher.EXPECT().SendRefresh(gomock.Any())
 
 	packages := "a,b,c"
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return(packages)
 
 	// Then we expect to read the packages
-	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+	reader.EXPECT().CheckPackages(gomock.Any(), gomock.Any()).Return(nil)
 
 	// Then we expect a read to the datastore
-	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
 
@@ -322,15 +322,15 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID()).Return("")
 
 	// Then we expect to call send refresh, because the package list was empty.
-	refresher.EXPECT().SendRefresh()
+	refresher.EXPECT().SendRefresh(gomock.Any())
 
 	writer.EXPECT().GetPackageIDsByOperatorSource(opsrcIn.GetUID())
 
 	// Then we expect to read the packages
-	reader.EXPECT().CheckPackages(gomock.Any()).Return(nil)
+	reader.EXPECT().CheckPackages(gomock.Any(), gomock.Any()).Return(nil)
 
 	// Then we expect a read to the datastore
-	reader.EXPECT().Read(gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
+	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
 	kubeclient.EXPECT().Get(context.TODO(), gomock.Any(), gomock.Any()).Return(nil)
 	kubeclient.EXPECT().Update(context.TODO(), gomock.Any()).Return(updateError)

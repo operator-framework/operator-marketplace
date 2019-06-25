@@ -32,19 +32,30 @@ func New() *memoryDatastore {
 
 // Reader is the interface that wraps the Read method.
 type Reader interface {
-	// Read takes a package identifier and returns metadata defined in the opsrc
+	// Read takes an OperatorSource name and package identifier and returns metadata defined in the opsrc
 	// spec to associate that package to a specific opsrc in the marketplace.
 	// The OpsrcRef returned can be used to determine how to download manifests
 	// for a specific operator package.
-	Read(packageID string) (opsrcMeta *OpsrcRef, err error)
+	Read(source, packageID string) (opsrcMeta *OpsrcRef, err error)
 
-	// ReadVersion takes a package identifer and returns version metadata
+	// ReadRepositoryVersion takes an OperatorSource name and package identifer and returns version
 	// to associate that package to a particular repository version.
-	ReadRepositoryVersion(packageID string) (version string, err error)
+	ReadRepositoryVersion(source, packageID string) (version string, err error)
+
+	// GetAllOperatorSources returns a list of all OperatorSource objecs(s) that
+	// datastore is aware of.
+	GetAllOperatorSources() []*OperatorSourceKey
 
 	// CheckPackages returns an error if there are packages missing from the
 	// datastore but listed in the spec.
-	CheckPackages(packageIDs []string) error
+	CheckPackages(source string, packageIDs []string) error
+
+	// SearchForSource will return an OperatorSource that contains the list of packages.
+	// If an OperatorSource does not contains the list of packages, an error is returned.
+	SearchForSource(requiredPackages []string) (string, error)
+
+	// DoesSourceExist returns true if an OperatorSource with the given name exists
+	DoesSourceExist(source string) bool
 }
 
 // Writer is an interface that is used to manage the underlying datastore
@@ -128,8 +139,8 @@ type memoryDatastore struct {
 	rows *operatorSourceRowMap
 }
 
-func (ds *memoryDatastore) Read(packageID string) (opsrcMeta *OpsrcRef, err error) {
-	repository, err := ds.GetRepositoryByPackageName(packageID)
+func (ds *memoryDatastore) Read(source, packageID string) (opsrcMeta *OpsrcRef, err error) {
+	repository, err := ds.GetRepository(source, packageID)
 	if err != nil {
 		return
 	}
@@ -139,8 +150,8 @@ func (ds *memoryDatastore) Read(packageID string) (opsrcMeta *OpsrcRef, err erro
 	return
 }
 
-func (ds *memoryDatastore) ReadRepositoryVersion(packageID string) (version string, err error) {
-	repository, err := ds.GetRepositoryByPackageName(packageID)
+func (ds *memoryDatastore) ReadRepositoryVersion(source, packageID string) (version string, err error) {
+	repository, err := ds.GetRepository(source, packageID)
 	if err != nil {
 		return
 	}
@@ -169,6 +180,7 @@ func (ds *memoryDatastore) Write(opsrc *v1.OperatorSource, registryMetas []*Regi
 			Metadata: *metadata,
 			Package:  metadata.Repository,
 			Opsrc: &OpsrcRef{
+				Name:                 opsrc.Name,
 				Endpoint:             opsrc.Spec.Endpoint,
 				RegistryNamespace:    opsrc.Spec.RegistryNamespace,
 				SecretNamespacedName: secretNamespacedName,
@@ -183,17 +195,17 @@ func (ds *memoryDatastore) Write(opsrc *v1.OperatorSource, registryMetas []*Regi
 	return
 }
 
-func (ds *memoryDatastore) GetRepositoryByPackageName(pkg string) (repository *Repository, err error) {
+func (ds *memoryDatastore) GetRepository(sourceName, pkg string) (repository *Repository, err error) {
 	repositories := ds.rows.GetAllRepositories()
-
 	if len(repositories) == 0 {
 		err = fmt.Errorf("Datastore is empty. No package metadata to return.")
 		return
 	}
 
 	for _, repo := range repositories {
-		if repo.Package == pkg {
+		if repo.Package == pkg && repo.Opsrc.Name == sourceName {
 			repository = repo
+			break
 		}
 	}
 	if repository == nil {
@@ -217,10 +229,10 @@ func (ds *memoryDatastore) GetPackageIDsByOperatorSource(opsrcUID types.UID) str
 	return strings.Join(packages, ",")
 }
 
-func (ds *memoryDatastore) CheckPackages(packageIDs []string) error {
+func (ds *memoryDatastore) CheckPackages(source string, packageIDs []string) error {
 	missingPackages := []string{}
 	for _, packageID := range packageIDs {
-		if _, err := ds.Read(packageID); err != nil {
+		if _, err := ds.Read(source, packageID); err != nil {
 			missingPackages = append(missingPackages, packageID)
 			continue
 		}
@@ -228,8 +240,8 @@ func (ds *memoryDatastore) CheckPackages(packageIDs []string) error {
 
 	if len(missingPackages) > 0 {
 		return fmt.Errorf(
-			"Still resolving package(s) - %s. Please make sure these are valid packages.",
-			strings.Join(missingPackages, ","),
+			"Still resolving package(s) - %s. Please make sure these are valid packages within the %s OperatorSource.",
+			strings.Join(missingPackages, ","), source,
 		)
 	}
 	return nil
@@ -259,7 +271,7 @@ func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata 
 		return
 	}
 
-	result = newUpdateResult()
+	result = newUpdateResult(row.Name.Name)
 
 	for _, remote := range metadata {
 		if remote.Release == "" {
@@ -307,4 +319,33 @@ func (ds *memoryDatastore) OperatorSourceHasUpdate(opsrcUID types.UID, metadata 
 
 func (ds *memoryDatastore) GetAllOperatorSources() []*OperatorSourceKey {
 	return ds.rows.GetAllRows()
+}
+
+func (ds *memoryDatastore) DoesSourceExist(source string) bool {
+	for _, opSrc := range ds.GetAllOperatorSources() {
+		if source == opSrc.Name.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (ds *memoryDatastore) SearchForSource(packages []string) (string, error) {
+	opSrcs := ds.GetAllOperatorSources()
+	for _, opSrc := range opSrcs {
+		if ds.doesSourceContainPackages(opSrc.Name.Name, packages) {
+			return opSrc.Name.Name, nil
+		}
+	}
+	return "", fmt.Errorf("Unable to resolve the source - no source contains the requested package(s) %s", packages)
+}
+
+// doesSourceContainPackages returns true if the cached OperatorSource contains the list of packages.
+func (ds *memoryDatastore) doesSourceContainPackages(opSrc string, packages []string) bool {
+	for _, packageID := range packages {
+		if _, err := ds.Read(opSrc, packageID); err != nil {
+			return false
+		}
+	}
+	return true
 }

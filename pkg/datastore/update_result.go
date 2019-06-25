@@ -4,22 +4,27 @@ import (
 	"fmt"
 )
 
-func newUpdateResult() *UpdateResult {
+func newUpdateResult(opSrc string) *UpdateResult {
 	return &UpdateResult{
+		opSrc:   opSrc,
 		Updated: make([]string, 0),
 		Removed: make([]string, 0),
 	}
 }
 
-func NewPackageUpdateAggregator() *PackageUpdateAggregator {
+func NewPackageUpdateAggregator(opSrc string) *PackageUpdateAggregator {
 	return &PackageUpdateAggregator{
+		opSrc:   opSrc,
 		updated: map[string]bool{},
 		removed: map[string]bool{},
 	}
 }
 
-func NewPackageRefreshNotification() *PackageUpdateAggregator {
+// NewPackageRefreshNotification is used to update packages associated with
+// the OperatorSource.
+func NewPackageRefreshNotification(opSrc string) *PackageUpdateAggregator {
 	return &PackageUpdateAggregator{
+		opSrc:         opSrc,
 		refreshNeeded: true,
 	}
 }
@@ -27,6 +32,7 @@ func NewPackageRefreshNotification() *PackageUpdateAggregator {
 // UpdateResult holds information related to what has changed in the remote
 // registry associated with an operator source.
 type UpdateResult struct {
+	opSrc string
 	// RegistryHasUpdate indicates whether the remote registry associated with
 	// the operatour source has any change. It is set to true if any of the
 	// following is true:
@@ -51,6 +57,10 @@ func (a *UpdateResult) String() string {
 // PackageUpdateNotification is an interface used to determine whether a
 // specified operator has a new version or has been removed.
 type PackageUpdateNotification interface {
+	// GetOpSrc returns the name of the OperaterSource that update should
+	// be applied to.
+	GetOpSrc() string
+
 	// IsRemoved returns true if the specified package has been removed.
 	IsRemoved(pkg string) bool
 
@@ -67,6 +77,7 @@ type PackageUpdateNotification interface {
 // all operator source(s).
 // PackageUpdateAggregator also implements PackageUpdateNotification interface.
 type PackageUpdateAggregator struct {
+	opSrc         string
 	updated       map[string]bool
 	removed       map[string]bool
 	refreshNeeded bool
@@ -74,6 +85,10 @@ type PackageUpdateAggregator struct {
 
 func (a *PackageUpdateAggregator) IsRefreshNotification() bool {
 	return a.refreshNeeded
+}
+
+func (a *PackageUpdateAggregator) GetOpSrc() string {
+	return a.opSrc
 }
 
 // Add accepts an UpdateResult for a given operator source and aggregates it.

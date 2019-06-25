@@ -61,6 +61,12 @@ func (t *triggerer) Trigger(notification datastore.PackageUpdateNotification) er
 
 	allErrors := []error{}
 	for _, instance := range cscs.Items {
+		// If the source specified in the CatalogSourceConfig is not the
+		// OperatorSource that triggered the update, do not refresh the packages.
+		if instance.Spec.Source != notification.GetOpSrc() {
+			continue
+		}
+
 		// Needed because sdk does not get the gvk.
 		instance.EnsureGVK()
 
@@ -83,7 +89,7 @@ func (t *triggerer) setPackages(instance *v2.CatalogSourceConfig, notification d
 		// If this is a refresh notification, we need to access the datastore to determine
 		// what catalogsourceconfigs need to be refreshed.
 		if notification.IsRefreshNotification() {
-			datastoreVersion, err := t.reader.ReadRepositoryVersion(pkg)
+			datastoreVersion, err := t.reader.ReadRepositoryVersion(instance.Spec.Source, pkg)
 			if err != nil {
 				log.Errorf(
 					"Unable to resolve package %s associated with csc %s in datastore. Removing.",

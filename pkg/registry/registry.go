@@ -41,6 +41,7 @@ type registry struct {
 	log      *logrus.Entry
 	client   wrapper.Client
 	reader   datastore.Reader
+	source   string
 	packages string
 	key      types.NamespacedName
 	image    string
@@ -55,11 +56,12 @@ type Registry interface {
 }
 
 // NewRegistry returns an initialized instance of Registry
-func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, key types.NamespacedName, packages, image string) Registry {
+func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, key types.NamespacedName, source, packages, image string) Registry {
 	return &registry{
 		log:      log,
 		client:   client,
 		reader:   reader,
+		source:   source,
 		packages: packages,
 		key:      key,
 		image:    image,
@@ -250,7 +252,7 @@ func (r *registry) getLabel() map[string]string {
 func (r *registry) getAppRegistries() (appRegistries []string, secretIsPresent bool) {
 	packageIDs := v2.GetValidPackageSliceFromString(r.packages)
 	for _, packageID := range packageIDs {
-		opsrcMeta, err := r.reader.Read(packageID)
+		opsrcMeta, err := r.reader.Read(r.source, packageID)
 		if err != nil {
 			r.log.Errorf("Error %v reading package %s", err, packageID)
 			continue

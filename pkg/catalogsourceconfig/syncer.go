@@ -81,8 +81,9 @@ func (s *catalogSyncer) Send(notification datastore.PackageUpdateNotification) {
 }
 
 // SendRefresh sends a refresh notification to trigger refresh of all packages
-// if their datastore and status versions differ
-func (s *catalogSyncer) SendRefresh() {
-	refreshNotification := datastore.NewPackageRefreshNotification()
+// if their datastore and status versions differ. The refresh will only update
+// CatalogSourceConfigs whose sources match the name of the opSrc parameter.
+func (s *catalogSyncer) SendRefresh(opSrc string) {
+	refreshNotification := datastore.NewPackageRefreshNotification(opSrc)
 	s.Send(refreshNotification)
 }

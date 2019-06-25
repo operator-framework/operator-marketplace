@@ -39,6 +39,8 @@ type CatalogSourceConfigList struct {
 
 // CatalogSourceConfigSpec defines the desired state of CatalogSourceConfig
 type CatalogSourceConfigSpec struct {
+	// The name of the OperatorSource that the packages originate from
+	Source          string `json:"source"`
 	TargetNamespace string `json:"targetNamespace"`
 	Packages        string `json:"packages"`
 
