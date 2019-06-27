@@ -71,7 +71,7 @@ func configuringStateWhenPackageNameDoesNotExist(t *testing.T) {
 	// configuring phase with the expected message
 	expectedPhase := "Configuring"
 	expectedMessage := fmt.Sprintf("Unable to resolve the source - no source contains the requested package(s) [%s]", nonExistingPackageName)
-	err = helpers.WaitForExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	assert.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached expected phase/message, expected %v/%v", expectedPhase, expectedMessage))
 }
 
@@ -83,7 +83,7 @@ func childResourcesNotCreated(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check that the CatalogSourceConfig's child resources were not created.
-	err = helpers.CheckCscChildResourcesDeleted(test.Global.Client, cscName, namespace, namespace)
+	err = helpers.CheckChildResourcesDeleted(test.Global.Client, cscName, namespace, namespace)
 	assert.NoError(t, err, "Child resources of CatalogSourceConfig were unexpectedly created")
 }
 
@@ -108,7 +108,7 @@ func testOpSrcWithIdenticalPackages(t *testing.T) {
 	assert.NoError(t, err, "Could not create operator source")
 
 	// Check that the child resources were created.
-	err = helpers.CheckOpsrcChildResourcesCreated(client, opSrcName, namespace)
+	err = helpers.CheckChildResourcesCreated(client, opSrcName, namespace, namespace)
 	assert.NoError(t, err)
 
 	t.Run("resolved-multiple-sources", resolvedMultipleSources)
@@ -223,7 +223,7 @@ func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage s
 
 	// Check that the CatalogSourceConfig with an non-existing targetNamespace eventually reaches the
 	// configuring phase with the expected message.
-	err = helpers.WaitForExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
 	if err != nil {
 		return err
 	}

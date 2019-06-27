@@ -29,7 +29,7 @@ func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check for child resources.
-	err = helpers.CheckOpsrcChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace)
+	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace)
 	require.NoError(t, err)
 
 	// Check that the CatalogSource has the expected labels.

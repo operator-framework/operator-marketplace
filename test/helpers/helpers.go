@@ -80,10 +80,10 @@ func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment apps.De
 	})
 }
 
-// WaitForExpectedPhaseAndMessage checks if a CatalogSourceConfig with the given name exists in the namespace
+// WaitForCscExpectedPhaseAndMessage checks if a CatalogSourceConfig with the given name exists in the namespace
 // and makes sure that the phase and message matches the expected values.
 // If expectedMessage is an empty string, only the expectedPhase is checked.
-func WaitForExpectedPhaseAndMessage(client test.FrameworkClient, cscName string, namespace string, expectedPhase, expectedMessage string) error {
+func WaitForCscExpectedPhaseAndMessage(client test.FrameworkClient, cscName, namespace, expectedPhase, expectedMessage string) error {
 	// Check that the CatalogSourceConfig exists.
 	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	return wait.PollImmediate(RetryInterval, Timeout, func() (bool, error) {
@@ -105,7 +105,7 @@ func WaitForExpectedPhaseAndMessage(client test.FrameworkClient, cscName string,
 
 // WaitForOpSrcExpectedPhaseAndMessage checks if a OperatorSource with the given name exists in the namespace
 // and makes sure that the phase and message matches the expected values.
-func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName string, namespace string, expectedPhase string, expectedMessage string) error {
+func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName, namespace, expectedPhase, expectedMessage string) error {
 	resultOperatorSource := &v1.OperatorSource{}
 	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
 		err := WaitForResult(client, resultOperatorSource, namespace, opSrcName)
@@ -179,7 +179,7 @@ func DeleteRuntimeObject(client test.FrameworkClient, obj runtime.Object) error 
 
 // CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into
 // a runtime object for tests that rely on an OperatorSource
-func CreateOperatorSourceDefinition(name string, namespace string) *v1.OperatorSource {
+func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
 	return &v1.OperatorSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind: v1.OperatorSourceKind,
@@ -199,9 +199,9 @@ func CreateOperatorSourceDefinition(name string, namespace string) *v1.OperatorS
 	}
 }
 
-// CheckCscChildResourcesCreated checks that a CatalogSourceConfig's
+// CheckChildResourcesCreated checks that a CatalogSourceConfig's
 // child resources were deployed.
-func CheckCscChildResourcesCreated(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
 	// Check that the CatalogSource was created.
 	resultCatalogSource := &olm.CatalogSource{}
 	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
@@ -231,9 +231,9 @@ func CheckCscChildResourcesCreated(client test.FrameworkClient, cscName string, 
 	return nil
 }
 
-// CheckCscChildResourcesDeleted checks that a CatalogSourceConfig's
+// CheckChildResourcesDeleted checks that a CatalogSourceConfig's
 // child resources were deleted.
-func CheckCscChildResourcesDeleted(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+func CheckChildResourcesDeleted(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
 	// Check that the CatalogSource was deleted.
 	resultCatalogSource := &olm.CatalogSource{}
 	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
@@ -259,7 +259,7 @@ func CheckCscChildResourcesDeleted(client test.FrameworkClient, cscName string, 
 
 // CheckCscSuccessfulCreation checks that a CatalogSourceConfig
 // and it's child resources were deployed.
-func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
 	// Check that the CatalogSourceConfig was created.
 	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
@@ -268,7 +268,7 @@ func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, nam
 	}
 
 	// Check that all child resources were created.
-	err = CheckCscChildResourcesCreated(client, cscName, namespace, targetNamespace)
+	err = CheckChildResourcesCreated(client, cscName, namespace, targetNamespace)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName string, nam
 
 // CheckCscSuccessfulDeletion checks that a CatalogSourceConfig
 // and it's child resources were deleted.
-func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName string, namespace string, targetNamespace string) error {
+func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
 	// Check that the CatalogSourceConfig was deleted.
 	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
 	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
@@ -287,68 +287,10 @@ func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName string, nam
 	}
 
 	// Check that all child resources were deleted.
-	err = CheckCscChildResourcesDeleted(client, cscName, namespace, targetNamespace)
+	err = CheckChildResourcesDeleted(client, cscName, namespace, targetNamespace)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// CheckOpsrcChildResourcesCreated checks that a OperatorSource's
-// child resources were deployed.
-func CheckOpsrcChildResourcesCreated(client test.FrameworkClient, opsrcName string, namespace string) error {
-	// Check that the CatalogSource was created.
-	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForResult(client, resultCatalogSource, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Service was created.
-	resultService := &corev1.Service{}
-	err = WaitForResult(client, resultService, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Deployment was created.
-	resultDeployment := &apps.Deployment{}
-	err = WaitForResult(client, resultDeployment, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Now check that the Deployment is ready.
-	err = WaitForSuccessfulDeployment(client, *resultDeployment)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// CheckOpsrcChildResourcesDeleted checks that an OperatorSource's
-// child resources were deleted.
-func CheckOpsrcChildResourcesDeleted(client test.FrameworkClient, opsrcName string, namespace string) error {
-	// Check that the CatalogSource was deleted.
-	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForNotFound(client, resultCatalogSource, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Service was deleted.
-	resultService := &corev1.Service{}
-	err = WaitForNotFound(client, resultService, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Deployment was deleted.
-	resultDeployment := &apps.Deployment{}
-	err = WaitForNotFound(client, resultDeployment, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
 	return nil
 }
