@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorstatus"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -75,6 +76,7 @@ func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v2.CatalogS
 
 		if err == nil {
 			// No reconciliation err, but update of object has failed!
+			operatorstatus.SendEventMessage(err)
 			return updateErr
 		}
 

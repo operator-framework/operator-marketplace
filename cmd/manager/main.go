@@ -13,8 +13,8 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorstatus"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
-	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
@@ -49,6 +49,12 @@ func main() {
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		log.Fatalf("failed to get watch namespace: %v", err)
+	}
+
+	// Report that the operator is progressing towards a new version.
+	err = operatorstatus.StartReporting()
+	if err != nil {
+		log.Fatalf("Failed to create StatusMonitor %v", err)
 	}
 
 	// Get a config to talk to the apiserver
@@ -92,17 +98,11 @@ func main() {
 	log.Print("Starting the Cmd.")
 	stopCh := signals.SetupSignalHandler()
 
-	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
-	statusReportingDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)
-
 	go registrySyncer.Sync(stopCh)
 	go catalogsourceconfig.Syncer.Sync(stopCh)
 
 	// Start the Cmd
 	err = mgr.Start(stopCh)
-
-	// Wait for ClusterOperator status reporting routine to close the statusReportingDoneCh channel.
-	<-statusReportingDoneCh
 
 	exit(err)
 }

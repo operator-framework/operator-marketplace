@@ -5,7 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	operatorsourcehandler "github.com/operator-framework/operator-marketplace/pkg/operatorsource"
-	"github.com/operator-framework/operator-marketplace/pkg/status"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorstatus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,19 +64,11 @@ type ReconcileOperatorSource struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling OperatorSource %s/%s\n", request.Namespace, request.Name)
-	// Reconcile kicked off, message Sync Channel with sync event
-	status.SendSyncMessage(nil)
+	operatorstatus.SendEventMessage(nil)
 
-	// If err is not nil at the end of this function message the syncCh channel
-	var err error
-	defer func() {
-		if err != nil {
-			status.SendSyncMessage(err)
-		}
-	}()
 	// Fetch the OperatorSource instance
 	instance := &v1.OperatorSource{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

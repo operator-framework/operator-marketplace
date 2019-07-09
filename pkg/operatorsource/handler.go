@@ -7,6 +7,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorstatus"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,6 +114,7 @@ func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entr
 
 		if reconciliationErr == nil {
 			// No reconciliation err, but update of object has failed!
+			operatorstatus.SendEventMessage(reconciliationErr)
 			return updateErr
 		}
 
