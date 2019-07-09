@@ -77,6 +77,7 @@ func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcil
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		operatorstatus.SendEventMessage(err)
 		return reconcile.Result{}, err
 	}
 

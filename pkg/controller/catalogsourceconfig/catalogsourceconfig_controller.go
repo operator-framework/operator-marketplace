@@ -94,6 +94,7 @@ func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (rec
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		operatorstatus.SendEventMessage(err)
 		return reconcile.Result{}, err
 	}
 

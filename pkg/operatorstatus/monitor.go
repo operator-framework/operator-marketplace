@@ -22,11 +22,20 @@ const (
 	// degradedRatio is the ratio of failed transition to syncs that must be reached
 	// prior to reporting that the marketplace operator is  degraded.
 	degradedRatio = 0.7
+
+	// syncLimit is used to prevent the sync and failed phase transition event counts
+	// from overflowing in a long running operator.
+	// Once the number of syncs reaches the syncLimit value, syncs
+	// and failedTransitions will be recalculated with the following
+	// equation: updatedValue = currentValue / truncateValue.
+	syncLimit     = 1000
+	truncateValue = 10
 )
 
 var (
-	instance *statusMonitor
-	once     sync.Once
+	// statusMon is a singleton.
+	statusMon *statusMonitor
+	once      sync.Once
 )
 
 type statusMonitor struct {
@@ -36,7 +45,7 @@ type statusMonitor struct {
 	eventCh      chan error
 }
 
-// initInstance initializes the statusMonitor singleton named instance.
+// initInstance initializes the statusMonitor singleton named statusMon.
 func initInstance() error {
 	// Get the watch namespace.
 	namespace, err := k8sutil.GetWatchNamespace()
@@ -50,21 +59,27 @@ func initInstance() error {
 		return fmt.Errorf("Error creating ClusterOpreator writer: %v", err)
 	}
 
-	// Initialize the instance singleton once.
+	// Initialize the statusMon singleton once.
 	once.Do(func() {
-		// init the instance singleton.
-		instance = &statusMonitor{
-			coWriter:     coWriter,
-			namespace:    namespace,
-			eventTracker: eventTracker{0, 0, 1000, 10, sync.Mutex{}},
-			eventCh:      make(chan error, 32),
+		// init the statusMon singleton.
+		statusMon = &statusMonitor{
+			coWriter:  coWriter,
+			namespace: namespace,
+			eventTracker: eventTracker{
+				syncs:             0,
+				failedTransitions: 0,
+				syncLimit:         syncLimit,
+				truncateValue:     truncateValue,
+				lock:              sync.Mutex{},
+			},
+			eventCh: make(chan error, 32),
 		}
 	})
 
 	return nil
 }
 
-// StartReporting initializes the instance singleton and starts reporting
+// StartReporting initializes the statusMon singleton and starts reporting
 // ClusterOperator status.
 func StartReporting() error {
 	err := initInstance()
@@ -72,13 +87,13 @@ func StartReporting() error {
 		return err
 	}
 
-	err = instance.reportProgressing()
+	err = statusMon.reportProgressing()
 	if err != nil {
 		log.Errorf("[status] Error updating status: %v", err)
 	}
 
-	go instance.eventChannelReceiver()
-	go instance.monitorEvents()
+	go statusMon.eventChannelReceiver()
+	go statusMon.monitorEvents()
 
 	return nil
 }
@@ -104,13 +119,13 @@ func (s *statusMonitor) eventChannelReceiver() {
 func SendEventMessage(err error) {
 	// If the coAPI is not available do not attempt to send messages to the
 	// sync channel
-	if instance == nil {
+	if statusMon == nil {
 		return
 	}
 
 	// A missing sync status is better than stalling the controller
 	select {
-	case instance.eventCh <- err:
+	case statusMon.eventCh <- err:
 		break
 	default:
 		log.Warning("[status] Event channel is busy, not reporting event")
