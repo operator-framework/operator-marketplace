@@ -331,9 +331,8 @@ func (s *status) monitorClusterStatus() {
 	for {
 		select {
 		case <-s.stopCh:
-			// If the stopCh is closed, the operator will exit and CO should
-			// be set to degraded.
-			msg := "The operator has exited and is no longer reporting status."
+			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
+			msg := "The operator has exited"
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg)
 			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg)
