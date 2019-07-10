@@ -53,6 +53,19 @@ rules:
   - update
   - list
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
   - apps
   resources:
   - deployments
