@@ -8,6 +8,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -110,6 +111,9 @@ func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entr
 	// In either case, we need to update the modified OperatorSource object.
 	if updateErr := h.client.Update(ctx, opsrc); updateErr != nil {
 		logger.Errorf("Failed to update object - %v", updateErr)
+
+		// Error updating the object - report a failed sync.
+		status.SendSyncMessage(updateErr)
 
 		if reconciliationErr == nil {
 			// No reconciliation err, but update of object has failed!

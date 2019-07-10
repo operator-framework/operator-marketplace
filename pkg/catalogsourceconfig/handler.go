@@ -5,6 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	operatorstatus "github.com/operator-framework/operator-marketplace/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -72,6 +73,9 @@ func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v2.CatalogS
 	// case, we need to update the modified CatalogSourceConfig object.
 	if updateErr := h.client.Update(ctx, out); updateErr != nil {
 		log.Errorf("Failed to update object - %v", updateErr)
+
+		// Error updating the object - report a failed sync.
+		operatorstatus.SendSyncMessage(updateErr)
 
 		if err == nil {
 			// No reconciliation err, but update of object has failed!
