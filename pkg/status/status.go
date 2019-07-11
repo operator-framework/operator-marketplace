@@ -324,10 +324,12 @@ func (s *status) monitorClusterStatus() {
 		select {
 		case <-s.stopCh:
 			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
+			reason := "OperatorExited"
+			msg := "The operator has exited"
 			conditionListBuilder := clusterStatusListBuilder()
-			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, "")
-			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, "The operator has exited and is no longer reporting status.")
-			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, "")
+			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
+			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
+			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 			statusErr := s.setStatus(statusConditions)
 			if statusErr != nil {
 				log.Error("[status] " + statusErr.Error())
@@ -347,10 +349,12 @@ func (s *status) monitorClusterStatus() {
 			// Create the cluster operator in the progressing state if it does not exist
 			// or if it is the first report.
 			if s.clusterOperator == nil {
+				reason := "OperatorStarting"
 				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards %s", s.version))
-				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, "")
-				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, "")
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", s.version), reason)
+				msg := fmt.Sprintf("Determining status")
+				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
+				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 				statusErr = s.setStatus(statusConditions)
 				break
 			}
@@ -364,9 +368,10 @@ func (s *status) monitorClusterStatus() {
 
 			// Report that marketplace is available after meeting minimal syncs.
 			if cohelpers.IsStatusConditionFalse(s.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
+				reason := "OperatorAvailable"
 				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, "")
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("%s is available", s.version))
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
+				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
 				statusErr = s.setStatus(statusConditions)
 				break
 			}
@@ -377,9 +382,9 @@ func (s *status) monitorClusterStatus() {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
 				conditionListBuilder := clusterStatusListBuilder()
 				if isSucceeding {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, "")
+					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
 				} else {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Current CR sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio))
+					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Current CR sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsFailing")
 				}
 				statusErr = s.setStatus(statusConditions)
 				break
