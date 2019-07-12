@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,7 @@ func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check for child resources.
-	err = helpers.CheckOpsrcChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace)
+	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace, v1.OperatorSourceKind)
 	require.NoError(t, err)
 
 	// Check that the CatalogSource has the expected labels.

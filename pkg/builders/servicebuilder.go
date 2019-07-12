@@ -34,13 +34,26 @@ func (b *ServiceBuilder) WithMeta(name, namespace string) *ServiceBuilder {
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
-func (b *ServiceBuilder) WithOwnerLabel(name, namespace string) *ServiceBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *ServiceBuilder) WithOpsrcOwnerLabel(name, namespace string) *ServiceBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.service.GetLabels() {
+		labels[key] = value
 	}
 
+	b.service.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *ServiceBuilder) WithCscOwnerLabel(name, namespace string) *ServiceBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.service.GetLabels() {
 		labels[key] = value
 	}

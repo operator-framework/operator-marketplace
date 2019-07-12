@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
@@ -44,6 +45,7 @@ type registry struct {
 	source   string
 	packages string
 	key      types.NamespacedName
+	owner    string
 	image    string
 	address  string
 }
@@ -56,7 +58,7 @@ type Registry interface {
 }
 
 // NewRegistry returns an initialized instance of Registry
-func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, key types.NamespacedName, source, packages, image string) Registry {
+func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Reader, key types.NamespacedName, source, packages, image, owner string) Registry {
 	return &registry{
 		log:      log,
 		client:   client,
@@ -64,6 +66,7 @@ func NewRegistry(log *logrus.Entry, client wrapper.Client, reader datastore.Read
 		source:   source,
 		packages: packages,
 		key:      key,
+		owner:    owner,
 		image:    image,
 	}
 }
@@ -292,11 +295,15 @@ func (r *registry) getSubjects() []rbac.Subject {
 // newDeployment() returns a Deployment object that can be used to bring up a
 // registry deployment
 func (r *registry) newDeployment(registryCommand []string, needServiceAccount bool) *apps.Deployment {
-	return new(builders.DeploymentBuilder).
+	builder := new(builders.DeploymentBuilder).
 		WithMeta(r.key.Name, r.key.Namespace).
-		WithOwnerLabel(r.key.Name, r.key.Namespace).
-		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand, needServiceAccount)).
-		Deployment()
+		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand, needServiceAccount))
+	if r.owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+	} else if r.owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+	}
+	return builder.Deployment()
 }
 
 // newPodTemplateSpec returns a PodTemplateSpec object that can be used to bring
@@ -351,38 +358,54 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 // newRole returns a Role object with the rules set to access secrets from the
 // registry pod
 func (r *registry) newRole() *rbac.Role {
-	return new(builders.RoleBuilder).
+	builder := new(builders.RoleBuilder).
 		WithMeta(r.key.Name, r.key.Namespace).
-		WithOwnerLabel(r.key.Name, r.key.Namespace).
-		WithRules(getRules()).
-		Role()
+		WithRules(getRules())
+	if r.owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+	} else if r.owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+	}
+	return builder.Role()
 }
 
 // newRoleBinding returns a RoleBinding object RoleRef set to the given Role.
 func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
-	return new(builders.RoleBindingBuilder).
+	builder := new(builders.RoleBindingBuilder).
 		WithMeta(r.key.Name, r.key.Namespace).
-		WithOwnerLabel(r.key.Name, r.key.Namespace).
 		WithSubjects(r.getSubjects()).
-		WithRoleRef(roleName).
-		RoleBinding()
+		WithRoleRef(roleName)
+	if r.owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+	} else if r.owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+	}
+	return builder.RoleBinding()
 }
 
 // newService returns a new Service object.
 func (r *registry) newService() *core.Service {
-	return new(builders.ServiceBuilder).
+	builder := new(builders.ServiceBuilder).
 		WithMeta(r.key.Name, r.key.Namespace).
-		WithOwnerLabel(r.key.Name, r.key.Namespace).
-		WithSpec(r.newServiceSpec()).
-		Service()
+		WithSpec(r.newServiceSpec())
+	if r.owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+	} else if r.owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+	}
+	return builder.Service()
 }
 
 // newServiceAccount returns a new ServiceAccount object.
 func (r *registry) newServiceAccount() *core.ServiceAccount {
-	return new(builders.ServiceAccountBuilder).
-		WithMeta(r.key.Name, r.key.Namespace).
-		WithOwnerLabel(r.key.Name, r.key.Namespace).
-		ServiceAccount()
+	builder := new(builders.ServiceAccountBuilder).
+		WithMeta(r.key.Name, r.key.Namespace)
+	if r.owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+	} else if r.owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+	}
+	return builder.ServiceAccount()
 }
 
 // newServiceSpec returns a ServiceSpec as required to front the registry deployment

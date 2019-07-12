@@ -61,13 +61,26 @@ func (b *CatalogSourceBuilder) WithOLMLabels(cscLabels map[string]string) *Catal
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the CatalogSource object to the given owner.
-func (b *CatalogSourceBuilder) WithOwnerLabel(name, namespace string) *CatalogSourceBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *CatalogSourceBuilder) WithOpsrcOwnerLabel(name, namespace string) *CatalogSourceBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.cs.GetLabels() {
+		labels[key] = value
 	}
 
+	b.cs.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the CatalogSource object to the given owner.
+func (b *CatalogSourceBuilder) WithCscOwnerLabel(name, namespace string) *CatalogSourceBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.cs.GetLabels() {
 		labels[key] = value
 	}

@@ -35,13 +35,26 @@ func (b *ServiceAccountBuilder) WithMeta(name, namespace string) *ServiceAccount
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the ServiceAccount object to the given owner.
-func (b *ServiceAccountBuilder) WithOwnerLabel(name, namespace string) *ServiceAccountBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the ServiceAccount object to the given owner.
+func (b *ServiceAccountBuilder) WithOpsrcOwnerLabel(name, namespace string) *ServiceAccountBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.sa.GetLabels() {
+		labels[key] = value
 	}
 
+	b.sa.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the ServiceAccount object to the given owner.
+func (b *ServiceAccountBuilder) WithCscOwnerLabel(name, namespace string) *ServiceAccountBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.sa.GetLabels() {
 		labels[key] = value
 	}

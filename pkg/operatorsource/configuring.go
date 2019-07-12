@@ -126,7 +126,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 	for key, value := range in.Labels {
 		labels[key] = value
 	}
-	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, in.Name, packages, labels)
+	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, in.Name, packages, v1.OperatorSourceKind, labels)
 	if err != nil {
 		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return

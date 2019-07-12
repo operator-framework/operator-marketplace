@@ -36,13 +36,26 @@ func (b *DeploymentBuilder) WithMeta(name, namespace string) *DeploymentBuilder 
 	return b
 }
 
-// WithOwnerLabel sets the owner label of the Deployment object to the given owner.
-func (b *DeploymentBuilder) WithOwnerLabel(name, namespace string) *DeploymentBuilder {
+// WithOpsrcOwnerLabel sets the owner label of the Deployment object to the given owner.
+func (b *DeploymentBuilder) WithOpsrcOwnerLabel(name, namespace string) *DeploymentBuilder {
 	labels := map[string]string{
-		OwnerNameLabel:      name,
-		OwnerNamespaceLabel: namespace,
+		OpsrcOwnerNameLabel:      name,
+		OpsrcOwnerNamespaceLabel: namespace,
+	}
+	for key, value := range b.deployment.GetLabels() {
+		labels[key] = value
 	}
 
+	b.deployment.SetLabels(labels)
+	return b
+}
+
+// WithCscOwnerLabel sets the owner label of the Deployment object to the given owner.
+func (b *DeploymentBuilder) WithCscOwnerLabel(name, namespace string) *DeploymentBuilder {
+	labels := map[string]string{
+		CscOwnerNameLabel:      name,
+		CscOwnerNamespaceLabel: namespace,
+	}
 	for key, value := range b.deployment.GetLabels() {
 		labels[key] = value
 	}

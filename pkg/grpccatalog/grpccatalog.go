@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
@@ -41,7 +42,7 @@ type GrpcCatalog struct {
 // EnsureResources creates a GRPC CatalogSource if one does not already
 // exists otherwise it updates an existing one. It then creates/updates all the
 // resources it requires.
-func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, publisher, targetNamespace, source, packages string, labels map[string]string) error {
+func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, publisher, targetNamespace, source, packages, owner string, labels map[string]string) error {
 	// Ensure reader is not nil
 	if r.reader == nil {
 		return fmt.Errorf("GrpcCatalog.reader is not defined")
@@ -53,7 +54,7 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 	}
 
 	// Ensure that a registry deployment is available
-	registry := registry.NewRegistry(r.log, r.client, r.reader, key, source, packages, registry.ServerImage)
+	registry := registry.NewRegistry(r.log, r.client, r.reader, key, source, packages, registry.ServerImage, owner)
 	err = registry.Ensure()
 	if err != nil {
 		return err
@@ -79,7 +80,7 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 		r.log.Infof("Updated CatalogSource %s", catalogSourceGet.Name)
 	} else {
 		// Create the CatalogSource structure
-		catalogSource := newCatalogSource(labels, csKey, displayName, publisher, key.Namespace, registry.GetAddress())
+		catalogSource := newCatalogSource(labels, csKey, displayName, publisher, key.Namespace, registry.GetAddress(), owner)
 		r.log.Infof("Creating CatalogSource %s", catalogSource.Name)
 		err = r.client.Create(context.TODO(), catalogSource)
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -93,12 +94,15 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 }
 
 // newCatalogSource returns a CatalogSource object.
-func newCatalogSource(labels map[string]string, key types.NamespacedName, displayName, publisher, namespace, address string) *olm.CatalogSource {
+func newCatalogSource(labels map[string]string, key types.NamespacedName, displayName, publisher, namespace, address, owner string) *olm.CatalogSource {
 	builder := new(builders.CatalogSourceBuilder).
-		WithOwnerLabel(key.Name, namespace).
 		WithMeta(key.Name, key.Namespace).
 		WithSpec(olm.SourceTypeGrpc, address, displayName, publisher)
-
+	if owner == v1.OperatorSourceKind {
+		builder.WithOpsrcOwnerLabel(key.Name, namespace)
+	} else if owner == v2.CatalogSourceConfigKind {
+		builder.WithCscOwnerLabel(key.Name, namespace)
+	}
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint
 	// for us to set the "olm-visibility" label in the CatalogSource so that it
@@ -114,13 +118,10 @@ func newCatalogSource(labels map[string]string, key types.NamespacedName, displa
 }
 
 // DeleteResources deletes a CatalogSource and all resources that make up a registry.
-func (r *GrpcCatalog) DeleteResources(ctx context.Context, name, namespace, targetNamespace string) (err error) {
+func (r *GrpcCatalog) DeleteResources(ctx context.Context, name, namespace, targetNamespace, owner string) (err error) {
 	allErrors := []error{}
-	labelMap := map[string]string{
-		builders.OwnerNameLabel:      name,
-		builders.OwnerNamespaceLabel: namespace,
-	}
-	labelSelector := labels.SelectorFromSet(labelMap)
+	ownerLabel := builders.GetOwnerLabel(name, namespace, owner)
+	labelSelector := labels.SelectorFromSet(ownerLabel)
 	catalogSourceOptions := &client.ListOptions{LabelSelector: labelSelector}
 	catalogSourceOptions.InNamespace(targetNamespace)
 	namespacedResourceOptions := &client.ListOptions{LabelSelector: labelSelector}

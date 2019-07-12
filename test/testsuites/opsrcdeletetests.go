@@ -3,6 +3,7 @@ package testsuites
 import (
 	"testing"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func testDeleteOpSrc(t *testing.T) {
 	require.NoError(t, err, "Could not create OperatorSource.")
 
 	// Check for the child resources.
-	err = helpers.CheckOpsrcChildResourcesCreated(test.Global.Client, testOperatorSource.Name, namespace)
+	err = helpers.CheckChildResourcesCreated(test.Global.Client, testOperatorSource.Name, namespace, namespace, v1.OperatorSourceKind)
 	require.NoError(t, err, "Could not ensure that child resources were created")
 
 	// Now let's delete the OperatorSource
@@ -42,6 +43,6 @@ func testDeleteOpSrc(t *testing.T) {
 
 	// Now let's wait until the OperatorSource is successfully deleted and the
 	// child resources are removed.
-	err = helpers.CheckOpsrcChildResourcesDeleted(test.Global.Client, testOperatorSource.Name, namespace)
+	err = helpers.CheckChildResourcesDeleted(test.Global.Client, testOperatorSource.Name, namespace, namespace)
 	require.NoError(t, err, "Could not ensure child resources were deleted.")
 }
