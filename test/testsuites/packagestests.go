@@ -200,7 +200,7 @@ func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage s
 	// Get global framework variables.
 	client := test.Global.Client
 
-	// Create a new CatalogSourceConfig with a non-existing targetNamespace.
+	// Create a new CatalogSourceConfig.
 	csc := &v2.CatalogSourceConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind: v2.CatalogSourceConfigKind,
@@ -210,7 +210,7 @@ func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage s
 		},
 		Spec: v2.CatalogSourceConfigSpec{
 			Source:          source,
-			TargetNamespace: "openshift-marketplace",
+			TargetNamespace: namespace,
 			Packages:        packages,
 		}}
 
