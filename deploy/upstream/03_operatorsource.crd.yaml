@@ -50,6 +50,7 @@ spec:
     JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
+      description: OperatorSource is used to define the external datastore we are using to store operator bundles.
       properties:
         spec:
           type: object
