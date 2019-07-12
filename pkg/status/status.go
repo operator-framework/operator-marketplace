@@ -375,26 +375,16 @@ func (s *status) monitorClusterStatus() {
 				break
 			}
 
-			// Report that marketplace is available after meeting minimal syncs.
-			if cohelpers.IsStatusConditionFalse(s.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
-				reason := "OperatorAvailable"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
-				err := s.setStatus(statusConditions)
-				if err != nil {
-					log.Error("[status] " + err.Error())
-				}
-				break
-			}
-
 			// Update the status with the appropriate state.
 			isSucceeding, ratio := s.syncRatio.IsSucceeding()
 			if ratio != nil {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
+				// Set all conditions in case Marketplace CO has been deleted.
+				reason := "OperatorAvailable"
 				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
+				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				if isSucceeding {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
 				} else {
