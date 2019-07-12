@@ -351,14 +351,6 @@ func (s *status) monitorClusterStatus() {
 		// Attempt to update the ClusterOperator status whenever the seconds
 		// number of seconds defined by coStatusReportInterval passes.
 		case <-time.After(coStatusReportInterval):
-			// Log any status update errors after exit.
-			var statusErr error
-			defer func() {
-				if statusErr != nil {
-					log.Error("[status] " + statusErr.Error())
-				}
-			}()
-
 			// Create the ClusterOperator in the progressing state if it does not exist
 			// or if it is the first report.
 			if s.clusterOperator == nil {
@@ -369,7 +361,10 @@ func (s *status) monitorClusterStatus() {
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
-				statusErr = s.setStatus(statusConditions)
+				err := s.setStatus(statusConditions)
+				if err != nil {
+					log.Error("[status] " + err.Error())
+				}
 				break
 			}
 
@@ -387,7 +382,10 @@ func (s *status) monitorClusterStatus() {
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
 				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
-				statusErr = s.setStatus(statusConditions)
+				err := s.setStatus(statusConditions)
+				if err != nil {
+					log.Error("[status] " + err.Error())
+				}
 				break
 			}
 
@@ -402,7 +400,10 @@ func (s *status) monitorClusterStatus() {
 				} else {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Current CR sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsFailing")
 				}
-				statusErr = s.setStatus(statusConditions)
+				err := s.setStatus(statusConditions)
+				if err != nil {
+					log.Error("[status] " + err.Error())
+				}
 				break
 			}
 		}
