@@ -122,7 +122,22 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 		}
 		r.log.Infof("Created Deployment %s with registry command: %s", deployment.GetName(), registryCommand)
 	} else {
-		deployment.Spec.Template = r.newPodTemplateSpec(registryCommand, needServiceAccount)
+		// Check if the list of containers is empty. Based on that we will either create a spec
+		// from scratch or update the existing container spec.
+		if len(deployment.Spec.Template.Spec.Containers) == 0 {
+			deployment.Spec.Template = r.newPodTemplateSpec(registryCommand, needServiceAccount)
+		} else {
+			// Update the command passed to the registry to account for packages being added and removed
+			// from Quay
+			deployment.Spec.Template.Spec.Containers[0].Command = registryCommand
+
+			// It is possible that private app-registries were added to an OperatorSource requiring addition
+			// of an authorization token. In that scenario we have to add the service account to the spec.
+			// There is no harm updating in other cases.
+			if needServiceAccount {
+				deployment.Spec.Template.Spec.ServiceAccountName = r.key.Name
+			}
+		}
 		// Set or update the annotation to force an update. This is required so that we get updates
 		// from Quay during the sync cycle when packages have not been added or removed from the spec.
 		meta.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, deploymentUpdateAnnotation,

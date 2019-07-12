@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gomock "github.com/golang/mock/gomock"
@@ -327,6 +328,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	// Then we expect a read to the datastore
 	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
+	// replicas := int32(1)
 	kubeclient.EXPECT().Get(context.TODO(), gomock.Any(), gomock.Any()).Return(nil)
 	kubeclient.EXPECT().Update(context.TODO(), gomock.Any()).Return(updateError)
 
