@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -17,7 +18,8 @@ import (
 )
 
 const (
-	cscErrMsg = "CatalogSourceConfig child resource(s) were not recreated"
+	cscErrMsg   = "CatalogSourceConfig child resource(s) were not recreated"
+	opsrcErrMsg = "OperatorSource child resource(s) were not recreated"
 )
 
 // WatchTests is a test suite that ensure that the watches for child resources
@@ -26,6 +28,9 @@ func WatchTests(t *testing.T) {
 	t.Run("restore-csc-catalogsource", testRestoreCscCs)
 	t.Run("restore-csc-deployment", testRestoreCscDeployment)
 	t.Run("restore-csc-service", testRestoreCscService)
+	t.Run("restore-opsrc-catalogsource", testRestoreOpSrcCs)
+	t.Run("restore-opsrc-deployment", testRestoreOpSrcDeployment)
+	t.Run("restore-opsrc-service", testRestoreOpSrcService)
 }
 
 // testRestoreCscCs tests that when a CatalogSource that is owned by a CatalogSourceConfig
@@ -49,6 +54,27 @@ func testRestoreCscService(t *testing.T) {
 	assert.NoError(t, err, cscErrMsg)
 }
 
+// testRestoreOpSrcCs tests that when a CatalogSource that is owned by an OperatorSource
+// is restored upon deletion.
+func testRestoreOpSrcCs(t *testing.T) {
+	err := deleteCheckRestoreChild(t, olm.CatalogSourceKind, v1.OperatorSourceKind)
+	assert.NoError(t, err, opsrcErrMsg)
+}
+
+// testRestoreOpSrcDeployment tests that when a Deployment that is owned by an OperatorSource
+// is restored upon deletion.
+func testRestoreOpSrcDeployment(t *testing.T) {
+	err := deleteCheckRestoreChild(t, "Deployment", v1.OperatorSourceKind)
+	assert.NoError(t, err, opsrcErrMsg)
+}
+
+// testRestoreOpSrcService tests that when a Service that is owned by an OperatorSourceKind
+// is restored upon deletion.
+func testRestoreOpSrcService(t *testing.T) {
+	err := deleteCheckRestoreChild(t, "Service", v1.OperatorSourceKind)
+	assert.NoError(t, err, opsrcErrMsg)
+}
+
 // deleteCheckRestoreChild constructs the child resource based on the object and
 // deletes it. It then checks if the child resources were recreated.
 func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
@@ -67,6 +93,9 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 	case v2.CatalogSourceConfigKind:
 		name = helpers.TestCatalogSourceConfigName
 		targetNamespace = helpers.TestCatalogSourceConfigTargetNamespace
+	case v1.OperatorSourceKind:
+		name = helpers.TestOperatorSourceName
+		targetNamespace = namespace
 	default:
 		return fmt.Errorf("Unknown owner %s", owner)
 	}
