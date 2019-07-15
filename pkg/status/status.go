@@ -51,6 +51,10 @@ const (
 	// Marketplace is always upgradeable and should include this message in the Upgradeable
 	// ClusterOperatorStatus condition.
 	upgradeableMessage = "Marketplace is upgradeable"
+
+	// coSleep is the amount of time marketplace will sleep betwee reporting its status
+	// once it reports available.
+	coSleepDuration = 5 * time.Minute
 )
 
 // status will be a singleton
@@ -394,6 +398,7 @@ func (s *status) monitorClusterStatus() {
 				if err != nil {
 					log.Error("[status] " + err.Error())
 				}
+				time.Sleep(coSleepDuration)
 				break
 			}
 		}
