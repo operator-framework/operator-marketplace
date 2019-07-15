@@ -47,6 +47,10 @@ const (
 
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
+
+	// Marketplace is always upgradeable and should include this message in the Upgradeable
+	// ClusterOperatorStatus condition.
+	upgradeableMessage = "Marketplace is upgradeable"
 )
 
 // status will be a singleton
@@ -337,6 +341,7 @@ func (s *status) monitorClusterStatus() {
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
 			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
+			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 			statusErr := s.setStatus(statusConditions)
 			if statusErr != nil {
@@ -360,6 +365,7 @@ func (s *status) monitorClusterStatus() {
 				reason := "OperatorStarting"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", s.version), reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
@@ -379,6 +385,7 @@ func (s *status) monitorClusterStatus() {
 				reason := "OperatorAvailable"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
 				statusErr = s.setStatus(statusConditions)
 				break
@@ -389,6 +396,7 @@ func (s *status) monitorClusterStatus() {
 			if ratio != nil {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
 				conditionListBuilder := clusterStatusListBuilder()
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
 				if isSucceeding {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
 				} else {

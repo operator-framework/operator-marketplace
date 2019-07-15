@@ -34,6 +34,7 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
+		configv1.OperatorUpgradeable: configv1.ConditionTrue,
 		configv1.OperatorProgressing: configv1.ConditionFalse,
 		configv1.OperatorAvailable:   configv1.ConditionTrue,
 		configv1.OperatorDegraded:    configv1.ConditionFalse}
