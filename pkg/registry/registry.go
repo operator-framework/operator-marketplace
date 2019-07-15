@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -22,10 +23,11 @@ import (
 )
 
 const (
-	containerName   = "registry-server"
-	clusterRoleName = "marketplace-operator-registry-server"
-	portNumber      = 50051
-	portName        = "grpc"
+	containerName              = "registry-server"
+	clusterRoleName            = "marketplace-operator-registry-server"
+	portNumber                 = 50051
+	portName                   = "grpc"
+	deploymentUpdateAnnotation = "openshift-marketplace-update-hash"
 )
 
 var action = []string{"grpc_health_probe", "-addr=localhost:50051"}
@@ -120,26 +122,11 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 		}
 		r.log.Infof("Created Deployment %s with registry command: %s", deployment.GetName(), registryCommand)
 	} else {
-		// Scale down the deployment. This is required so that we get updates
-		// from Quay during the sync cycle when packages have not been added or
-		// removed from the spec.
-		var replicas int32
-		deployment.Spec.Replicas = &replicas
-		if err = r.client.Update(context.TODO(), deployment); err != nil {
-			r.log.Errorf("Failed to update Deployment %s for scale down: %v", deployment.GetName(), err)
-			return err
-		}
-
-		// Wait for the deployment to scale down. We need to get the latest version of the object after
-		// the update, so we use the object returned here for scaling up.
-		if deployment, err = r.waitForDeploymentScaleDown(2*time.Second, 1*time.Minute); err != nil {
-			r.log.Errorf("Failed to scale down Deployment %s : %v", deployment.GetName(), err)
-			return err
-		}
-
-		replicas = 1
-		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Template = r.newPodTemplateSpec(registryCommand, needServiceAccount)
+		// Set or update the annotation to force an update. This is required so that we get updates
+		// from Quay during the sync cycle when packages have not been added or removed from the spec.
+		meta.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, deploymentUpdateAnnotation,
+			fmt.Sprintf("%x", time.Now().UnixNano()))
 		if err = r.client.Update(context.TODO(), deployment); err != nil {
 			r.log.Errorf("Failed to update Deployment %s : %v", deployment.GetName(), err)
 			return err
