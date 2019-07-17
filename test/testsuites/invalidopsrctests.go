@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -25,6 +26,7 @@ func InvalidOpSrc(t *testing.T) {
 	t.Run("invalid-endpoint", testOpSrcWithInvalidEndpoint)
 	t.Run("invalid-url", testOpSrcWithInvalidURL)
 	t.Run("nonexistent-registry-namespace", testOpSrcWithNonexistentRegistryNamespace)
+	t.Run("object-in-other-namespace", testOpSrcInOtherNamespace)
 }
 
 // Create OperatorSource with invalid endpoint
@@ -63,7 +65,7 @@ func testOpSrcWithInvalidEndpoint(t *testing.T) {
 
 	// Check that OperatorSource is in "Configuring" state with appropriate message
 	expectedPhase := "Configuring"
-	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "no such host")
+	_, err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "no such host")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 
 	// Delete the OperatorSource
@@ -107,7 +109,7 @@ func testOpSrcWithInvalidURL(t *testing.T) {
 
 	// Check that OperatorSource reaches "Failed" state eventually
 	expectedPhase := "Failed"
-	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "Invalid OperatorSource endpoint")
+	_, err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "Invalid OperatorSource endpoint")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 
 	// Delete the OperatorSource
@@ -154,10 +156,64 @@ func testOpSrcWithNonexistentRegistryNamespace(t *testing.T) {
 
 	// Check that OperatorSource reaches "Failed" state eventually
 	expectedPhase := "Failed"
-	err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "The OperatorSource endpoint returned an empty manifest list")
+	_, err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase, "The OperatorSource endpoint returned an empty manifest list")
 	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %v", expectedPhase))
 
 	// Delete the OperatorSource
 	err = helpers.DeleteRuntimeObject(client, nonexistentRegistryNamespaceOperatorSource)
 	require.NoError(t, err, "Could not delete OperatorSource")
+}
+
+// testOpSrcInOtherNamespace creates an OperatorSource in the default namespace
+// and forces it through all the phases
+// Expected result: OperatorSource always reaches failed state
+func testOpSrcInOtherNamespace(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get global framework variables
+	client := test.Global.Client
+
+	// Create the OperatorSource in the default namespace
+	namespace := "default"
+	opSrcName := "other-namespace-opsrc"
+	otherNamespaceOperatorSource := &v1.OperatorSource{
+		TypeMeta: metav1.TypeMeta{
+			Kind: v1.OperatorSourceKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opSrcName,
+			Namespace: namespace,
+		},
+		Spec: v1.OperatorSourceSpec{
+			Type:              endpointType,
+			Endpoint:          "https://quay.io/cnr",
+			RegistryNamespace: "marketplace_e2e",
+		},
+	}
+	err := helpers.CreateRuntimeObject(client, ctx, otherNamespaceOperatorSource)
+	require.NoError(t, err, "Could not create OperatorSource")
+
+	expectedPhase := "Failed"
+	opsrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase,
+		"Will only reconcile resources in the operator's namespace")
+	assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message, expected %s", expectedPhase))
+	require.NotNil(t, opsrc, "Could not retrieve OperatorSource")
+
+	// Force the OperatorSource status into various phases other than "Failed" and "Initial"
+	for _, phase := range []string{"Configuring", "Succeeded", "Validating", "Purging"} {
+		opsrc.Status = v1.OperatorSourceStatus{
+			CurrentPhase: shared.ObjectPhase{
+				Phase: shared.Phase{
+					Name: phase,
+				},
+			},
+		}
+		err = helpers.UpdateRuntimeObject(client, opsrc)
+		require.NoError(t, err, "Could not update OperatorSource")
+		opsrc, err = helpers.WaitForOpSrcExpectedPhaseAndMessage(client, opSrcName, namespace, expectedPhase,
+			"Will only reconcile resources in the operator's namespace")
+		assert.NoError(t, err, fmt.Sprintf("OperatorSource never reached expected phase/message for inserted phase %s, expected %s", phase, expectedPhase))
+	}
+
 }

@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 
@@ -42,6 +43,18 @@ type phaseReconcilerFactory struct {
 }
 
 func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1.OperatorSource) (Reconciler, error) {
+	objectInOtherNamespace, err := shared.IsObjectInOtherNamespace(opsrc.GetNamespace())
+	if err != nil {
+		return nil, err
+	}
+
+	// We will only reconcile objects in the operator's namespace. If the object
+	// was created in some other namespace, invoke the other namespace
+	// reconciler that will place it in the failed phase.
+	if objectInOtherNamespace {
+		return NewOtherNamespaceReconciler(logger), nil
+	}
+
 	currentPhase := opsrc.GetCurrentPhaseName()
 
 	// If the object has a deletion timestamp, it means it has been marked for
