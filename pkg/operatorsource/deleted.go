@@ -3,13 +3,13 @@ package operatorsource
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
-
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -89,7 +89,7 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource
 
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 
-	err = defaults.New(defaults.GetGlobals()).Ensure(r.client, in.Name)
+	defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).Ensure(r.client, in.Name)
 
 	return
 }

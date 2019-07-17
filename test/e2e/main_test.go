@@ -24,7 +24,7 @@ func TestMarketplace(t *testing.T) {
 	initTestingFramework(t)
 
 	// Run Test Groups
-	if isCoAPIPresent, _ := helpers.EnsureClusterOperatorIsAvailable(); isCoAPIPresent == true {
+	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	}
 	t.Run("opsrc-csc-test-group", testgroups.OpSrcCscTestGroup)
@@ -70,8 +70,10 @@ func initTestingFramework(t *testing.T) {
 		t.Fatalf("failed to add CatalogSource custom resource scheme to framework: %v", err)
 	}
 
-	_, err = helpers.EnsureClusterOperatorIsAvailable()
+	_, err = helpers.EnsureConfigAPIIsAvailable()
 	if err != nil {
-		t.Logf("failed to add ClusterOperator custom resource scheme to framework: %v. ClusterOperator test will not run.", err)
+		t.Logf("failed to add OpenShift config custom resource scheme to framework: %v. config tests will not run.",
+			err)
 	}
+
 }

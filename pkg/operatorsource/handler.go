@@ -8,6 +8,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
@@ -69,7 +70,7 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSourc
 		"name":      in.GetName(),
 	})
 
-	defaults.New().RestoreSpecIfDefault(in)
+	defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).RestoreSpecIfDefault(in)
 
 	outOfSyncCacheReconciler := h.newCacheReconciler(logger, h.datastore, h.client)
 	out, status, err := outOfSyncCacheReconciler.Reconcile(ctx, in)

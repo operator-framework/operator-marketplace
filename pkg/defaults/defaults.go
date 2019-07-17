@@ -2,7 +2,6 @@ package defaults
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,7 +10,6 @@ import (
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -37,7 +35,7 @@ var (
 // Defaults is the interface that can be used to ensure default OperatorSources
 // are always present on the cluster.
 type Defaults interface {
-	EnsureAll(client wrapper.Client) error
+	EnsureAll(client wrapper.Client) map[string]error
 	Ensure(client wrapper.Client, opsrcName string) error
 	RestoreSpecIfDefault(in *v1.OperatorSource)
 }
@@ -96,16 +94,16 @@ func (d *defaults) Ensure(client wrapper.Client, opsrcName string) error {
 }
 
 // EnsureAll processes all the default OperatorSources and ensures they are
-// present or absent on the cluster based on the conifg.
-func (d *defaults) EnsureAll(client wrapper.Client) error {
-	allErrors := []error{}
-	for name := range d.definitions {
+// present or absent on the cluster based on the config.
+func (d *defaults) EnsureAll(client wrapper.Client) map[string]error {
+	result := make(map[string]error)
+	for name := range d.config {
 		err := d.Ensure(client, name)
 		if err != nil {
-			allErrors = append(allErrors, fmt.Errorf("Error handling %s - %v", name, err))
+			result[name] = err
 		}
 	}
-	return utilerrors.NewAggregate(allErrors)
+	return result
 }
 
 // GetGlobals returns the global OperatorSource definitions and the
@@ -122,6 +120,14 @@ func GetGlobalDefinitions() map[string]v1.OperatorSource {
 // GetDefaultConfig returns the global OperatorSource definitions
 func GetDefaultConfig() map[string]bool {
 	return defaultConfig
+}
+
+// IsDefaultSource returns true if the given name is one of the default
+// OperatorSources
+func IsDefaultSource(name string) bool {
+	_, present := defaultConfig[name]
+	return present
+
 }
 
 // PopulateGlobals populates the global definitions and default config. If Dir

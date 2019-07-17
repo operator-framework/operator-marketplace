@@ -3,18 +3,22 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
 
+	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
+	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
@@ -66,6 +70,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Set OpenShift config API availability
+	err = configv1.SetConfigAPIAvailability(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create a new Cmd to provide shared dependencies and start components
 	// Even though we are asking to watch all namespaces, we only handle events
 	// from the operator's namespace. The reason for watching all namespaces is
@@ -89,6 +99,13 @@ func main() {
 	// Add external resource to scheme
 	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
 		exit(err)
+	}
+
+	// If the config API is available add the config resources to the scheme
+	if configv1.IsAPIAvailable() {
+		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
+			exit(err)
+		}
 	}
 
 	// Setup all Controllers
@@ -181,10 +198,23 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 		return err
 	}
 
-	err = defaults.New(defaults.GetGlobals()).EnsureAll(clientForDefaults)
-	if err != nil {
-		log.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", err)
+	if configv1.IsAPIAvailable() {
+		// Check if the cluster OperatorHub config resource is present.
+		operatorHubCluster := &apiconfigv1.OperatorHub{}
+		err = clientForDefaults.Get(context.TODO(), client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
+
+		// The default OperatorHub config resource is present which will take care of ensuring defaults
+		if err == nil {
+			return nil
+		}
 	}
 
-	return err
+	// Ensure that the default OperatorSources are present based on the definitions
+	// in the defaults directory
+	result := defaults.New(defaults.GetGlobals()).EnsureAll(clientForDefaults)
+	if len(result) != 0 {
+		return fmt.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", result)
+	}
+
+	return nil
 }
