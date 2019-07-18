@@ -2,6 +2,6 @@
 // +k8s:defaulter-gen=TypeMeta
 // +k8s:openapi-gen=true
 
-// +kubebuilder:validation:Optional
-// +groupName=operator.openshift.io
+// +groupName=console.openshift.io
+// Package v1 is the v1 version of the API.
 package v1
