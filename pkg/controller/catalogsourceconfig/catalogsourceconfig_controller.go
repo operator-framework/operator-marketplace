@@ -28,7 +28,7 @@ func Add(mgr manager.Manager) error {
 	return add(mgr, reconciler)
 }
 
-// newReconciler returns a new reconcile.Reconciler
+// newReconciler returns a new ReconcileCatalogSourceConfig
 func newReconciler(mgr manager.Manager) (*ReconcileCatalogSourceConfig, error) {
 	// The default client serves read requests from the cache which contains
 	// objects only from the namespace the operator is watching. Given we need
@@ -50,7 +50,7 @@ func newReconciler(mgr manager.Manager) (*ReconcileCatalogSourceConfig, error) {
 	}, nil
 }
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
+// add adds a new Controller to mgr with r as the ReconcileCatalogSourceConfig
 func add(mgr manager.Manager, r *ReconcileCatalogSourceConfig) error {
 	// Create a new controller
 	c, err := controller.New("catalogsourceconfig-controller", mgr, controller.Options{Reconciler: r})
