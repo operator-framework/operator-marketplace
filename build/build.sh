@@ -15,4 +15,4 @@ PROJECT_NAME="marketplace-operator"
 REPO_PATH="github.com/operator-framework/operator-marketplace/"
 BUILD_PATH="${REPO_PATH}/cmd/manager"
 echo "building "${PROJECT_NAME}"..."
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
+GOOS=linux GOARCH=$(go env GOARCH) CGO_ENABLED=0 go build -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
