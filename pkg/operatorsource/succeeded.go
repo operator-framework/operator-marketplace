@@ -5,6 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
@@ -78,6 +79,8 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1.OperatorSour
 		msg = "Proxy environment variables not in sync, scheduling for configuring"
 		return
 	}
+
+	err = defaults.New().Ensure(r.client, in.Name)
 
 	return
 }

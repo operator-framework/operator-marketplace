@@ -14,6 +14,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
@@ -22,8 +23,11 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -46,9 +50,11 @@ func printVersion() {
 func main() {
 	printVersion()
 
-	// Parse the command line arguments for the registry server image
+	// Parse the command line arguments
 	flag.StringVar(&registry.ServerImage, "registryServerImage",
 		registry.DefaultServerImage, "the image to use for creating the operator registry pod")
+	flag.StringVar(&defaults.Dir, "defaultsDir",
+		"", "the directory where the default OperatorSources are stored")
 	flag.Parse()
 
 	namespace, err := k8sutil.GetWatchNamespace()
@@ -127,6 +133,19 @@ func main() {
 	log.Info("Elected leader.")
 
 	log.Print("Starting the Cmd.")
+
+	// Populate the default OperatorSources tracker
+	err = defaults.PopulateTracker()
+	if err != nil {
+		exit(err)
+	}
+
+	// Handle the defaults
+	err = ensureDefaults(cfg, mgr.GetScheme())
+	if err != nil {
+		exit(err)
+	}
+
 	stopCh := signals.SetupSignalHandler()
 
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
@@ -154,4 +173,24 @@ func exit(err error) {
 	// No error, graceful termination
 	log.Info("The operator exited gracefully, exit code 0")
 	os.Exit(0)
+}
+
+// ensureDefaults ensures that all the default OperatorSources are present on
+// the cluster
+func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
+	// The default client serves read requests from the cache which only gets
+	// initialized after mgr.Start(). So we need to instantiate a new client
+	// for the defaults handler.
+	clientForDefaults, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		log.Errorf("Error initializing client for handling defaults - %v", err)
+		return err
+	}
+
+	err = defaults.New().EnsureAll(clientForDefaults)
+	if err != nil {
+		log.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", err)
+	}
+
+	return err
 }

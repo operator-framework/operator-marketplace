@@ -47,6 +47,9 @@ const (
 	// TestCatalogSourceConfigTargetNamespace is the target namespace used in the test
 	// CatalogSourceConfig.
 	TestCatalogSourceConfigTargetNamespace = "default"
+
+	// DefaultsDir is the relative path to the defaults directory
+	DefaultsDir = "./defaults"
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
