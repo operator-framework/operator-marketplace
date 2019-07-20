@@ -43,3 +43,19 @@ func GetOwnerLabel(name, namespace, owner string) map[string]string {
 		return map[string]string{}
 	}
 }
+
+// HasOwnerLabels determines whether owner labels are present in a given set of labels
+func HasOwnerLabels(labels map[string]string, owner string) bool {
+	switch owner {
+	case v1.OperatorSourceKind:
+		_, hasNameLabel := labels[OpsrcOwnerNameLabel]
+		_, hasNamespaceLabel := labels[OpsrcOwnerNamespaceLabel]
+		return hasNameLabel && hasNamespaceLabel
+	case v2.CatalogSourceConfigKind:
+		_, hasNameLabel := labels[CscOwnerNameLabel]
+		_, hasNamespaceLabel := labels[CscOwnerNamespaceLabel]
+		return hasNameLabel && hasNamespaceLabel
+	default:
+		return false
+	}
+}

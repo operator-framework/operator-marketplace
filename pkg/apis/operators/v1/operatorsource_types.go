@@ -108,6 +108,11 @@ func (opsrc *OperatorSource) GetCurrentPhaseName() string {
 	return opsrc.Status.CurrentPhase.Name
 }
 
+// GetPackages returns the list of packages from the Status block
+func (opsrc *OperatorSource) GetPackages() []string {
+	return strings.Split(opsrc.Status.Packages, ",")
+}
+
 // IsEqual returns true if the Spec specified in this is the same as the other.
 // Otherwise, the function returns false.
 //
