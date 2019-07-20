@@ -65,7 +65,7 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1.OperatorSour
 		return
 	}
 
-	err = defaults.New().Ensure(r.client, in.Name)
+	err = defaults.New(defaults.GetGlobals()).Ensure(r.client, in.Name)
 
 	return
 }

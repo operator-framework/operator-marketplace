@@ -89,7 +89,7 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource
 
 	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 
-	err = defaults.New().Ensure(r.client, in.Name)
+	err = defaults.New(defaults.GetGlobals()).Ensure(r.client, in.Name)
 
 	return
 }

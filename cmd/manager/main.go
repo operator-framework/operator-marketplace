@@ -113,8 +113,8 @@ func main() {
 
 	log.Print("Starting the Cmd.")
 
-	// Populate the default OperatorSources tracker
-	err = defaults.PopulateTracker()
+	// Populate the global default OperatorSources definition and config
+	err = defaults.PopulateGlobals()
 	if err != nil {
 		exit(err)
 	}
@@ -181,7 +181,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 		return err
 	}
 
-	err = defaults.New().EnsureAll(clientForDefaults)
+	err = defaults.New(defaults.GetGlobals()).EnsureAll(clientForDefaults)
 	if err != nil {
 		log.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", err)
 	}
