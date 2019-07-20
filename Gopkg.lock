@@ -517,14 +517,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:994aada7f56f25aa47c3c1c02d7132c7c59ba92a8d0c82194c647451978a25ff"
+  digest = "1:0c8a7e4a66d05690c20763c6e26cc375a1a5403dc5c5d48647be247e4aa2e70c"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
     "operator/v1",
   ]
   pruneopts = "NT"
-  revision = "924343028ee3dc875057861a5faa5b817ec87f5b"
+  revision = "9525304a0adb725ab4a4a54539a1a6bf6cc343d3"
 
 [[projects]]
   branch = "master"
@@ -588,6 +588,7 @@
     "internal/util/projutil",
     "internal/util/yamlutil",
     "pkg/k8sutil",
+    "pkg/leader",
     "pkg/test",
     "version",
   ]
@@ -1408,6 +1409,7 @@
     "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1",
     "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
+    "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/sirupsen/logrus",
@@ -1441,8 +1443,10 @@
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/source",

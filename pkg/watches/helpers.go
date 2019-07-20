@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
@@ -206,4 +208,60 @@ func getOpSrcOwnerKey(labels map[string]string) *client.ObjectKey {
 	}
 
 	return &client.ObjectKey{Namespace: ownerNamespace, Name: ownerName}
+}
+
+// WatchProxyEvents adds watches for proxy events.
+func WatchProxyEvents(c controller.Controller, client cl.Client, owner string) error {
+	// We only care if the event came from the cluster proxy.
+	pred := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			if e.Meta.GetName() == proxy.ClusterProxyName {
+				return true
+			}
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// If the cluster operator is ever changed we should kick off an event.
+			// Only check if the old name was "cluster", a kube object cannot have it's
+			// name changed in an update.
+			if e.MetaOld.GetName() == proxy.ClusterProxyName {
+				return true
+			}
+			return false
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			if e.Meta.GetName() == proxy.ClusterProxyName {
+				// If DeleteStateUnknown is true it implies that the Delete event was missed
+				// and we can ignore it.
+				if e.DeleteStateUnknown {
+					return false
+				}
+				return true
+			}
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			if e.Meta.GetName() == proxy.ClusterProxyName {
+				return true
+			}
+			return false
+		},
+	}
+
+	var enqueueRequestsFromMapFunc handler.EnqueueRequestsFromMapFunc
+	switch owner {
+	case v2.CatalogSourceConfigKind:
+		enqueueRequestsFromMapFunc = handler.EnqueueRequestsFromMapFunc{ToRequests: ProxyToCatalogSourceConfigs(client)}
+	case v1.OperatorSourceKind:
+		enqueueRequestsFromMapFunc = handler.EnqueueRequestsFromMapFunc{ToRequests: ProxyToOperatorSources(client)}
+	default:
+		return fmt.Errorf("Unknown owner %s", owner)
+	}
+
+	err := c.Watch(&source.Kind{Type: &apiconfigv1.Proxy{}}, &enqueueRequestsFromMapFunc, pred)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

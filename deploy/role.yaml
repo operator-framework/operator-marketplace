@@ -4,6 +4,14 @@ metadata:
   name: marketplace-operator
 rules:
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - proxies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - operators.coreos.com
   resources:
   - catalogsources

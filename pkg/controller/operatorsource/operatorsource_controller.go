@@ -5,6 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	operatorsourcehandler "github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
@@ -51,6 +52,14 @@ func add(mgr manager.Manager, r *ReconcileOperatorSource) error {
 	err = watches.WatchChildResourcesDeletionEvents(c, r.client, v1.OperatorSourceKind)
 	if err != nil {
 		return err
+	}
+
+	// Only add watch if proxy API is available.
+	if proxy.IsAPIAvailable() {
+		err = watches.WatchProxyEvents(c, r.client, v1.OperatorSourceKind)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

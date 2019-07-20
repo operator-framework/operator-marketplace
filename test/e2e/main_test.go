@@ -29,6 +29,7 @@ func TestMarketplace(t *testing.T) {
 	// Run Test Groups
 	if coAPIPresent {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
+		testgroups.EnableProxyTests()
 	}
 	t.Run("opsrc-csc-test-group", testgroups.OpSrcCscTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)

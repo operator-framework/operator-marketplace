@@ -5,6 +5,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
@@ -68,6 +69,14 @@ func add(mgr manager.Manager, r *ReconcileCatalogSourceConfig) error {
 	err = watches.WatchChildResourcesDeletionEvents(c, r.client, v2.CatalogSourceConfigKind)
 	if err != nil {
 		return err
+	}
+
+	// Only add watch if proxy API is available.
+	if proxy.IsAPIAvailable() {
+		err = watches.WatchProxyEvents(c, r.client, v2.CatalogSourceConfigKind)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

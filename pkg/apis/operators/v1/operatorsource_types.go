@@ -96,6 +96,12 @@ func (opsrc *OperatorSource) EnsureGVK() {
 	opsrc.SetGroupVersionKind(gvk)
 }
 
+// ForceUpdate forces the OperatorSource object to be reconciled.
+func (opsrc *OperatorSource) ForceUpdate() {
+	// Drop the existing Status field so that reconciliation can start anew.
+	opsrc.Status = OperatorSourceStatus{}
+}
+
 // GetCurrentPhaseName returns the name of the current phase of the
 // given OperatorSource object.
 func (opsrc *OperatorSource) GetCurrentPhaseName() string {

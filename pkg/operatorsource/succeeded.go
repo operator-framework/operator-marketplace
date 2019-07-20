@@ -6,6 +6,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,17 +51,33 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1.OperatorSour
 	out = in
 
 	msg := "No action taken, the object has already been reconciled"
+	defer func() {
+		r.logger.Info(msg)
+	}()
 
 	secretIsPresent := r.isSecretPresent(in)
 
 	if watches.CheckChildResources(r.client, in.Name, in.Namespace, in.Namespace, secretIsPresent) {
 		// A child has been deleted. Drop the existing Status field so that reconciliation can start anew.
-		out.Status = v1.OperatorSourceStatus{}
+		out.ForceUpdate()
 		nextPhase = phase.GetNext(phase.Configuring)
 		msg = "Child resource(s) have been deleted, scheduling for configuring"
+		return
 	}
 
-	r.logger.Info(msg)
+	// Check if the environment variables in the deployment created by the OperatorSource
+	// are out of sync with those in the global proxy.
+	needsUpdate, err := proxy.GetInstance().CheckDeploymentEnvVars(r.client, in.Name, in.Namespace)
+	if err != nil {
+		return
+	}
+
+	if needsUpdate {
+		out.ForceUpdate()
+		nextPhase = phase.GetNext(phase.Configuring)
+		msg = "Proxy environment variables not in sync, scheduling for configuring"
+		return
+	}
 
 	return
 }
