@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var proxyTestsEnalbed = false
+
 // OpSrcCscTestGroup creates an OperatorSource and a CatalogSourceConfig and then runs a series of
 // test suites that rely on these resources.
 func OpSrcCscTestGroup(t *testing.T) {
@@ -43,9 +45,17 @@ func OpSrcCscTestGroup(t *testing.T) {
 	require.NoError(t, err, "CatalogSourceConfig child resources were not created")
 
 	// Run the test suites.
+	if proxyTestsEnalbed {
+		t.Run("proxy-test-suite", testsuites.ProxyTests)
+	}
 	t.Run("opsrc-creation-test-suite", testsuites.OpSrcCreation)
 	t.Run("csc-target-namespace-test-suite", testsuites.CscTargetNamespace)
 	t.Run("packages-test-suite", testsuites.PackageTests)
 	t.Run("csc-invalid-tests", testsuites.CscInvalid)
 	t.Run("watch-tests", testsuites.WatchTests)
+}
+
+// EnableProxyTests will cause the proxy e2e tests to run.
+func EnableProxyTests() {
+	proxyTestsEnalbed = true
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,6 +47,11 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourc
 
 	msg := "No action taken, the object has already been reconciled"
 
+	// Always log the message.
+	defer func() {
+		r.log.Info(msg)
+	}()
+
 	secretIsPresent, err := r.isSecretPresent(in)
 	if err != nil {
 		return
@@ -53,12 +59,25 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourc
 
 	if watches.CheckChildResources(r.client, in.Name, in.Namespace, in.Spec.TargetNamespace, secretIsPresent) {
 		// A child resource has been deleted. Drop the existing Status field so that reconciliation can start anew.
-		out.Status = v2.CatalogSourceConfigStatus{}
+		out.ForceUpdate()
 		nextPhase = phase.GetNext(phase.Configuring)
 		msg = "Child resource(s) have been deleted, scheduling for configuring"
+		return
 	}
 
-	r.log.Info(msg)
+	// Check if the environment variables in the deployment created by the CatalogSourceConfig
+	// are out of sync with those in the global proxy.
+	needsUpdate, err := proxy.GetInstance().CheckDeploymentEnvVars(r.client, in.Name, in.Namespace)
+	if err != nil {
+		return
+	}
+
+	if needsUpdate {
+		out.ForceUpdate()
+		nextPhase = phase.GetNext(phase.Configuring)
+		msg = "Proxy environment variables not in sync, scheduling for configuring"
+		return
+	}
 
 	return
 }

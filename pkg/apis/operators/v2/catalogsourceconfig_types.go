@@ -79,6 +79,12 @@ func (csc *CatalogSourceConfig) EnsureGVK() {
 	csc.SetGroupVersionKind(gvk)
 }
 
+// ForceUpdate forces the CatalogSourceConfig object to be reconciled.
+func (csc *CatalogSourceConfig) ForceUpdate() {
+	// Drop the existing Status field so that reconciliation can start anew.
+	csc.Status = CatalogSourceConfigStatus{}
+}
+
 // RemoveFinalizer removes the operator source finalizer from the
 // CatatalogSourceConfig ObjectMeta.
 func (csc *CatalogSourceConfig) RemoveFinalizer() {

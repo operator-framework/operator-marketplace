@@ -8,18 +8,21 @@ import (
 	"runtime"
 	"time"
 
+	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -59,6 +62,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Set proxy API availability
+	k8sInterface, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = proxy.SetProxyAvailability(k8sInterface.Discovery())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create a new Cmd to provide shared dependencies and start components
 	// Even though we are asking to watch all namespaces, we only handle events
 	// from the operator's namespace. The reason for watching all namespaces is
@@ -82,6 +96,14 @@ func main() {
 	// Add external resource to scheme
 	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
 		exit(err)
+	}
+
+	// If the proxy api is available add the proxy resource to scheme
+	if proxy.IsAPIAvailable() {
+		// Add the proxy to the schema.
+		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
+			exit(err)
+		}
 	}
 
 	// Setup all Controllers
