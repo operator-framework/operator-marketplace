@@ -121,7 +121,10 @@ func (s *OperatorSourceSpec) IsEqual(other *OperatorSourceSpec) bool {
 	}
 	if strings.EqualFold(s.Endpoint, other.Endpoint) &&
 		strings.EqualFold(s.RegistryNamespace, other.RegistryNamespace) &&
-		strings.EqualFold(s.Type, other.Type) {
+		strings.EqualFold(s.Type, other.Type) &&
+		strings.EqualFold(s.AuthorizationToken.SecretName, other.AuthorizationToken.SecretName) &&
+		strings.EqualFold(s.DisplayName, other.DisplayName) &&
+		strings.EqualFold(s.Publisher, other.Publisher) {
 		return true
 	}
 	return false
