@@ -10,6 +10,7 @@ import (
 	interface_client "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,9 +157,13 @@ func (r *configuringReconciler) getManifestMetadata(spec *v1.OperatorSourceSpec,
 
 	metadata, err = registry.ListPackages(spec.RegistryNamespace)
 	if err != nil {
+		// Get the http error code from error message and update
+		// the respective metric.
+		code := metrics.GetHTTPErrorCode(err.Error())
+		errMessage := metrics.ErrorMessage(code)
+		metrics.UpdateOpsrcErrorHist(spec.DisplayName, errMessage)
 		return metadata, err
 	}
-
 	return metadata, nil
 }
 

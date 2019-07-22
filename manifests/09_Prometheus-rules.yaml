@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  creationTimestamp: null
+  labels:
+    prometheus: alert-rules
+    role: alert-rules
+  name: marketplace-alert-rules
+  namespace: openshift-marketplace
+spec:
+  groups:
+    - name: ./marketplace.rules 
+      rules:
+        - alert: marketplace-alert
+          expr: rate(opsrc_failure_count[2m]) > 0

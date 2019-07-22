@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -16,6 +15,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	customMetrics "github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/proxy"
@@ -43,10 +43,6 @@ const (
 	resyncInterval             = time.Duration(60) * time.Minute
 	initialWait                = time.Duration(1) * time.Minute
 	updateNotificationSendWait = time.Duration(10) * time.Minute
-
-	// Port and Host where metrics are published
-	metricsHost = "0.0.0.0"
-	metricsPort = 8383
 )
 
 func printVersion() {
@@ -93,9 +89,8 @@ func main() {
 	// watch for CatalogSources in targetNamespaces being deleted and recreate
 	// them.
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          namespace,
-		MapperProvider:     restmapper.NewDynamicRESTMapper,
-		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		Namespace:      namespace,
+		MapperProvider: restmapper.NewDynamicRESTMapper,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -229,7 +224,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 // and records the metrics to expose at the specified endpoint.
 func generateMetrics(cfg *rest.Config, namespace string) {
 	// Create a Service object to expose the metrics port.
-	service, err := metrics.ExposeMetricsPort(context.TODO(), metricsPort)
+	service, err := metrics.ExposeMetricsPort(context.TODO(), customMetrics.MetricsPort)
 	if err != nil {
 		log.Errorf("Unable to expose metrics port: %v", err)
 	}
@@ -244,4 +239,6 @@ func generateMetrics(cfg *rest.Config, namespace string) {
 	if err != nil {
 		log.Errorf("Error Creating Service Monitor: %v", err)
 	}
+	// Start collecting custom metrics
+	customMetrics.RecordMetrics()
 }
