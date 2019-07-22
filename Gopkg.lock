@@ -82,6 +82,20 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:0c4193043b1a33c7f9ba4ea42b8af2c09bb3d51970212d42e4dac8aa217b4ca5"
+  name = "github.com/coreos/prometheus-operator"
+  packages = [
+    "pkg/apis/monitoring",
+    "pkg/apis/monitoring/v1",
+    "pkg/client/versioned/scheme",
+    "pkg/client/versioned/typed/monitoring/v1",
+  ]
+  pruneopts = "NT"
+  revision = "7a25bf6b6bb2347dacb235659b73bc210117acc7"
+  version = "v0.29.0"
+
+[[projects]]
+  digest = "1:4b8b5811da6970495e04d1f4e98bb89518cc3cfc3b3f456bdb876ed7b6c74049"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
@@ -468,6 +482,8 @@
     "internal/util/yamlutil",
     "pkg/k8sutil",
     "pkg/leader",
+    "pkg/metrics",
+    "pkg/restmapper",
     "pkg/test",
     "version"
   ]
@@ -1191,5 +1207,68 @@
   analyzer-name = "dep"
   analyzer-version = 1
   inputs-digest = "28ffcc3662ad3b4731c86d038ff17162210a702e34429c55f7a4614fc4345b70"
+  input-imports = [
+    "github.com/go-openapi/runtime",
+    "github.com/go-openapi/runtime/client",
+    "github.com/go-openapi/strfmt",
+    "github.com/golang/mock/gomock",
+    "github.com/openshift/api/config/v1",
+    "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1",
+    "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers",
+    "github.com/openshift/library-go/pkg/operator/v1helpers",
+    "github.com/operator-framework/go-appr/appregistry",
+    "github.com/operator-framework/go-appr/appregistry/blobs",
+    "github.com/operator-framework/go-appr/appregistry/package_appr",
+    "github.com/operator-framework/go-appr/models",
+    "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1",
+    "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals",
+    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
+    "github.com/operator-framework/operator-sdk/pkg/leader",
+    "github.com/operator-framework/operator-sdk/pkg/metrics",
+    "github.com/operator-framework/operator-sdk/pkg/restmapper",
+    "github.com/operator-framework/operator-sdk/pkg/test",
+    "github.com/operator-framework/operator-sdk/version",
+    "github.com/prometheus/client_golang/prometheus",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/sirupsen/logrus",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "k8s.io/api/apps/v1",
+    "k8s.io/api/core/v1",
+    "k8s.io/api/rbac/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/labels",
+    "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/clock",
+    "k8s.io/apimachinery/pkg/util/errors",
+    "k8s.io/apimachinery/pkg/util/intstr",
+    "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/client-go/discovery",
+    "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+    "k8s.io/client-go/rest",
+    "k8s.io/code-generator/cmd/client-gen",
+    "k8s.io/code-generator/cmd/conversion-gen",
+    "k8s.io/code-generator/cmd/deepcopy-gen",
+    "k8s.io/code-generator/cmd/informer-gen",
+    "k8s.io/code-generator/cmd/lister-gen",
+    "k8s.io/gengo/args",
+    "k8s.io/kube-openapi/cmd/openapi-gen",
+    "sigs.k8s.io/controller-runtime/pkg/client",
+    "sigs.k8s.io/controller-runtime/pkg/client/config",
+    "sigs.k8s.io/controller-runtime/pkg/client/fake",
+    "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/event",
+    "sigs.k8s.io/controller-runtime/pkg/handler",
+    "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
+    "sigs.k8s.io/controller-runtime/pkg/reconcile",
+    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
+    "sigs.k8s.io/controller-runtime/pkg/source",
+    "sigs.k8s.io/controller-tools/pkg/crd/generator",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

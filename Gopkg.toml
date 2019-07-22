@@ -11,6 +11,10 @@ required = [
 ]
 
 [[override]]
+  name = "github.com/coreos/prometheus-operator"
+  version = "=v0.29.0"
+
+[[override]]
   name = "k8s.io/code-generator"
   # revision for tag "kubernetes-1.13.1"
   revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
