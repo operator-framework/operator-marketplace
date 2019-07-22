@@ -62,6 +62,10 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "marketplace-operator"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: "RELEASE_VERSION"
               # The string "0.0.1-snapshot" is substituted by the CVO with the version of the payload
               value: "0.0.1-snapshot"

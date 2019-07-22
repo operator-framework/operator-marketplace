@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -22,8 +23,11 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
+	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/api/core/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -36,10 +40,13 @@ import (
 const (
 	// TODO: resyncInterval is hardcoded to 1 hour now, it would have to be
 	// configurable on a per OperatorSource level.
-	resyncInterval = time.Duration(60) * time.Minute
-
+	resyncInterval             = time.Duration(60) * time.Minute
 	initialWait                = time.Duration(1) * time.Minute
 	updateNotificationSendWait = time.Duration(10) * time.Minute
+
+	// Port and Host where metrics are published
+	metricsHost = "0.0.0.0"
+	metricsPort = 8383
 )
 
 func printVersion() {
@@ -85,7 +92,11 @@ func main() {
 	// from the operator's namespace. The reason for watching all namespaces is
 	// watch for CatalogSources in targetNamespaces being deleted and recreate
 	// them.
-	mgr, err := manager.New(cfg, manager.Options{Namespace: ""})
+	mgr, err := manager.New(cfg, manager.Options{
+		Namespace:          namespace,
+		MapperProvider:     restmapper.NewDynamicRESTMapper,
+		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,6 +128,9 @@ func main() {
 	if err := controller.AddToManager(mgr); err != nil {
 		exit(err)
 	}
+
+	// Generate metrics and publish it at an endpoint.
+	generateMetrics(cfg, namespace)
 
 	// Serve a health check.
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -209,4 +223,25 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	}
 
 	return err
+}
+
+// generateMetrics creates a service, service monitor, starts a metrics server
+// and records the metrics to expose at the specified endpoint.
+func generateMetrics(cfg *rest.Config, namespace string) {
+	// Create a Service object to expose the metrics port.
+	service, err := metrics.ExposeMetricsPort(context.TODO(), metricsPort)
+	if err != nil {
+		log.Errorf("Unable to expose metrics port: %v", err)
+	}
+
+	services := []*v1.Service{}
+	if service != nil {
+		services = append(services, service)
+	}
+
+	// Create a serviceMonitor for the namespace and register the service created above to it.
+	_, err = metrics.CreateServiceMonitors(cfg, namespace, services)
+	if err != nil {
+		log.Errorf("Error Creating Service Monitor: %v", err)
+	}
 }

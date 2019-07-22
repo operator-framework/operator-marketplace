@@ -101,6 +101,7 @@ rules:
   - pods
   verbs:
   - get
+  - list
 - apiGroups:
   - apps
   resources:
@@ -120,3 +121,11 @@ rules:
   - create
   - delete
   - update
+  - list
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create

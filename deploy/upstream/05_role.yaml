@@ -84,10 +84,13 @@ rules:
   - pods
   verbs:
   - get
+  - list
 - apiGroups:
   - apps
   resources:
   - deployments
+  - deployments/finalizers
+  - replicasets
   verbs:
   - get
   - create
@@ -103,3 +106,11 @@ rules:
   - create
   - delete
   - update
+  - list
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
