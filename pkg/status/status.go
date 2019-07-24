@@ -10,14 +10,12 @@ import (
 	cohelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -113,25 +111,12 @@ func StartReporting(cfg *rest.Config, mgr manager.Manager, namespace string, ver
 
 // New returns an initialized status
 func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string, stopCh <-chan struct{}) *status {
-	// Check if the ClusterOperator API is present on the cluster. If the API
-	// is not present on the cluster set the status.coAPINotPresent to true so
-	// status is not reported
-	k8sInterface, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		log.Fatal("[status] " + err.Error())
-	}
-	err = discovery.ServerSupportsVersion(k8sInterface.Discovery(), schema.GroupVersion{
-		Group:   "config.openshift.io",
-		Version: "v1",
-	})
-
 	monitorDoneCh := make(chan struct{})
-	coAPINotPresent := false
-	if err != nil {
-		log.Warningf("[status] ClusterOperator API not present: %v", err)
-		coAPINotPresent = true
+	coAPINotPresent := !mktconfig.IsAPIAvailable()
+	if coAPINotPresent {
+		log.Warningf("[status] ClusterOperator API not present")
 		// If the co is not present, close the monitorDoneCh channel to prevent
-		// recievers from stalling
+		// receivers from stalling
 		close(monitorDoneCh)
 	}
 
