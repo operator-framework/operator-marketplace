@@ -248,10 +248,17 @@ func (r *registry) ensureServiceAccount() error {
 	return nil
 }
 
-// getLabels returns the label that must match between the Deployment's
+// getLabel returns the label that must match between the Deployment's
 // LabelSelector and the Pod template's label
-func (r *registry) getLabel() map[string]string {
-	return map[string]string{"marketplace.catalogSourceConfig": r.key.Name}
+func (r *registry) getLabel(owner string) map[string]string {
+	switch owner {
+	case v2.CatalogSourceConfigKind:
+		return map[string]string{"marketplace.catalogSourceConfig": r.key.Name}
+	case v1.OperatorSourceKind:
+		return map[string]string{"marketplace.operatorSource": r.key.Name}
+	default:
+		return nil
+	}
 }
 
 // getAppRegistries returns a list of app registries in the format
@@ -303,7 +310,7 @@ func (r *registry) getSubjects() []rbac.Subject {
 func (r *registry) newDeployment(registryCommand []string, needServiceAccount bool) *apps.Deployment {
 	builder := new(builders.DeploymentBuilder).
 		WithMeta(r.key.Name, r.key.Namespace).
-		WithSpec(1, r.getLabel(), r.newPodTemplateSpec(registryCommand, needServiceAccount))
+		WithSpec(1, r.getLabel(r.owner), r.newPodTemplateSpec(registryCommand, needServiceAccount))
 	if r.owner == v1.OperatorSourceKind {
 		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
@@ -319,7 +326,7 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 		ObjectMeta: meta.ObjectMeta{
 			Name:      r.key.Name,
 			Namespace: r.key.Namespace,
-			Labels:    r.getLabel(),
+			Labels:    r.getLabel(r.owner),
 		},
 		Spec: core.PodSpec{
 			Containers: []core.Container{
@@ -427,7 +434,7 @@ func (r *registry) newServiceSpec() core.ServiceSpec {
 				TargetPort: intstr.FromInt(portNumber),
 			},
 		},
-		Selector: r.getLabel(),
+		Selector: r.getLabel(r.owner),
 	}
 }
 
