@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
-
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -111,6 +111,9 @@ func (m *migrator) updateSubscriptions() ([]types.NamespacedName, []error) {
 			// Update the Subscription to reference the datastore CatalogSource
 			subscription.Spec.CatalogSource = datastoreCs.GetName()
 			subscription.Spec.CatalogSourceNamespace = datastoreCs.GetNamespace()
+			// Get the name and namespace of the InstalledCsc
+			installedCscName := subscription.GetLabels()[builders.CscOwnerNameLabel]
+			installedCscNamespace := subscription.GetLabels()[builders.CscOwnerNamespaceLabel]
 			// Remove the owner labels from the subscription
 			subscription.Labels = labelsutil.CloneAndRemoveLabel(
 				labelsutil.CloneAndRemoveLabel(subscription.GetLabels(), builders.CscOwnerNameLabel),
@@ -125,8 +128,8 @@ func (m *migrator) updateSubscriptions() ([]types.NamespacedName, []error) {
 				installedCscs = append(
 					installedCscs,
 					types.NamespacedName{
-						Name:      subscription.GetLabels()[builders.CscOwnerNameLabel],
-						Namespace: subscription.GetLabels()[builders.CscOwnerNamespaceLabel]})
+						Name:      installedCscName,
+						Namespace: installedCscNamespace})
 			}
 		}
 	}
@@ -156,10 +159,10 @@ func (m *migrator) deleteInstalledCscs(cscs []types.NamespacedName, operatorName
 func (m *migrator) deleteDatastoreCscs(operatorNamespace string) []error {
 	var errors []error
 	options := &client.ListOptions{}
-	options.SetLabelSelector(fmt.Sprintf("opsrc-datastore: \"true\""))
+	options.SetLabelSelector(fmt.Sprintf(datastore.DatastoreLabel))
 	options.InNamespace(operatorNamespace)
 	cscs := &v2.CatalogSourceConfigList{}
-	// Get the list of existing cscs that have the label "opsrc-datastore: "true" "
+	// Get the list of existing cscs that have the datastore label
 	err := m.client.List(context.TODO(), options, cscs)
 	if err != nil {
 		msg := fmt.Sprintf("[migration] Client error: %s", err.Error())

@@ -42,6 +42,10 @@ func MigrationTestGroup(t *testing.T) {
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestUserCreatedSubscriptionName, namespace, false))
 	require.NoError(t, err, "Could not create User Subscription")
 
+	// Create a CatalogSourceConfig.
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateCatalogSourceConfigDefinition(helpers.TestCatalogSourceConfigName, namespace, namespace))
+	require.NoError(t, err, "Could not create CatalogSourceConfig")
+
 	// Create the installed CatalogSourceConfig.
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateInstalledCscDefinition(namespace))
 	require.NoError(t, err, "Could not create installed CatalogSourceConfig")
