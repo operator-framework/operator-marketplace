@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -19,16 +20,17 @@ import (
 // * Existing Subscriptions are updated to reference the datastore CatalogSources instead
 // of installed CatalogSources created during operator installation in a openshift 4.1.x cluster.
 func MigrationTests(t *testing.T) {
-	t.Run("catalogsourceconfigs-are-cleaned-up", testCatalogSourceConfigsCleanedUp)
+	t.Run("datastore-and-installed-catalogsourceconfigs-are-cleaned-up", testDatastoreAndInstalledCatalogSourceConfigsCleanedUp)
 	t.Run("subscriptions-are-updated", testSubscriptionsUpdated)
 	t.Run("user-created-subscriptions-are-not-updated", testUserCreatedSubscriptions)
+	t.Run("catalogsourceconfigs-not-deleted", testCatalogSourceConfigsNotDeleted)
 }
 
-// testCatalogSourceConfigsCleanedUp ensures that after a cluster is migrated
+// testDatastoreAndInstalledCatalogSourceConfigsCleanedUp ensures that after a cluster is migrated
 // from openshift 4.1.x to openshift 4.2.0, the following stale objects are cleaned up:
 // Stale CatalogSourceConfigs created during operator installation in a openshift 4.1.x cluster.
 // Datastore CatalogSourceConfigs created by OperatorSources in a openshift 4.1.x cluster.
-func testCatalogSourceConfigsCleanedUp(t *testing.T) {
+func testDatastoreAndInstalledCatalogSourceConfigsCleanedUp(t *testing.T) {
 	// Create a ctx that is used to delete the CatalogSourceConfigs and Subscription at the completion of this function.
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
@@ -83,4 +85,21 @@ func testUserCreatedSubscriptions(t *testing.T) {
 	// Check for user created subscription was not updated after migration
 	err = helpers.CheckSubscriptionNotUpdated(test.Global.Client, helpers.TestUserCreatedSubscriptionName, namespace)
 	require.NoError(t, err, fmt.Sprintf("User-created Subscription %s was updated after migration", helpers.TestUserCreatedSubscriptionName))
+}
+
+// testCatalogSourceConfigsNotDeleted ensures that after a cluster is migrated
+// from openshift 4.1.x to openshift 4.2.0, the CatalogSourceConfigs not created by
+// the OperatorSources or the UI are not deleted.
+func testCatalogSourceConfigsNotDeleted(t *testing.T) {
+	// Create a ctx that is used to delete the CatalogSourceConfigs and Subscription at the completion of this function.
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get test namespace.
+	namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	// Check for CatalogSourceConfig is still there after migration
+	err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: helpers.TestCatalogSourceConfigName, Namespace: namespace}, &v2.CatalogSourceConfig{})
+	require.NoError(t, err, fmt.Sprintf("Non datastore or non UI CatalogSourceConfig %s was deleted after migration", helpers.TestCatalogSourceConfigName))
 }
