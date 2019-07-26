@@ -31,6 +31,7 @@ var (
 type Defaults interface {
 	EnsureAll(client wrapper.Client) error
 	Ensure(client wrapper.Client, opsrcName string) error
+	RestoreSpecIfDefault(in *v1.OperatorSource)
 }
 
 type defaults struct {
@@ -39,6 +40,19 @@ type defaults struct {
 // New returns a the singleton defaults
 func New() Defaults {
 	return &defaults{}
+}
+
+// RestoreSpecIfDefault takes an operator source and, if it is one of the defaults,
+// sets the spec back to the expected spec in order to prevent any changes.
+func (d *defaults) RestoreSpecIfDefault(in *v1.OperatorSource) {
+	defOpsrc, present := defaultsTracker[in.Name]
+	if !present {
+		return
+	}
+
+	in.Spec = defOpsrc.Spec
+
+	return
 }
 
 // Ensure checks if the given OperatorSource source is one of the
