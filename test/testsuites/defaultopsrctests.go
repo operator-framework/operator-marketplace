@@ -30,6 +30,7 @@ func DefaultOpSrc(t *testing.T) {
 
 	t.Run("delete-default-operator-source", testDeleteDefaultOpSrc)
 	t.Run("update-default-operator-source", testUpdateDefaultOpSrc)
+	t.Run("update-default-registry-namespace-operator-source", testUpdateRegistryNamespaceDefaultOpSrc)
 }
 
 // testDeleteDefaultOpSrc deletes a default OperatorSource and checks if it has
@@ -88,6 +89,44 @@ func testUpdateDefaultOpSrc(t *testing.T) {
 		updateOpSrc)
 
 	updateOpSrc.Spec.Publisher = "Random"
+	err = helpers.UpdateRuntimeObject(client, updateOpSrc)
+	require.NoError(t, err, "Default OperatorSource could not be deleted successfully")
+
+	// Ensure the OperatorSource phase is "Succeeded"
+	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, defaultOpSrc.Name, namespace, "Succeeded",
+		"The object has been successfully reconciled")
+	assert.NoError(t, err, "Default OperatorSource never reached the succeeded phase")
+
+	// Check for the child resources which implies that the OperatorSource was recreated
+	err = helpers.CheckChildResourcesCreated(client, defaultOpSrc.Name, namespace, namespace, v1.OperatorSourceKind)
+	assert.NoError(t, err, "Could not ensure that child resources were created")
+
+	assert.ObjectsAreEqualValues(defaultOpSrc.Spec, clusterOpSrc.Spec)
+}
+
+// testUpdateDefaultOpSrc changes a default OperatorSource and checks if it has
+// been restored correctly.
+func testUpdateRegistryNamespaceDefaultOpSrc(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get global framework variables
+	client := test.Global.Client
+
+	// Get test namespace
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	require.NoError(t, err, "Could not get namespace.")
+
+	err = initOpSrcDefinition()
+	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
+
+	// Now let's update the OperatorSource
+	updateOpSrc := &v1.OperatorSource{}
+	err = client.Get(context.TODO(), types.NamespacedName{
+		Name: defaultOpSrc.Name, Namespace: defaultOpSrc.Namespace},
+		updateOpSrc)
+
+	updateOpSrc.Spec.RegistryNamespace = "Random"
 	err = helpers.UpdateRuntimeObject(client, updateOpSrc)
 	require.NoError(t, err, "Default OperatorSource could not be deleted successfully")
 
