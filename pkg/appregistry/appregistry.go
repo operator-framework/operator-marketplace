@@ -7,8 +7,6 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	apprclient "github.com/operator-framework/go-appr/appregistry"
-	"github.com/operator-framework/operator-marketplace/pkg/proxy"
-	"net/http"
 )
 
 // NewClientFactory return a factory which can be used to instantiate a new appregistry client
@@ -42,17 +40,7 @@ func (f *factory) New(options Options) (Client, error) {
 		return nil, err
 	}
 
-	// A custom HTTPClient is used here since the default HTTPClients ProxyFromEnvironment
-	// uses a cache which won't let us update the proxy env vars.
-	cli := &http.Client{
-		Transport: &http.Transport{
-			Proxy: func(req *http.Request) (*url.URL, error) {
-				return proxy.GetInstance().GetProxyConfig().ProxyFunc()(req.URL)
-			},
-		},
-	}
-
-	transport := httptransport.NewWithClient(u.Host, u.Path, []string{u.Scheme}, cli)
+	transport := httptransport.New(u.Host, u.Path, []string{u.Scheme})
 	transport.Consumers["application/x-gzip"] = runtime.ByteStreamConsumer()
 
 	// If a bearer token has been specified then we should pass it along in the headers
