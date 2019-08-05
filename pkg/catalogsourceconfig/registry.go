@@ -126,7 +126,7 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 
 		// Wait for the deployment to scale down. We need to get the latest version of the object after
 		// the update, so we use the object returned here for scaling up.
-		if deployment, err = r.waitForDeploymentScaleDown(2*time.Second, 1*time.Minute); err != nil {
+		if _, err = r.waitForDeploymentScaleDown(2*time.Second, 1*time.Minute); err != nil {
 			r.log.Errorf("Failed to scale down Deployment %s : %v", deployment.GetName(), err)
 			return err
 		}
