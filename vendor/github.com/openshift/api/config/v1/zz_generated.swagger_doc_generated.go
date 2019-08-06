@@ -244,7 +244,7 @@ func (StringSourceSpec) SwaggerDoc() map[string]string {
 }
 
 var map_APIServer = map[string]string{
-	"": "APIServer holds cluster-wide information about api-servers.  The canonical name is `cluster`",
+	"": "APIServer holds configuration (like serving certificates, client CA and CORS domains) shared by all API servers in the system, among them especially kube-apiserver and openshift-apiserver. The canonical name of an instance is 'cluster'.",
 }
 
 func (APIServer) SwaggerDoc() map[string]string {
@@ -280,7 +280,7 @@ func (APIServerSpec) SwaggerDoc() map[string]string {
 }
 
 var map_Authentication = map[string]string{
-	"":         "Authentication holds cluster-wide information about Authentication.  The canonical name is `cluster`",
+	"":         "Authentication specifies cluster-wide settings for authentication (like OAuth and webhook token authenticators). The canonical name of an instance is `cluster`.",
 	"metadata": "Standard object's metadata.",
 	"spec":     "spec holds user settable values for configuration",
 	"status":   "status holds observed values from the cluster. They may not be overridden.",
@@ -539,7 +539,7 @@ func (UpdateHistory) SwaggerDoc() map[string]string {
 }
 
 var map_Console = map[string]string{
-	"":         "Console holds cluster-wide information about Console.  The canonical name is `cluster`.",
+	"":         "Console holds cluster-wide configuration for the web console, including the logout URL, and reports the public URL of the console. The canonical name is `cluster`.",
 	"metadata": "Standard object's metadata.",
 	"spec":     "spec holds user settable values for configuration",
 	"status":   "status holds observed values from the cluster. They may not be overridden.",
@@ -584,7 +584,7 @@ func (ConsoleStatus) SwaggerDoc() map[string]string {
 }
 
 var map_DNS = map[string]string{
-	"":         "DNS holds cluster-wide information about DNS.  The canonical name is `cluster`",
+	"":         "DNS holds cluster-wide information about DNS. The canonical name is `cluster`",
 	"metadata": "Standard object's metadata.",
 	"spec":     "spec holds user settable values for configuration",
 	"status":   "status holds observed values from the cluster. They may not be overridden.",
@@ -603,9 +603,9 @@ func (DNSList) SwaggerDoc() map[string]string {
 }
 
 var map_DNSSpec = map[string]string{
-	"baseDomain":  "baseDomain is the base domain of the cluster. All managed DNS records will be sub-domains of this base.\n\nFor example, given the base domain `openshift.example.com`, an API server DNS record may be created for `cluster-api.openshift.example.com`.",
-	"publicZone":  "publicZone is the location where all the DNS records that are publicly accessible to the internet exist. If this field is nil, no public records should be created.",
-	"privateZone": "privateZone is the location where all the DNS records that are only available internally to the cluster exist. If this field is nil, no private records should be created.",
+	"baseDomain":  "baseDomain is the base domain of the cluster. All managed DNS records will be sub-domains of this base.\n\nFor example, given the base domain `openshift.example.com`, an API server DNS record may be created for `cluster-api.openshift.example.com`.\n\nOnce set, this field cannot be changed.",
+	"publicZone":  "publicZone is the location where all the DNS records that are publicly accessible to the internet exist.\n\nIf this field is nil, no public records should be created.\n\nOnce set, this field cannot be changed.",
+	"privateZone": "privateZone is the location where all the DNS records that are only available internally to the cluster exist.\n\nIf this field is nil, no private records should be created.\n\nOnce set, this field cannot be changed.",
 }
 
 func (DNSSpec) SwaggerDoc() map[string]string {
@@ -1146,6 +1146,61 @@ func (TokenConfig) SwaggerDoc() map[string]string {
 	return map_TokenConfig
 }
 
+var map_HubSource = map[string]string{
+	"":         "HubSource is used to specify the hub source and its configuration",
+	"name":     "name is the name of one of the default hub sources",
+	"disabled": "disabled is used to disable a default hub source on cluster",
+}
+
+func (HubSource) SwaggerDoc() map[string]string {
+	return map_HubSource
+}
+
+var map_HubSourceStatus = map[string]string{
+	"":        "HubSourceStatus is used to reflect the current state of applying the configuration to a default source",
+	"status":  "status indicates success or failure in applying the configuration",
+	"message": "message provides more information regarding failures",
+}
+
+func (HubSourceStatus) SwaggerDoc() map[string]string {
+	return map_HubSourceStatus
+}
+
+var map_OperatorHub = map[string]string{
+	"": "OperatorHub is the Schema for the operatorhubs API. It can be used to change the state of the default hub sources for OperatorHub on the cluster from enabled to disabled and vice versa.",
+}
+
+func (OperatorHub) SwaggerDoc() map[string]string {
+	return map_OperatorHub
+}
+
+var map_OperatorHubList = map[string]string{
+	"": "OperatorHubList contains a list of OperatorHub",
+}
+
+func (OperatorHubList) SwaggerDoc() map[string]string {
+	return map_OperatorHubList
+}
+
+var map_OperatorHubSpec = map[string]string{
+	"":                         "OperatorHubSpec defines the desired state of OperatorHub",
+	"disableAllDefaultSources": "disableAllDefaultSources allows you to disable all the default hub sources. If this is true, a specific entry in sources can be used to enable a default source. If this is false, a specific entry in sources can be used to disable or enable a default source.",
+	"sources":                  "sources is the list of default hub sources and their configuration. If the list is empty, it implies that the default hub sources are enabled on the cluster unless disableAllDefaultSources is true. If disableAllDefaultSources is true and sources is not empty, the configuration present in sources will take precedence. The list of default hub sources and their current state will always be reflected in the status block.",
+}
+
+func (OperatorHubSpec) SwaggerDoc() map[string]string {
+	return map_OperatorHubSpec
+}
+
+var map_OperatorHubStatus = map[string]string{
+	"":        "OperatorHubStatus defines the observed state of OperatorHub. The current state of the default hub sources will always be reflected here.",
+	"sources": "sources encapsulates the result of applying the configuration for each hub source",
+}
+
+func (OperatorHubStatus) SwaggerDoc() map[string]string {
+	return map_OperatorHubStatus
+}
+
 var map_Project = map[string]string{
 	"":         "Project holds cluster-wide information about Project.  The canonical name is `cluster`",
 	"metadata": "Standard object's metadata.",
@@ -1208,6 +1263,7 @@ var map_ProxySpec = map[string]string{
 	"httpsProxy":         "httpsProxy is the URL of the proxy for HTTPS requests.  Empty means unset and will not result in an env var.",
 	"noProxy":            "noProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Empty means unset and will not result in an env var.",
 	"readinessEndpoints": "readinessEndpoints is a list of endpoints used to verify readiness of the proxy.",
+	"trustedCA":          "trustedCA is a reference to a ConfigMap containing a CA certificate bundle used for client egress HTTPS connections. The certificate bundle must be from the CA that signed the proxy's certificate and be signed for everything. The trustedCA field should only be consumed by a proxy validator. The validator is responsible for reading the certificate bundle from required key \"ca-bundle.crt\" and copying it to a ConfigMap named \"trusted-ca-bundle\" in the \"openshift-config-managed\" namespace. The namespace for the ConfigMap referenced by trustedCA is \"openshift-config\". Here is an example ConfigMap (in yaml):\n\napiVersion: v1 kind: ConfigMap metadata:\n name: user-ca-bundle\n namespace: openshift-config\n data:\n   ca-bundle.crt: |",
 }
 
 func (ProxySpec) SwaggerDoc() map[string]string {
@@ -1226,7 +1282,7 @@ func (ProxyStatus) SwaggerDoc() map[string]string {
 }
 
 var map_Scheduler = map[string]string{
-	"":         "Scheduler holds cluster-wide information about Scheduler.  The canonical name is `cluster`",
+	"":         "Scheduler holds cluster-wide config information to run the Kubernetes Scheduler and influence its placement decisions. The canonical name for this config is `cluster`.",
 	"metadata": "Standard object's metadata.",
 	"spec":     "spec holds user settable values for configuration",
 	"status":   "status holds observed values from the cluster. They may not be overridden.",
