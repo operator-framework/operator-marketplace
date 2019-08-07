@@ -43,6 +43,6 @@ func testDeleteOpSrc(t *testing.T) {
 
 	// Now let's wait until the OperatorSource is successfully deleted and the
 	// child resources are removed.
-	err = helpers.CheckChildResourcesDeleted(test.Global.Client, testOperatorSource.Name, namespace, namespace)
+	err = helpers.CheckChildResourcesDeleted(test.Global.Client, testOperatorSource.Name, namespace, namespace, v1.OperatorSourceKind)
 	require.NoError(t, err, "Could not ensure child resources were deleted.")
 }

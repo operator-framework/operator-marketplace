@@ -15,6 +15,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -307,10 +308,11 @@ func checkOwnerLabels(labels map[string]string, owner string) error {
 // CheckChildResourcesCreated checks that a CatalogSourceConfig's
 // child resources were deployed.
 func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace, targetNamespace, owner string) error {
+	resourceName := AddChildResourcePrefix(cscName, owner)
 
 	// Check that the CatalogSource was created.
 	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForResult(client, resultCatalogSource, targetNamespace, resourceName)
 	if err != nil {
 		return err
 	}
@@ -323,7 +325,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 
 	// Check that the Service was created.
 	resultService := &corev1.Service{}
-	err = WaitForResult(client, resultService, namespace, cscName)
+	err = WaitForResult(client, resultService, namespace, resourceName)
 	if err != nil {
 		return err
 	}
@@ -336,7 +338,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 
 	// Check that the Deployment was created.
 	resultDeployment := &apps.Deployment{}
-	err = WaitForResult(client, resultDeployment, namespace, cscName)
+	err = WaitForResult(client, resultDeployment, namespace, resourceName)
 	if err != nil {
 		return err
 	}
@@ -357,24 +359,26 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 
 // CheckChildResourcesDeleted checks that a CatalogSourceConfig's
 // child resources were deleted.
-func CheckChildResourcesDeleted(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
+func CheckChildResourcesDeleted(client test.FrameworkClient, cscName, namespace, targetNamespace, owner string) error {
+	resourceName := AddChildResourcePrefix(cscName, owner)
+
 	// Check that the CatalogSource was deleted.
 	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, resourceName)
 	if err != nil {
 		return err
 	}
 
 	// Check that the Service was deleted.
 	resultService := &corev1.Service{}
-	err = WaitForNotFound(client, resultService, namespace, cscName)
+	err = WaitForNotFound(client, resultService, namespace, resourceName)
 	if err != nil {
 		return err
 	}
 
 	// Check that the Deployment was deleted.
 	resultDeployment := &apps.Deployment{}
-	err = WaitForNotFound(client, resultDeployment, namespace, cscName)
+	err = WaitForNotFound(client, resultDeployment, namespace, resourceName)
 	if err != nil {
 		return err
 	}
@@ -411,7 +415,7 @@ func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName, namespace,
 	}
 
 	// Check that all child resources were deleted.
-	err = CheckChildResourcesDeleted(client, cscName, namespace, targetNamespace)
+	err = CheckChildResourcesDeleted(client, cscName, namespace, targetNamespace, v2.CatalogSourceConfigKind)
 	if err != nil {
 		return err
 	}
@@ -672,4 +676,16 @@ func InitOpSrcDefinition() error {
 		}
 	}
 	return nil
+}
+
+// AddChildResourcePrefix adds prefix to child resources depending on the owner's
+// kind of those resources.
+func AddChildResourcePrefix(name, owner string) string {
+	var resourceName string
+	if owner == v1.OperatorSourceKind {
+		resourceName = registry.OperatorSourceDepPrefix + name
+	} else if owner == v2.CatalogSourceConfigKind {
+		resourceName = registry.CatalogSourceConfigDepPrefix + name
+	}
+	return resourceName
 }

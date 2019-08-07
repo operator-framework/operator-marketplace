@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -26,14 +28,16 @@ func ProxyTests(t *testing.T) {
 // created by an OperatorSource has the appropriate proxy environment
 // variables set.
 func testOpSrcRegistryIncludesProxyVars(t *testing.T) {
-	assert.NoError(t, checkDeploymentIncludesProxyVars(t, helpers.TestOperatorSourceName))
+	resourceName := helpers.AddChildResourcePrefix(helpers.TestOperatorSourceName, v1.OperatorSourceKind)
+	assert.NoError(t, checkDeploymentIncludesProxyVars(t, resourceName))
 }
 
 // testCsdRegistry ensures that the Operator Registry deployment
 // created by an OperatorSource has the appropriate proxy environment
 // variables set.
 func testCscRegistryIncludesProxyVars(t *testing.T) {
-	assert.NoError(t, checkDeploymentIncludesProxyVars(t, helpers.TestCatalogSourceConfigName))
+	resourceName := helpers.AddChildResourcePrefix(helpers.TestCatalogSourceConfigName, v2.CatalogSourceConfigKind)
+	assert.NoError(t, checkDeploymentIncludesProxyVars(t, resourceName))
 }
 
 // checkDeploymentIncludesProxyVars checks if the deployment has the appropriate

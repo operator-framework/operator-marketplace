@@ -312,7 +312,7 @@ func checkOpSrcAndChildrenArePresent(name, namespace string) error {
 // checkOpSrcAndChildrenAreDeleted checks if the OperatorSource and its child resources have been deleted.
 func checkOpSrcAndChildrenAreDeleted(name, namespace string) error {
 	client := test.Global.Client
-	err := helpers.CheckChildResourcesDeleted(client, name, namespace, namespace)
+	err := helpers.CheckChildResourcesDeleted(client, name, namespace, namespace, v1.OperatorSourceKind)
 	if err != nil {
 		return err
 	}

@@ -34,13 +34,16 @@ func testOperatorSourceGeneratesExpectedObjects(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
+	// Determine resource name
+	resourceName := helpers.AddChildResourcePrefix(helpers.TestOperatorSourceName, v1.OperatorSourceKind)
+
 	// Check for child resources.
 	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace, v1.OperatorSourceKind)
 	require.NoError(t, err)
 
 	// Check that the CatalogSource has the expected labels.
 	resultCatalogSource := &olm.CatalogSource{}
-	err = helpers.WaitForResult(test.Global.Client, resultCatalogSource, namespace, helpers.TestOperatorSourceName)
+	err = helpers.WaitForResult(test.Global.Client, resultCatalogSource, namespace, resourceName)
 	require.NoError(t, err)
 	labels := resultCatalogSource.GetLabels()
 	groupGot, ok := labels[helpers.TestOperatorSourceLabelKey]
@@ -61,6 +64,9 @@ func testRegistryDeploymentRetainsChanges(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
+	// Determine resource name
+	resourceName := helpers.AddChildResourcePrefix(helpers.TestOperatorSourceName, v1.OperatorSourceKind)
+
 	// Check for child resources.
 	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace,
 		v1.OperatorSourceKind)
@@ -69,7 +75,7 @@ func testRegistryDeploymentRetainsChanges(t *testing.T) {
 	client := test.Global.Client
 
 	// Get the registry deployment of the test OperatorSource
-	deployment := getRegistryDeployment(t, helpers.TestOperatorSourceName, namespace)
+	deployment := getRegistryDeployment(t, resourceName, namespace)
 	require.NotNil(t, deployment)
 
 	// Add an annotation to the pod template and update the deployment
@@ -97,7 +103,7 @@ func testRegistryDeploymentRetainsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get the registry deployment again
-	deployment = getRegistryDeployment(t, helpers.TestOperatorSourceName, namespace)
+	deployment = getRegistryDeployment(t, resourceName, namespace)
 	require.NotNil(t, deployment)
 
 	// Check that the annotation was present after the OperatorSource update

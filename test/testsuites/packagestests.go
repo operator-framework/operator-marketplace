@@ -84,7 +84,7 @@ func childResourcesNotCreated(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check that the CatalogSourceConfig's child resources were not created.
-	err = helpers.CheckChildResourcesDeleted(test.Global.Client, cscName, namespace, namespace)
+	err = helpers.CheckChildResourcesDeleted(test.Global.Client, cscName, namespace, namespace, v2.CatalogSourceConfigKind)
 	assert.NoError(t, err, "Child resources of CatalogSourceConfig were unexpectedly created")
 }
 

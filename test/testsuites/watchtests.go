@@ -87,13 +87,15 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 	client := test.Global.Client
 
 	var obj runtime.Object
-	var name, targetNamespace string
+	var name, targetNamespace, resourceName string
 
 	switch owner {
 	case v2.CatalogSourceConfigKind:
+		resourceName = helpers.AddChildResourcePrefix(helpers.TestCatalogSourceConfigName, owner)
 		name = helpers.TestCatalogSourceConfigName
 		targetNamespace = helpers.TestCatalogSourceConfigTargetNamespace
 	case v1.OperatorSourceKind:
+		resourceName = helpers.AddChildResourcePrefix(helpers.TestOperatorSourceName, owner)
 		name = helpers.TestOperatorSourceName
 		targetNamespace = namespace
 	default:
@@ -101,7 +103,7 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 	}
 
 	objMeta := meta.ObjectMeta{
-		Name:      name,
+		Name:      resourceName,
 		Namespace: namespace,
 	}
 
@@ -112,7 +114,7 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 				Kind: olm.CatalogSourceKind,
 			},
 			ObjectMeta: meta.ObjectMeta{
-				Name:      name,
+				Name:      resourceName,
 				Namespace: targetNamespace,
 			},
 		}
