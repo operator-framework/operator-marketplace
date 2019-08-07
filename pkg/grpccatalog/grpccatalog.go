@@ -96,12 +96,13 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 // newCatalogSource returns a CatalogSource object.
 func newCatalogSource(labels map[string]string, key types.NamespacedName, displayName, publisher, namespace, address, owner string) *olm.CatalogSource {
 	builder := new(builders.CatalogSourceBuilder).
-		WithMeta(key.Name, key.Namespace).
 		WithSpec(olm.SourceTypeGrpc, address, displayName, publisher)
 	if owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(key.Name, namespace)
+		builder.WithMeta(registry.OperatorSourceDepPrefix+key.Name, key.Namespace).
+			WithOpsrcOwnerLabel(key.Name, namespace)
 	} else if owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(key.Name, namespace)
+		builder.WithMeta(registry.CatalogSourceConfigDepPrefix+key.Name, key.Namespace).
+			WithCscOwnerLabel(key.Name, namespace)
 	}
 	// Check if the operatorsource.DatastoreLabel is "true" which indicates that
 	// the CatalogSource is the datastore for an OperatorSource. This is a hint

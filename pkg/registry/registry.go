@@ -38,7 +38,14 @@ var action = []string{"grpc_health_probe", "-addr=localhost:50051"}
 
 // DefaultServerImage is the registry image to be used in the absence of
 // the command line parameter.
-const DefaultServerImage = "quay.io/openshift/origin-operator-registry"
+// OperatorSourceDepPrefix is default prefix for Operator Source deployment
+// CatalogSourceConfigDepPrefix is default prefix for Catalog Source Config
+// deployment
+const (
+	DefaultServerImage           = "quay.io/openshift/origin-operator-registry"
+	OperatorSourceDepPrefix      = "opsrc-"
+	CatalogSourceConfigDepPrefix = "csc-"
+)
 
 // ServerImage is the image used for creating the operator registry pod.
 // This gets set in the cmd/manager/main.go.
@@ -139,7 +146,11 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 			// of an authorization token. In that scenario we have to add the service account to the spec.
 			// There is no harm updating in other cases.
 			if needServiceAccount {
-				deployment.Spec.Template.Spec.ServiceAccountName = r.key.Name
+				if r.owner == v1.OperatorSourceKind {
+					deployment.Spec.Template.Spec.ServiceAccountName = OperatorSourceDepPrefix + r.key.Name
+				} else if r.owner == v2.CatalogSourceConfigKind {
+					deployment.Spec.Template.Spec.ServiceAccountName = CatalogSourceConfigDepPrefix + r.key.Name
+				}
 			}
 
 			if configv1.IsAPIAvailable() {
@@ -318,12 +329,13 @@ func (r *registry) getSubjects() []rbac.Subject {
 // registry deployment
 func (r *registry) newDeployment(registryCommand []string, needServiceAccount bool) *apps.Deployment {
 	builder := new(builders.DeploymentBuilder).
-		WithMeta(r.key.Name, r.key.Namespace).
 		WithSpec(1, r.getLabel(r.owner), r.newPodTemplateSpec(registryCommand, needServiceAccount))
 	if r.owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(OperatorSourceDepPrefix+r.key.Name, r.key.Namespace).
+			WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(CatalogSourceConfigDepPrefix+r.key.Name, r.key.Namespace).
+			WithCscOwnerLabel(r.key.Name, r.key.Namespace)
 	}
 	return builder.Deployment()
 }
@@ -378,7 +390,11 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 		},
 	}
 	if needServiceAccount {
-		podTemplateSpec.Spec.ServiceAccountName = r.key.Name
+		if r.owner == v1.OperatorSourceKind {
+			podTemplateSpec.Spec.ServiceAccountName = OperatorSourceDepPrefix + r.key.Name
+		} else if r.owner == v2.CatalogSourceConfigKind {
+			podTemplateSpec.Spec.ServiceAccountName = CatalogSourceConfigDepPrefix + r.key.Name
+		}
 	}
 
 	if configv1.IsAPIAvailable() {
@@ -396,12 +412,13 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 // registry pod
 func (r *registry) newRole() *rbac.Role {
 	builder := new(builders.RoleBuilder).
-		WithMeta(r.key.Name, r.key.Namespace).
 		WithRules(getRules())
 	if r.owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(OperatorSourceDepPrefix+r.key.Name, r.key.Namespace).
+			WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(CatalogSourceConfigDepPrefix+r.key.Name, r.key.Namespace).
+			WithCscOwnerLabel(r.key.Name, r.key.Namespace)
 	}
 	return builder.Role()
 }
@@ -409,13 +426,14 @@ func (r *registry) newRole() *rbac.Role {
 // newRoleBinding returns a RoleBinding object RoleRef set to the given Role.
 func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
 	builder := new(builders.RoleBindingBuilder).
-		WithMeta(r.key.Name, r.key.Namespace).
 		WithSubjects(r.getSubjects()).
 		WithRoleRef(roleName)
 	if r.owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(OperatorSourceDepPrefix+r.key.Name, r.key.Namespace).
+			WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(CatalogSourceConfigDepPrefix+r.key.Name, r.key.Namespace).
+			WithCscOwnerLabel(r.key.Name, r.key.Namespace)
 	}
 	return builder.RoleBinding()
 }
@@ -423,24 +441,26 @@ func (r *registry) newRoleBinding(roleName string) *rbac.RoleBinding {
 // newService returns a new Service object.
 func (r *registry) newService() *core.Service {
 	builder := new(builders.ServiceBuilder).
-		WithMeta(r.key.Name, r.key.Namespace).
 		WithSpec(r.newServiceSpec())
 	if r.owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(OperatorSourceDepPrefix+r.key.Name, r.key.Namespace).
+			WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(CatalogSourceConfigDepPrefix+r.key.Name, r.key.Namespace).
+			WithCscOwnerLabel(r.key.Name, r.key.Namespace)
 	}
 	return builder.Service()
 }
 
 // newServiceAccount returns a new ServiceAccount object.
 func (r *registry) newServiceAccount() *core.ServiceAccount {
-	builder := new(builders.ServiceAccountBuilder).
-		WithMeta(r.key.Name, r.key.Namespace)
+	builder := new(builders.ServiceAccountBuilder)
 	if r.owner == v1.OperatorSourceKind {
-		builder.WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(OperatorSourceDepPrefix+r.key.Name, r.key.Namespace).
+			WithOpsrcOwnerLabel(r.key.Name, r.key.Namespace)
 	} else if r.owner == v2.CatalogSourceConfigKind {
-		builder.WithCscOwnerLabel(r.key.Name, r.key.Namespace)
+		builder.WithMeta(CatalogSourceConfigDepPrefix+r.key.Name, r.key.Namespace).
+			WithCscOwnerLabel(r.key.Name, r.key.Namespace)
 	}
 	return builder.ServiceAccount()
 }
