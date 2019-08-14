@@ -138,9 +138,8 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 			if needServiceAccount {
 				deployment.Spec.Template.Spec.ServiceAccountName = r.key.Name
 			}
-			// Update proxy env vars to match those in the operator.
-			deployment.Spec.Template.Spec.Containers[0].Env = proxy.GetInstance().GetEnvVars()
-
+			// Update proxy environment variables to match those in the operator.
+			deployment.Spec.Template.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
 		}
 		// Set or update the annotation to force an update. This is required so that we get updates
 		// from Quay during the sync cycle when packages have not been added or removed from the spec.
@@ -365,9 +364,8 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 	if needServiceAccount {
 		podTemplateSpec.Spec.ServiceAccountName = r.key.Name
 	}
-	// Update proxy env vars to match those in the operator.
-	podTemplateSpec.Spec.Containers[0].Env = proxy.GetInstance().GetEnvVars()
-
+	// Update proxy environment variables to match those in the operator.
+	podTemplateSpec.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
 	return podTemplateSpec
 }
 

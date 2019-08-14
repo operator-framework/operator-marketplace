@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
@@ -70,9 +71,14 @@ const (
 	TestUserCreatedSubscriptionName string = "test-operators"
 )
 
-// TestUserCreatedSubscriptionResourceVersion is the resourceversion of the user
-// created subscription. This is set when this subscription is created.
-var TestUserCreatedSubscriptionResourceVersion string
+var (
+	// TestUserCreatedSubscriptionResourceVersion is the resourceversion of the user
+	// created subscription. This is set when this subscription is created.
+	TestUserCreatedSubscriptionResourceVersion string
+
+	// isCoAPIPresent keeps track of whether or not the ClusterOperator API is available.
+	isCoAPIPresent *bool
+)
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
 // If the request fails because of an IsNotFound error it retries until the specified timeout.
@@ -541,4 +547,39 @@ func CheckSubscriptionNotUpdated(client test.FrameworkClient, name, namespace st
 		return fmt.Errorf("User created Subscription %s Spec.CatalogSource has changed. Spec.CatalogSource was %s and is now %s", subscription.GetName(), subscription.Spec.CatalogSource, specSource)
 	}
 	return nil
+}
+
+// EnsureClusterOperatorIsAvailable will make a single attempt to add the ClusterOperator
+// to the FrameworkScheme. If an error is encountered in this first call, it will
+// be returned.
+// Subsequent calls will always return whether or not the ClusterOperator was added
+// to the FrameworkScheme and nil.
+// The boolean returned by this method can be used to identify if the tests are
+// being ran on an OpenShift cluster.
+func EnsureClusterOperatorIsAvailable() (bool, error) {
+	var err error
+	if isCoAPIPresent == nil {
+		// present is used to allocate space for the isCoAPIPresent pointer.
+		present := false
+
+		// Add (configv1) ClusterOperator to framework scheme
+		clusterOperator := &configv1.ClusterOperator{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "ClusterOperator",
+				APIVersion: fmt.Sprintf("%s/%s",
+					configv1.SchemeGroupVersion.Group, configv1.SchemeGroupVersion.Version),
+			},
+		}
+
+		// We are assuming that ClusterOperator API will always be added successfully
+		// on an OpenShift cluster.
+		err = test.AddToFrameworkScheme(configv1.Install, clusterOperator)
+		if err == nil {
+			present = true
+		}
+
+		isCoAPIPresent = &present
+	}
+
+	return *isCoAPIPresent, err
 }

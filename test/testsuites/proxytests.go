@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/proxy"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +51,7 @@ func checkDeploymentIncludesProxyVars(t *testing.T, name string) error {
 
 	// Get the cluster proxy
 	clusterProxy := &apiconfigv1.Proxy{}
-	clusterProxyKey := types.NamespacedName{Name: proxy.ClusterProxyName}
+	clusterProxyKey := types.NamespacedName{Name: "cluster"}
 	err = client.Get(context.TODO(), clusterProxyKey, clusterProxy)
 	if err != nil && !errors.IsNotFound(err) {
 		require.NoError(t, err, "Unexpected error while retrieving cluster proxy")
@@ -72,7 +71,7 @@ func checkDeploymentIncludesProxyVars(t *testing.T, name string) error {
 	require.NoError(t, err, fmt.Sprintf("Unexpected error while retrieving the %s/%s deployment", namespace, name))
 	actual := deployment.Spec.Template.Spec.Containers[0].Env
 
-	// Check that the
+	// Check that the the lists match.
 	for i := range expected {
 		if !contains(actual, expected[i]) {
 			return fmt.Errorf("EnvVar list %v does not contain %v", actual, expected[i])
