@@ -2,7 +2,6 @@ package defaults
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,7 +10,6 @@ import (
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -20,32 +18,50 @@ var (
 	// placed on disk. It will be empty if defaults are not required.
 	Dir string
 
-	// defaultsTracker is used to keep an in-memory record of default
-	// OperatorSources. It is a map of OperatorSource name to the OperatorSource
-	// definition in the defaults directory.
-	defaultsTracker = make(map[string]v1.OperatorSource)
+	// globalDefinitions is used to keep an in-memory record of default
+	// OperatorSources as found on disk. It is a map of OperatorSource name
+	// to the OperatorSource definition in the defaults directory. It is
+	// populated just once during runtime to prevent new defaults from being
+	// injected into the operator image.
+	globalDefinitions = make(map[string]v1.OperatorSource)
+
+	// defaultConfig is the default configuration for the cluster in the absence
+	// of a an OperatorHub config object or if there is one with an empty spec.
+	// The default is for all the OperatorSources in the globalDefinitions to be
+	// enabled.
+	defaultConfig = make(map[string]bool)
 )
 
 // Defaults is the interface that can be used to ensure default OperatorSources
 // are always present on the cluster.
 type Defaults interface {
-	EnsureAll(client wrapper.Client) error
+	EnsureAll(client wrapper.Client) map[string]error
 	Ensure(client wrapper.Client, opsrcName string) error
 	RestoreSpecIfDefault(in *v1.OperatorSource)
 }
 
 type defaults struct {
+	definitions map[string]v1.OperatorSource
+	config      map[string]bool
 }
 
-// New returns a the singleton defaults
-func New() Defaults {
-	return &defaults{}
+// New returns an instance of defaults
+func New(definitions map[string]v1.OperatorSource, config map[string]bool) Defaults {
+	// Doing this to remove the need for checking at calls sites. This can be
+	// made to return an error if error checking at calls sites is preferable.
+	if definitions == nil || config == nil {
+		panic("Defaults cannot be initialized with nil definitions or config")
+	}
+	return &defaults{
+		definitions: definitions,
+		config:      config,
+	}
 }
 
 // RestoreSpecIfDefault takes an operator source and, if it is one of the defaults,
 // sets the spec back to the expected spec in order to prevent any changes.
 func (d *defaults) RestoreSpecIfDefault(in *v1.OperatorSource) {
-	defOpsrc, present := defaultsTracker[in.Name]
+	defOpsrc, present := d.definitions[in.Name]
 	if !present {
 		return
 	}
@@ -56,14 +72,20 @@ func (d *defaults) RestoreSpecIfDefault(in *v1.OperatorSource) {
 }
 
 // Ensure checks if the given OperatorSource source is one of the
-// defaults and if it is, it ensures it is present on the cluster.
+// defaults and if it is, it ensures it is present or absent on the cluster
+// based on the config.
 func (d *defaults) Ensure(client wrapper.Client, opsrcName string) error {
-	opsrc, present := defaultsTracker[opsrcName]
+	opsrc, present := d.definitions[opsrcName]
 	if !present {
 		return nil
 	}
 
-	err := processOpSrc(client, opsrc)
+	disable, present := d.config[opsrcName]
+	if !present {
+		disable = false
+	}
+
+	err := processOpSrc(client, opsrc, disable)
 	if err != nil {
 		return err
 	}
@@ -72,46 +94,84 @@ func (d *defaults) Ensure(client wrapper.Client, opsrcName string) error {
 }
 
 // EnsureAll processes all the default OperatorSources and ensures they are
-// present on the cluster.
-func (d *defaults) EnsureAll(client wrapper.Client) error {
-	allErrors := []error{}
-	for name := range defaultsTracker {
+// present or absent on the cluster based on the config.
+func (d *defaults) EnsureAll(client wrapper.Client) map[string]error {
+	result := make(map[string]error)
+	for name := range d.config {
 		err := d.Ensure(client, name)
 		if err != nil {
-			allErrors = append(allErrors, fmt.Errorf("Error handling %s - %v", name, err))
+			result[name] = err
 		}
 	}
-	return utilerrors.NewAggregate(allErrors)
+	return result
 }
 
-// PopulateTracker populates the defaultsTracker on initialization
-func PopulateTracker() error {
+// GetGlobals returns the global OperatorSource definitions and the
+// default config
+func GetGlobals() (map[string]v1.OperatorSource, map[string]bool) {
+	return globalDefinitions, defaultConfig
+}
+
+// GetGlobalDefinitions returns the global OperatorSource definitions
+func GetGlobalDefinitions() map[string]v1.OperatorSource {
+	return globalDefinitions
+}
+
+// GetDefaultConfig returns the global OperatorSource definitions
+func GetDefaultConfig() map[string]bool {
+	return defaultConfig
+}
+
+// IsDefaultSource returns true if the given name is one of the default
+// OperatorSources
+func IsDefaultSource(name string) bool {
+	_, present := defaultConfig[name]
+	return present
+
+}
+
+// PopulateGlobals populates the global definitions and default config. If Dir
+// is blank, the global definitions and config will be initialized but empty.
+func PopulateGlobals() error {
+	var err error
+	globalDefinitions, defaultConfig, err = populateDefsConfig(Dir)
+	return err
+}
+
+// populateDefsConfig returns populated OperatorSource definitions from files
+// present in dir and an enabled config. It returns error on the first issues it
+// runs into. The function also guarantees to return an empty map on error.
+func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]bool, error) {
+	definitions := make(map[string]v1.OperatorSource)
+	config := make(map[string]bool)
 	// Default directory has not been specified
-	if Dir == "" {
-		return nil
+	if dir == "" {
+		return definitions, config, nil
 	}
 
 	_, err := os.Stat(Dir)
 	if err != nil {
-		return err
+		return definitions, config, err
 	}
 
 	fileInfos, err := ioutil.ReadDir(Dir)
 	if err != nil {
-		return err
+		return definitions, config, err
 	}
 
 	for _, fileInfo := range fileInfos {
 		fileName := fileInfo.Name()
 		opsrc, err := getOpSrcDefinition(fileName)
 		if err != nil {
-			// Reinitialize the tracker as we hard error on even one failure
-			defaultsTracker = make(map[string]v1.OperatorSource)
-			return err
+			// Reinitialize the definitions as we hard error on even one failure
+			definitions = make(map[string]v1.OperatorSource)
+			config = make(map[string]bool)
+			return definitions, config, err
 		}
-		defaultsTracker[opsrc.Name] = *opsrc
+		definitions[opsrc.Name] = *opsrc
+		config[opsrc.Name] = false
 	}
-	return nil
+	return definitions, config, nil
 }
 
 // getOpSrcDefinition returns an OperatorSource definition from the given file
@@ -132,40 +192,76 @@ func getOpSrcDefinition(fileName string) (*v1.OperatorSource, error) {
 	return opsrc, nil
 }
 
-// processOpSrc will ensure that the given OperatorSource exists on the cluster.
-func processOpSrc(client wrapper.Client, defaultOpsrc v1.OperatorSource) error {
+// processOpSrc will ensure that the given OperatorSource is present or not on
+// the cluster based on the disable flag.
+func processOpSrc(client wrapper.Client, def v1.OperatorSource, disable bool) error {
 	// Get OperatorSource on the cluster
-	opsrcCluster := &v1.OperatorSource{}
+	cluster := &v1.OperatorSource{}
 	err := client.Get(context.TODO(), wrapper.ObjectKey{
-		Name:      defaultOpsrc.Name,
-		Namespace: defaultOpsrc.Namespace},
-		opsrcCluster)
+		Name:      def.Name,
+		Namespace: def.Namespace},
+		cluster)
 	if err != nil && !errors.IsNotFound(err) {
+		logrus.Errorf("[defaults] Error getting OperatorSource %s - %v", def.Name, err)
 		return err
 	}
 
-	// Create if not present or is deleted
-	if errors.IsNotFound(err) || !opsrcCluster.ObjectMeta.DeletionTimestamp.IsZero() {
-		err = client.Create(context.TODO(), &defaultOpsrc)
-		if err != nil {
-			return err
-		}
-		logrus.Infof("[defaults] Creating OperatorSource %s", defaultOpsrc.Name)
+	if disable {
+		err = ensureAbsent(client, def, cluster)
+	} else {
+		err = ensurePresent(client, def, cluster)
+	}
+
+	if err != nil {
+		logrus.Errorf("[defaults] Error processing OperatorSource %s - %v", def.Name, err)
+	}
+
+	return err
+}
+
+// ensureAbsent ensure that that the default OperatorSource is not present on the cluster
+func ensureAbsent(client wrapper.Client, def v1.OperatorSource, cluster *v1.OperatorSource) error {
+	// OperatorSource is not present on the cluster or has been marked for deletion
+	if cluster.Name == "" || !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		logrus.Infof("[defaults] OperatorSource %s not present or has been marked for deletion", def.Name)
 		return nil
 	}
 
-	if defaultOpsrc.Spec.IsEqual(&opsrcCluster.Spec) {
-		logrus.Infof("[defaults] OperatorSource %s default and on cluster specs are same", defaultOpsrc.Name)
+	err := client.Delete(context.TODO(), cluster)
+	if err != nil {
+		return err
+	}
+
+	logrus.Infof("[defaults] Deleting OperatorSource %s", def.Name)
+
+	return err
+}
+
+// ensurePresent ensure that that the default OperatorSource is present on the cluster
+func ensurePresent(client wrapper.Client, def v1.OperatorSource, cluster *v1.OperatorSource) error {
+	// Create if not present or is deleted
+	if cluster.Name == "" || !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		err := client.Create(context.TODO(), &def)
+		if err != nil {
+			return err
+		}
+		logrus.Infof("[defaults] Creating OperatorSource %s", def.Name)
+		return nil
+	}
+
+	if def.Spec.IsEqual(&cluster.Spec) {
+		logrus.Infof("[defaults] OperatorSource %s default and on cluster specs are same", def.Name)
 		return nil
 	}
 
 	// Update if the spec has changed
-	opsrcCluster.Spec = defaultOpsrc.Spec
-	err = client.Update(context.TODO(), opsrcCluster)
+	cluster.Spec = def.Spec
+	err := client.Update(context.TODO(), cluster)
 	if err != nil {
 		return err
 	}
-	logrus.Infof("[defaults] Restoring OperatorSource %s", defaultOpsrc.Name)
+
+	logrus.Infof("[defaults] Restoring OperatorSource %s", def.Name)
 
 	return nil
 }

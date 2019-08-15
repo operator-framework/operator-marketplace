@@ -3,6 +3,9 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const (
@@ -76,8 +80,12 @@ var (
 	// created subscription. This is set when this subscription is created.
 	TestUserCreatedSubscriptionResourceVersion string
 
-	// isCoAPIPresent keeps track of whether or not the ClusterOperator API is available.
-	isCoAPIPresent *bool
+	// isConfigAPIPresent keeps track of whether or not the OpenShift config API is available.
+	isConfigAPIPresent *bool
+
+	// DefaultSources is the in-memory copy of the default OperatorSource definitions
+	// from the defaults directory.
+	DefaultSources []*v1.OperatorSource
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -549,17 +557,19 @@ func CheckSubscriptionNotUpdated(client test.FrameworkClient, name, namespace st
 	return nil
 }
 
-// EnsureClusterOperatorIsAvailable will make a single attempt to add the ClusterOperator
-// to the FrameworkScheme. If an error is encountered in this first call, it will
-// be returned.
-// Subsequent calls will always return whether or not the ClusterOperator was added
-// to the FrameworkScheme and nil.
-// The boolean returned by this method can be used to identify if the tests are
-// being ran on an OpenShift cluster.
-func EnsureClusterOperatorIsAvailable() (bool, error) {
+// EnsureConfigAPIIsAvailable will make a single attempt to add the config
+// APIs to the FrameworkScheme. If an error is encountered in this first call,
+// it will be returned. Subsequent calls will always return whether or not the
+// config CRDs were added to the FrameworkScheme and nil. The boolean
+// returned by this method can be used to identify if the tests are  being run
+// on an OpenShift cluster. Please note that if either of the config CRDs cannot
+// be added none of the associated config tests will run.
+// TBD: Separate out the ClusterOperator and OperatorHub CRD availability
+// checking.
+func EnsureConfigAPIIsAvailable() (bool, error) {
 	var err error
-	if isCoAPIPresent == nil {
-		// present is used to allocate space for the isCoAPIPresent pointer.
+	if isConfigAPIPresent == nil {
+		// present is used to allocate space for the isConfigAPIPresent pointer.
 		present := false
 
 		// Add (configv1) ClusterOperator to framework scheme
@@ -571,15 +581,59 @@ func EnsureClusterOperatorIsAvailable() (bool, error) {
 			},
 		}
 
-		// We are assuming that ClusterOperator API will always be added successfully
-		// on an OpenShift cluster.
 		err = test.AddToFrameworkScheme(configv1.Install, clusterOperator)
 		if err == nil {
 			present = true
 		}
 
-		isCoAPIPresent = &present
+		// Add (configv1) OperatorHub to framework scheme
+		operatorHub := &configv1.OperatorHubList{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "OperatorHub",
+				APIVersion: fmt.Sprintf("%s/%s",
+					configv1.SchemeGroupVersion.Group, configv1.SchemeGroupVersion.Version),
+			},
+		}
+		err = test.AddToFrameworkScheme(configv1.Install, operatorHub)
+		if err != nil {
+			present = false
+		}
+
+		isConfigAPIPresent = &present
 	}
 
-	return *isCoAPIPresent, err
+	return *isConfigAPIPresent, err
+}
+
+// InitOpSrcDefinition reads a default OperatorSource definition from the default directory
+// and initializes DefaultSources
+func InitOpSrcDefinition() error {
+	if DefaultSources != nil {
+		return nil
+	}
+
+	fileInfos, err := ioutil.ReadDir(DefaultsDir)
+	if err != nil {
+		return err
+	}
+
+	DefaultSources = make([]*v1.OperatorSource, len(fileInfos))
+
+	for i, fileInfo := range fileInfos {
+		fileName := fileInfo.Name()
+		file, err := os.Open(filepath.Join(DefaultsDir, fileName))
+		if err != nil {
+			DefaultSources = nil
+			return err
+		}
+
+		DefaultSources[i] = &v1.OperatorSource{}
+		decoder := yaml.NewYAMLOrJSONDecoder(file, 1024)
+		err = decoder.Decode(DefaultSources[i])
+		if err != nil {
+			DefaultSources = nil
+			return err
+		}
+	}
+	return nil
 }

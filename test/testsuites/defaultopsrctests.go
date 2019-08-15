@@ -3,8 +3,6 @@ package testsuites
 import (
 	"context"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -13,10 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/yaml"
 )
-
-var defaultOpSrc *v1.OperatorSource
 
 // DefaultOpSrc tests that the default OperatorSources are restored when updated
 // or deleted
@@ -46,27 +41,27 @@ func testDeleteDefaultOpSrc(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	err = initOpSrcDefinition()
+	err = helpers.InitOpSrcDefinition()
 	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
 
 	// Now let's delete the OperatorSource
-	deleteOpSrc := *defaultOpSrc
+	deleteOpSrc := *helpers.DefaultSources[0]
 	err = helpers.DeleteRuntimeObject(client, &deleteOpSrc)
 	require.NoError(t, err, "Default OperatorSource could not be deleted successfully")
 
 	// Ensure the OperatorSource phase is "Succeeded"
-	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, defaultOpSrc.Name, namespace, "Succeeded",
+	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, helpers.DefaultSources[0].Name, namespace, "Succeeded",
 		"The object has been successfully reconciled")
 	assert.NoError(t, err, "Default OperatorSource never reached the succeeded phase")
 
 	// Check for the child resources which implies that the OperatorSource was recreated
-	err = helpers.CheckChildResourcesCreated(client, defaultOpSrc.Name, namespace, namespace, v1.OperatorSourceKind)
+	err = helpers.CheckChildResourcesCreated(client, helpers.DefaultSources[0].Name, namespace, namespace, v1.OperatorSourceKind)
 	assert.NoError(t, err, "Could not ensure that child resources were created")
 
-	assert.ObjectsAreEqualValues(defaultOpSrc.Spec, clusterOpSrc.Spec)
+	assert.ObjectsAreEqualValues(helpers.DefaultSources[0].Spec, clusterOpSrc.Spec)
 }
 
-// testUpdateDefaultOpSrc changes a default OperatorSource and checks if it has
+// testUpdateDefaultSources changes a default OperatorSource and checks if it has
 // been restored correctly.
 func testUpdateDefaultOpSrc(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -79,13 +74,13 @@ func testUpdateDefaultOpSrc(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	err = initOpSrcDefinition()
+	err = helpers.InitOpSrcDefinition()
 	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
 
 	// Now let's update the OperatorSource
 	updateOpSrc := &v1.OperatorSource{}
 	err = client.Get(context.TODO(), types.NamespacedName{
-		Name: defaultOpSrc.Name, Namespace: defaultOpSrc.Namespace},
+		Name: helpers.DefaultSources[0].Name, Namespace: helpers.DefaultSources[0].Namespace},
 		updateOpSrc)
 
 	updateOpSrc.Spec.Publisher = "Random"
@@ -93,15 +88,15 @@ func testUpdateDefaultOpSrc(t *testing.T) {
 	require.NoError(t, err, "Default OperatorSource could not be deleted successfully")
 
 	// Ensure the OperatorSource phase is "Succeeded"
-	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, defaultOpSrc.Name, namespace, "Succeeded",
+	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, helpers.DefaultSources[0].Name, namespace, "Succeeded",
 		"The object has been successfully reconciled")
 	assert.NoError(t, err, "Default OperatorSource never reached the succeeded phase")
 
 	// Check for the child resources which implies that the OperatorSource was recreated
-	err = helpers.CheckChildResourcesCreated(client, defaultOpSrc.Name, namespace, namespace, v1.OperatorSourceKind)
+	err = helpers.CheckChildResourcesCreated(client, helpers.DefaultSources[0].Name, namespace, namespace, v1.OperatorSourceKind)
 	assert.NoError(t, err, "Could not ensure that child resources were created")
 
-	assert.ObjectsAreEqualValues(defaultOpSrc.Spec, clusterOpSrc.Spec)
+	assert.ObjectsAreEqualValues(helpers.DefaultSources[0].Spec, clusterOpSrc.Spec)
 }
 
 // testUpdateDefaultOpSrc changes a default OperatorSource and checks if it has
@@ -117,13 +112,13 @@ func testUpdateRegistryNamespaceDefaultOpSrc(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	err = initOpSrcDefinition()
+	err = helpers.InitOpSrcDefinition()
 	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
 
 	// Now let's update the OperatorSource
 	updateOpSrc := &v1.OperatorSource{}
 	err = client.Get(context.TODO(), types.NamespacedName{
-		Name: defaultOpSrc.Name, Namespace: defaultOpSrc.Namespace},
+		Name: helpers.DefaultSources[0].Name, Namespace: helpers.DefaultSources[0].Namespace},
 		updateOpSrc)
 
 	updateOpSrc.Spec.RegistryNamespace = "Random"
@@ -131,36 +126,13 @@ func testUpdateRegistryNamespaceDefaultOpSrc(t *testing.T) {
 	require.NoError(t, err, "Default OperatorSource could not be deleted successfully")
 
 	// Ensure the OperatorSource phase is "Succeeded"
-	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, defaultOpSrc.Name, namespace, "Succeeded",
+	clusterOpSrc, err := helpers.WaitForOpSrcExpectedPhaseAndMessage(client, helpers.DefaultSources[0].Name, namespace, "Succeeded",
 		"The object has been successfully reconciled")
 	assert.NoError(t, err, "Default OperatorSource never reached the succeeded phase")
 
 	// Check for the child resources which implies that the OperatorSource was recreated
-	err = helpers.CheckChildResourcesCreated(client, defaultOpSrc.Name, namespace, namespace, v1.OperatorSourceKind)
+	err = helpers.CheckChildResourcesCreated(client, helpers.DefaultSources[0].Name, namespace, namespace, v1.OperatorSourceKind)
 	assert.NoError(t, err, "Could not ensure that child resources were created")
 
-	assert.ObjectsAreEqualValues(defaultOpSrc.Spec, clusterOpSrc.Spec)
-}
-
-func initOpSrcDefinition() error {
-	if defaultOpSrc != nil {
-		return nil
-	}
-
-	fileInfos, _ := ioutil.ReadDir(helpers.DefaultsDir)
-	fileName := fileInfos[0].Name()
-
-	file, err := os.Open(filepath.Join(helpers.DefaultsDir, fileName))
-	if err != nil {
-		return err
-	}
-
-	defaultOpSrc = &v1.OperatorSource{}
-	decoder := yaml.NewYAMLOrJSONDecoder(file, 1024)
-	err = decoder.Decode(defaultOpSrc)
-	if err != nil {
-		defaultOpSrc = nil
-		return err
-	}
-	return nil
+	assert.ObjectsAreEqualValues(helpers.DefaultSources[0].Spec, clusterOpSrc.Spec)
 }

@@ -87,15 +87,15 @@ required = [
   version = "v1.2.0"
 
 [[constraint]]
-  branch = "master"
+  branch = "release-4.2"
   name = "github.com/openshift/api"
 
 [[constraint]]
-  branch = "master"
+  branch = "release-4.2"
   name = "github.com/openshift/library-go"
 
 [[constraint]]
-  branch = "master"
+  branch = "release-4.2"
   name = "github.com/openshift/client-go"
 
 [[constraint]]

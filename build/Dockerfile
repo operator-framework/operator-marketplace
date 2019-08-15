@@ -4,3 +4,5 @@ RUN useradd marketplace-operator
 USER marketplace-operator
 
 ADD build/_output/bin/operator-marketplace /usr/local/bin/marketplace-operator
+ADD defaults /defaults
+CMD ["/usr/bin/marketplace-operator"]
