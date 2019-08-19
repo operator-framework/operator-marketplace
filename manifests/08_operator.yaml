@@ -67,3 +67,14 @@ spec:
             - name: "RELEASE_VERSION"
               # The string "0.0.1-snapshot" is substituted by the CVO with the version of the payload
               value: "0.0.1-snapshot"
+          volumeMounts:
+            - name: marketplace-trusted-ca
+              mountPath: /etc/pki/ca-trust/extracted/pem/
+      volumes:
+        - name: marketplace-trusted-ca
+          configMap:
+            name: marketplace-trusted-ca
+            items:
+            # Require that this data is present in the ConfigMap before the operator is deployed.
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem

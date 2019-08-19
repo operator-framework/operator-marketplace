@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    # This label ensures that the OpenShift Certificate Authority bundle
+    # is added to the ConfigMap.
+    config.openshift.io/inject-trusted-cabundle: "true"
+  name: marketplace-trusted-ca
+  namespace: openshift-marketplace
