@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -92,6 +94,15 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 	go http.ListenAndServe(":8080", nil)
+
+	// Wait until this instance becomes the leader.
+	log.Info("Waiting to become leader.")
+	err = leader.Become(context.TODO(), "marketplace-operator-lock")
+	if err != nil {
+		log.Error(err, "Failed to retry for leader lock")
+		os.Exit(1)
+	}
+	log.Info("Elected leader.")
 
 	log.Print("Starting the Cmd.")
 	stopCh := signals.SetupSignalHandler()

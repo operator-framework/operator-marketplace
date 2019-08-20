@@ -39,14 +39,15 @@ func compareClusterOperatorStatusConditions(a configv1.ClusterOperatorStatusCond
 	return false
 }
 
-func clusterStatusListBuilder() func(conditionType configv1.ClusterStatusConditionType, conditionStatus configv1.ConditionStatus, conditionMessage string) []configv1.ClusterOperatorStatusCondition {
+func clusterStatusListBuilder() func(conditionType configv1.ClusterStatusConditionType, conditionStatus configv1.ConditionStatus, conditionMessage, reason string) []configv1.ClusterOperatorStatusCondition {
 	time := v1.Now()
 	list := []configv1.ClusterOperatorStatusCondition{}
-	return func(conditionType configv1.ClusterStatusConditionType, conditionStatus configv1.ConditionStatus, conditionMessage string) []configv1.ClusterOperatorStatusCondition {
+	return func(conditionType configv1.ClusterStatusConditionType, conditionStatus configv1.ConditionStatus, conditionMessage, reason string) []configv1.ClusterOperatorStatusCondition {
 		list = append(list, configv1.ClusterOperatorStatusCondition{
 			Type:               conditionType,
 			Status:             conditionStatus,
 			Message:            conditionMessage,
+			Reason:             reason,
 			LastTransitionTime: time,
 		})
 		return list
