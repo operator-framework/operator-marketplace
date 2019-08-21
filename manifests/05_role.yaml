@@ -4,14 +4,6 @@ metadata:
   name: marketplace-operator
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - config.openshift.io
   resources:
   - operatorhubs
