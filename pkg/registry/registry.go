@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/proxy"
@@ -138,9 +140,16 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 			if needServiceAccount {
 				deployment.Spec.Template.Spec.ServiceAccountName = r.key.Name
 			}
-			// Update proxy environment variables to match those in the operator.
-			deployment.Spec.Template.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
+
+			if configv1.IsAPIAvailable() {
+				// Update proxy environment variables to match those in the operator.
+				deployment.Spec.Template.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
+
+				// Mount the Certificate Authority into the PodTemplateSpec.
+				ca.MountCaConfigMap(&deployment.Spec.Template)
+			}
 		}
+
 		// Set or update the annotation to force an update. This is required so that we get updates
 		// from Quay during the sync cycle when packages have not been added or removed from the spec.
 		meta.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, deploymentUpdateAnnotation,
@@ -364,8 +373,15 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 	if needServiceAccount {
 		podTemplateSpec.Spec.ServiceAccountName = r.key.Name
 	}
-	// Update proxy environment variables to match those in the operator.
-	podTemplateSpec.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
+
+	if configv1.IsAPIAvailable() {
+		// Update proxy environment variables to match those in the operator.
+		podTemplateSpec.Spec.Containers[0].Env = proxy.GetProxyEnvVars()
+
+		// Mount the Certificate Authority into the PodTemplateSpec.
+		ca.MountCaConfigMap(&podTemplateSpec)
+	}
+
 	return podTemplateSpec
 }
 
