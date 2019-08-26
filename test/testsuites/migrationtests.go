@@ -24,6 +24,7 @@ func MigrationTests(t *testing.T) {
 	t.Run("subscriptions-are-updated", testSubscriptionsUpdated)
 	t.Run("user-created-subscriptions-are-not-updated", testUserCreatedSubscriptions)
 	t.Run("catalogsourceconfigs-not-deleted", testCatalogSourceConfigsNotDeleted)
+	t.Run("bad-subscription-ignored", testCatalogSourceConfigsNotDeleted)
 }
 
 // testDatastoreAndInstalledCatalogSourceConfigsCleanedUp ensures that after a cluster is migrated
@@ -44,7 +45,7 @@ func testDatastoreAndInstalledCatalogSourceConfigsCleanedUp(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check for successful deletion of installed CSC.
-	installedCscName := helpers.TestInstalledCscPublisherName + namespace
+	installedCscName := fmt.Sprintf("%s-%s", helpers.TestInstalledCscPublisherName, namespace)
 	err = helpers.CheckCscSuccessfulDeletion(test.Global.Client, installedCscName, namespace, namespace)
 	require.NoError(t, err)
 }
@@ -83,7 +84,7 @@ func testUserCreatedSubscriptions(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check for user created subscription was not updated after migration
-	err = helpers.CheckSubscriptionNotUpdated(test.Global.Client, helpers.TestUserCreatedSubscriptionName, namespace)
+	err = helpers.CheckSubscriptionNotUpdated(test.Global.Client, namespace, helpers.TestUserCreatedSubscriptionName, helpers.TestInstalledCscPublisherName)
 	require.NoError(t, err, fmt.Sprintf("User-created Subscription %s was updated after migration", helpers.TestUserCreatedSubscriptionName))
 }
 
@@ -102,4 +103,18 @@ func testCatalogSourceConfigsNotDeleted(t *testing.T) {
 	// Check for CatalogSourceConfig is still there after migration
 	err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: helpers.TestCatalogSourceConfigName, Namespace: namespace}, &v2.CatalogSourceConfig{})
 	require.NoError(t, err, fmt.Sprintf("Non datastore or non UI CatalogSourceConfig %s was deleted after migration", helpers.TestCatalogSourceConfigName))
+}
+
+// testInvalidSubscriptionIgnored ensures that after a cluster is migrated
+// any existing subscription that could not be migrated (because it points
+// to a non existent package, for example) is ignored
+func testInvalidSubscriptionIgnored(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	err = helpers.CheckSubscriptionNotUpdated(test.Global.Client, namespace, helpers.TestInvalidSubscriptionName, helpers.TestInvalidCscName)
+	require.NoError(t, err, fmt.Sprintf("User-created Subscription %s was updated after migration", helpers.TestInvalidSubscriptionName))
 }

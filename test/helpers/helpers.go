@@ -59,7 +59,7 @@ const (
 	// TestInstalledCscPublisherName is the publisher name part of a installed CatalogSourceConfig
 	// that is returned by the CreateDatastoreCscDefinition function. This publisher name part should be
 	// apened with a namespace to generate the full installed CatalogSourceConfig name.
-	TestInstalledCscPublisherName string = "installed-test-"
+	TestInstalledCscPublisherName string = "installed-test"
 
 	// TestUISubscriptionName is the name of a Subscription that is returned by
 	// the CreateUISubscriptionDefinition function.
@@ -68,6 +68,12 @@ const (
 	// TestUserCreatedSubscriptionName is the name of a Subscription that is returned by
 	// the CreateUserSubscriptionDefinition function.
 	TestUserCreatedSubscriptionName string = "test-operators"
+
+	// TestInvalidSubscriptionName is a subscription that points to a non-existent catalog source
+	TestInvalidSubscriptionName string = "invalid-subscription"
+
+	// TestInvalidCscName is a non-existent catalog source config
+	TestInvalidCscName string = "invalid-csc"
 )
 
 // TestUserCreatedSubscriptionResourceVersion is the resourceversion of the user
@@ -500,10 +506,11 @@ func CreateInstalledCscDefinition(namespace string) *v2.CatalogSourceConfig {
 }
 
 // CreateSubscriptionDefinition returns a newly built Subscription with the labels
-// `csc-owner-name` and `csc-owner-namespace` and the expected name
-func CreateSubscriptionDefinition(name, namespace string, isCreatedByUI bool) *olm.Subscription {
+// `csc-owner-name` and `csc-owner-namespace` based on the catalogsourceconfig and the expected name
+func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *olm.Subscription {
 	labels := make(map[string]string)
-	specSource := TestInstalledCscPublisherName + namespace
+	specSource := fmt.Sprintf("%s-%s", cscName, namespace)
+
 	if isCreatedByUI {
 		labels[builders.CscOwnerNameLabel] = specSource
 		labels[builders.CscOwnerNamespaceLabel] = namespace
@@ -530,10 +537,10 @@ func CreateSubscriptionDefinition(name, namespace string, isCreatedByUI bool) *o
 
 // CheckSubscriptionNotUpdated checks that a user created subscription
 // was not updated during migration.
-func CheckSubscriptionNotUpdated(client test.FrameworkClient, name, namespace string) error {
+func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscriptionName, installedCscName string) error {
 	subscription := &olm.Subscription{}
-	specSource := TestInstalledCscPublisherName + namespace
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, subscription)
+	specSource := fmt.Sprintf("%s-%s", installedCscName, namespace)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: subscriptionName, Namespace: namespace}, subscription)
 	if err != nil {
 		return err
 	}
