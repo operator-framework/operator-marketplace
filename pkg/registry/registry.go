@@ -19,6 +19,7 @@ import (
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -365,6 +366,12 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 						},
 						InitialDelaySeconds: 5,
 						FailureThreshold:    30,
+					},
+					Resources: core.ResourceRequirements{
+						Requests: core.ResourceList{
+							core.ResourceCPU:    resource.MustParse("10m"),
+							core.ResourceMemory: resource.MustParse("100Mi"),
+						},
 					},
 				},
 			},
