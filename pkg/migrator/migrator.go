@@ -103,11 +103,15 @@ func (m *migrator) updateSubscriptions() ([]types.NamespacedName, []error) {
 				datastoreCs, err = findCsFromOpsrc(&subscription, m.client)
 				if err != nil {
 					msg := fmt.Sprintf("[migration] Could not infer datastore CatalogSource for Subscription %s: %v", subscription.GetName(), err)
-					errors = append(errors, fmt.Errorf(msg))
-					m.logger.Errorf(msg)
+					m.logger.Warnf(msg)
 					continue
 				}
+			} else if err != nil {
+				errors = append(errors, err)
+				m.logger.Errorf(err.Error())
+				continue
 			}
+
 			// Update the Subscription to reference the datastore CatalogSource
 			subscription.Spec.CatalogSource = datastoreCs.GetName()
 			subscription.Spec.CatalogSourceNamespace = datastoreCs.GetNamespace()
@@ -222,7 +226,8 @@ func findCsFromOpsrc(subscription *olm.Subscription, kubeClient client.Client) (
 		}
 		return datastoreCs, nil
 	}
-	return nil, nil
+
+	return nil, fmt.Errorf("Unable to find any CatalogSource to associate to the subscription")
 }
 
 // IsPackageInOpsrc takes the name of a package, and an OperatorSource

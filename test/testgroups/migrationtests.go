@@ -35,12 +35,16 @@ func MigrationTestGroup(t *testing.T) {
 	}
 
 	// Create the UI Subscription
-	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestUISubscriptionName, namespace, true))
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestUISubscriptionName, namespace, helpers.TestInstalledCscPublisherName, true))
 	require.NoError(t, err, "Could not create UI Subscription")
 
 	// Create the User Subscription
-	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestUserCreatedSubscriptionName, namespace, false))
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestUserCreatedSubscriptionName, namespace, helpers.TestInstalledCscPublisherName, false))
 	require.NoError(t, err, "Could not create User Subscription")
+
+	// Create a Subscription that points to a non existent CatalogSourceConfig
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateSubscriptionDefinition(helpers.TestInvalidSubscriptionName, namespace, helpers.TestInvalidCscName, false))
+	require.NoError(t, err, "Could not create Invalid Subscription")
 
 	// Create a CatalogSourceConfig.
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateCatalogSourceConfigDefinition(helpers.TestCatalogSourceConfigName, namespace, namespace))
