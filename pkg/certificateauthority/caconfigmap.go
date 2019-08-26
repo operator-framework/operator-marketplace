@@ -2,6 +2,7 @@ package certificateauthority
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
@@ -57,4 +58,11 @@ func MountCaConfigMap(template *corev1.PodTemplateSpec) {
 // array or returns the error encountered when attempting to do so.
 func getCaOnDisk() ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(trustedCaMountPath, caBundlePath))
+}
+
+// IsCaBundlePresentOnDisk returns true if the expected Certificate Authority bundle
+// is present on disk.
+func IsCaBundlePresentOnDisk() bool {
+	_, err := os.Stat(filepath.Join(trustedCaMountPath, caBundlePath))
+	return !os.IsNotExist(err)
 }

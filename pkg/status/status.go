@@ -14,6 +14,7 @@ import (
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,10 @@ const (
 	// Marketplace is always upgradeable and should include this message in the Upgradeable
 	// ClusterOperatorStatus condition.
 	upgradeableMessage = "Marketplace is upgradeable"
+
+	// missingCaWaitTime is the length of time marketplace must wait prior to reporting that
+	// it is in a degraded state due to a missing Certificate Authority bundle.
+	missingCaWaitTime = time.Hour * 1
 )
 
 // status will be a singleton
@@ -73,6 +78,8 @@ type status struct {
 	stopCh <-chan struct{}
 	// monitorDoneCh is used to signal that threads are done reporting ClusterOperator status
 	monitorDoneCh chan struct{}
+	// startTime represents when the status object was created.
+	startTime time.Time
 }
 
 // SendSyncMessage is used to send messages to the syncCh. If the channel is
@@ -152,6 +159,7 @@ func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string
 		syncCh:        make(chan error, 25),
 		stopCh:        stopCh,
 		monitorDoneCh: monitorDoneCh,
+		startTime:     time.Now(),
 	}
 }
 
@@ -378,14 +386,24 @@ func (s *status) monitorClusterStatus() {
 			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
 			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 
-			// Ensure that enabled default OperatorSources are not failing.
-			failingOpsrc, err := s.getFailingEnabledDefaultOpsrc()
-			if err != nil {
-				log.Infof("[status] Error evaluating enabled default Operator Sources: %s", err.Error())
-			} else if failingOpsrc != nil {
-				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Default OperatorSource (%s) is failing: %v", failingOpsrc.Name, failingOpsrc.Status.CurrentPhase.Reason), failingOpsrc.Status.CurrentPhase.Reason)
-				statusErr = s.setStatus(statusConditions)
-				break
+			// Report degraded if the Certificate Authority bundle is on disk or
+			// the wait time to report degraded due to a missing bundle has elapsed.
+			//
+			// The second condition must be included because marketplace is upgraded
+			// before the cluster-network-operator, which injects a ConfigMap with Certificate
+			// Authority bundle which is in turn mounted into the marketplace operator. Failure
+			// to include this check breaks upgrades from 4.1 to 4.2.
+			// TODO: Remove this if statement once 4.3 master branch opens.
+			if ca.IsCaBundlePresentOnDisk() || s.elapsedTime() > missingCaWaitTime {
+				// Ensure that enabled default OperatorSources are not failing.
+				failingOpsrc, err := s.getFailingEnabledDefaultOpsrc()
+				if err != nil {
+					log.Infof("[status] Error evaluating enabled default Operator Sources: %s", err.Error())
+				} else if failingOpsrc != nil {
+					statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Default OperatorSource (%s) is failing: %v", failingOpsrc.Name, failingOpsrc.Status.CurrentPhase.Reason), failingOpsrc.Status.CurrentPhase.Reason)
+					statusErr = s.setStatus(statusConditions)
+					break
+				}
 			}
 
 			// Update the status with the appropriate state.
@@ -433,4 +451,8 @@ func (s *status) getFailingEnabledDefaultOpsrc() (*v1.OperatorSource, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (s *status) elapsedTime() time.Duration {
+	return time.Since(s.startTime)
 }
