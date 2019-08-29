@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	networkv1 "github.com/openshift/api/network/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -68,6 +69,18 @@ func initTestingFramework(t *testing.T) {
 	err = test.AddToFrameworkScheme(olm.AddToScheme, catalogSource)
 	if err != nil {
 		t.Fatalf("failed to add CatalogSource custom resource scheme to framework: %v", err)
+	}
+
+	// Add Egress API to framework scheme.
+	egressNetworkPolicy := &networkv1.EgressNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "EgressNetworkPolicy",
+			APIVersion: networkv1.GroupName + "/" + networkv1.GroupVersion.Version,
+		},
+	}
+	err = test.AddToFrameworkScheme(networkv1.AddToScheme, egressNetworkPolicy)
+	if err != nil {
+		t.Fatalf("failed to add EgressNetworkPolicy scheme to framework: %v", err)
 	}
 
 	_, err = helpers.EnsureConfigAPIIsAvailable()

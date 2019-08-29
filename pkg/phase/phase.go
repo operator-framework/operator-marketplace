@@ -70,10 +70,15 @@ func GetMessage(phaseName string) string {
 
 // GetNext returns a Phase object with the given phase name and default message
 func GetNext(name string) *shared.Phase {
-	return shared.NewPhase(name, GetMessage(name))
+	return shared.NewPhase(name, GetMessage(name), "")
 }
 
 // GetNextWithMessage returns a Phase object with the given phase name and default message
 func GetNextWithMessage(name string, message string) *shared.Phase {
-	return shared.NewPhase(name, message)
+	return shared.NewPhase(name, message, "")
+}
+
+// GetNextWithMessageAndReason returns a Phase object with the given phase name, message, and reason
+func GetNextWithMessageAndReason(name string, message string, reason string) *shared.Phase {
+	return shared.NewPhase(name, message, reason)
 }

@@ -49,6 +49,7 @@ func (t *transitioner) TransitionInto(currentPhase *shared.ObjectPhase, nextPhas
 	now := metav1.NewTime(t.clock.Now())
 	currentPhase.LastUpdateTime = now
 	currentPhase.Message = nextPhase.Message
+	currentPhase.Reason = nextPhase.Reason
 
 	if currentPhase.Name != nextPhase.Name {
 		currentPhase.LastTransitionTime = now
@@ -64,7 +65,7 @@ func (t *transitioner) TransitionInto(currentPhase *shared.ObjectPhase, nextPhas
 // If both Phase and Message are equal, the function will return false
 // indicating no change. Otherwise, the function will return true.
 func hasPhaseChanged(currentPhase *shared.ObjectPhase, nextPhase *shared.Phase) bool {
-	if currentPhase.Name == nextPhase.Name && currentPhase.Message == nextPhase.Message {
+	if currentPhase.Name == nextPhase.Name && currentPhase.Message == nextPhase.Message && currentPhase.Reason == nextPhase.Reason {
 		return false
 	}
 

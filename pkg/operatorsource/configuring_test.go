@@ -121,6 +121,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	nextPhaseWant := &shared.Phase{
 		Name:    phase.Failed,
 		Message: errGot.Error(),
+		Reason:  "AppRegistryMetadataEmptyError",
 	}
 
 	assert.Equal(t, opsrcIn, opsrcGot)
@@ -284,6 +285,7 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	nextPhaseWant := &shared.Phase{
 		Name:    phase.Configuring,
 		Message: updateError.Error(),
+		Reason:  "EnsureResourcesError",
 	}
 
 	writer := mocks.NewDatastoreWriter(controller)

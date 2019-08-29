@@ -45,6 +45,10 @@ spec:
     type: string
     description: Message associated with the current status
     JSONPath: .status.currentPhase.phase.message
+  - name: Reason
+    type: string
+    description: Reason is a Pascal Case string that highlights why the OperatorSource has failed to reach the succeeded phase.
+    JSONPath: .status.currentPhase.phase.reason
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp

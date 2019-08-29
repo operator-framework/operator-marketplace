@@ -11,6 +11,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -78,9 +79,9 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 
 	r.logger.Infof("Downloading metadata from Namespace [%s] of [%s]", in.Spec.RegistryNamespace, in.Spec.Endpoint)
 
-	metadata, err := r.getManifestMetadata(&in.Spec, in.Namespace)
+	metadata, err, reason := r.getManifestMetadata(&in.Spec, in.Namespace)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
+		nextPhase = phase.GetNextWithMessageAndReason(phase.Configuring, err.Error(), reason)
 		return
 	}
 
@@ -91,7 +92,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 		// resolve this situation. As soon as the user pushes new operator
 		// manifest(s) registry sync will detect a new release and will trigger
 		// a new reconciliation.
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessageAndReason(phase.Failed, err.Error(), status.AppRegistryMetadataEmptyError)
 		return
 	}
 
@@ -100,7 +101,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 	isResyncNeeded, err := r.writeMetadataToDatastore(in, out, metadata)
 	if err != nil {
 		// No operator metadata was written, move to Failed phase.
-		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
+		nextPhase = phase.GetNextWithMessageAndReason(phase.Failed, err.Error(), status.DataStoreWriteError)
 		return
 	}
 
@@ -128,7 +129,7 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 	}
 	err = grpcCatalog.EnsureResources(key, in.Spec.DisplayName, in.Spec.Publisher, in.Namespace, in.Name, packages, v1.OperatorSourceKind, labels)
 	if err != nil {
-		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
+		nextPhase = phase.GetNextWithMessageAndReason(phase.Configuring, err.Error(), status.EnsureResourcesError)
 		return
 	}
 
@@ -140,26 +141,26 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 // It returns the list of packages to be written to the OperatorSource status. error is set
 // when there is an issue downloading the metadata. In that case the list of packages
 // will be empty.
-func (r *configuringReconciler) getManifestMetadata(spec *v1.OperatorSourceSpec, namespace string) ([]*datastore.RegistryMetadata, error) {
+func (r *configuringReconciler) getManifestMetadata(spec *v1.OperatorSourceSpec, namespace string) ([]*datastore.RegistryMetadata, error, string) {
 
 	metadata := make([]*datastore.RegistryMetadata, 0)
 
 	options, err := SetupAppRegistryOptions(r.client, spec, namespace)
 	if err != nil {
-		return metadata, err
+		return metadata, err, status.AppRegistryOptionsError
 	}
 
 	registry, err := r.factory.New(options)
 	if err != nil {
-		return metadata, err
+		return metadata, err, status.AppRegistryFactoryError
 	}
 
 	metadata, err = registry.ListPackages(spec.RegistryNamespace)
 	if err != nil {
-		return metadata, err
+		return metadata, err, status.AppRegistryListPackagesError
 	}
 
-	return metadata, nil
+	return metadata, nil, ""
 }
 
 // writeMetadataToDatastore checks to see if there are any existing metadata

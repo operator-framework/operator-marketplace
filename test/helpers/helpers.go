@@ -10,6 +10,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	networkv1 "github.com/openshift/api/network/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
@@ -262,6 +263,28 @@ func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
 			Type:              "appregistry",
 			Endpoint:          "https://quay.io/cnr",
 			RegistryNamespace: "marketplace_e2e",
+		},
+	}
+}
+
+// CreateEgressNetworkPolicyDefinition returns an EgressNetworkPolicy definition in the given
+// namespace that can be turned into a runtime object for tests that require that
+// off-cluster requests fail.
+func CreateEgressNetworkPolicyDefinition(namespace string) *networkv1.EgressNetworkPolicy {
+	return &networkv1.EgressNetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "block-external-requests-for-tests",
+			Namespace: namespace,
+		},
+		Spec: networkv1.EgressNetworkPolicySpec{
+			Egress: []networkv1.EgressNetworkPolicyRule{
+				networkv1.EgressNetworkPolicyRule{
+					Type: networkv1.EgressNetworkPolicyRuleDeny,
+					To: networkv1.EgressNetworkPolicyPeer{
+						CIDRSelector: "0.0.0.0/0",
+					},
+				},
+			},
 		},
 	}
 }
@@ -639,6 +662,24 @@ func InitOpSrcDefinition() error {
 		err = decoder.Decode(DefaultSources[i])
 		if err != nil {
 			DefaultSources = nil
+			return err
+		}
+	}
+	return nil
+}
+
+// ReconcileOperatorSources forces all OperatorSources to be reconciled.
+func ReconcileOperatorSources(client test.FrameworkClient, ctx *test.TestCtx) error {
+	opsrcs := &v1.OperatorSourceList{}
+	err := client.List(context.TODO(), nil, opsrcs)
+	if err != nil {
+		return err
+	}
+
+	for _, opsrc := range opsrcs.Items {
+		opsrc.ForceUpdate()
+		err := client.Update(context.TODO(), &opsrc)
+		if err != nil {
 			return err
 		}
 	}

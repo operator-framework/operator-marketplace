@@ -43,7 +43,16 @@ func GetSingleton() OperatorHub {
 func (o *operatorhub) Get() map[string]bool {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	return o.current
+
+	// Create a map to return.
+	clone := make(map[string]bool)
+
+	// Populate the newly created map.
+	for key, value := range o.current {
+		clone[key] = value
+	}
+
+	return clone
 }
 
 // Set sets the current configuration based on the spec. If the spec is empty,

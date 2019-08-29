@@ -9,6 +9,9 @@ type Phase struct {
 
 	// A human readable message indicating why the object is in this phase
 	Message string `json:"message,omitempty"`
+
+	// A pacal case string indicating why the object has not reached the succeeded phase
+	Reason string `json:"reason,omitempty"`
 }
 
 // ObjectPhase describes the phase of a Marketplace object is in along with the

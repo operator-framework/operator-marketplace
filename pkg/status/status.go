@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -13,10 +14,13 @@ import (
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -56,6 +60,7 @@ var instance *status
 var once sync.Once
 
 type status struct {
+	client          client.Client
 	configClient    *configclient.ConfigV1Client
 	coAPINotPresent bool
 	namespace       string
@@ -137,6 +142,7 @@ func new(cfg *rest.Config, mgr manager.Manager, namespace string, version string
 	}
 
 	return &status{
+		client:          mgr.GetClient(),
 		configClient:    configClient,
 		coAPINotPresent: coAPINotPresent,
 		namespace:       namespace,
@@ -365,13 +371,19 @@ func (s *status) monitorClusterStatus() {
 				break
 			}
 
-			// Report that marketplace is available after meeting minimal syncs.
-			if cohelpers.IsStatusConditionFalse(s.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
-				reason := "OperatorAvailable"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
+			// At this point marketplace is Available, can be Upgraded, and has finished Progressing to the latest version.
+			conditionListBuilder := clusterStatusListBuilder()
+			reason := "OperatorAvailable"
+			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
+			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
+			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+
+			// Ensure that enabled default OperatorSources are not failing.
+			failingOpsrc, err := s.getFailingEnabledDefaultOpsrc()
+			if err != nil {
+				log.Infof("[status] Error evaluating enabled default Operator Sources: %s", err.Error())
+			} else if failingOpsrc != nil {
+				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Default OperatorSource (%s) is failing: %v", failingOpsrc.Name, failingOpsrc.Status.CurrentPhase.Reason), failingOpsrc.Status.CurrentPhase.Reason)
 				statusErr = s.setStatus(statusConditions)
 				break
 			}
@@ -380,7 +392,6 @@ func (s *status) monitorClusterStatus() {
 			isSucceeding, ratio := s.syncRatio.IsSucceeding()
 			if ratio != nil {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
-				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
 				if isSucceeding {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
@@ -405,4 +416,21 @@ func ReportMigration(cfg *rest.Config, mgr manager.Manager, namespace string, ve
 	conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, "Upgrading")
 	statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, "Upgrading")
 	return instance.setStatus(statusConditions)
+}
+
+func (s *status) getFailingEnabledDefaultOpsrc() (*v1.OperatorSource, error) {
+	// Ensure that enabled default OperatorSources are not failing.
+	for opsrcName, disabled := range operatorhub.GetSingleton().Get() {
+		if !disabled {
+			opsrc := &v1.OperatorSource{}
+			err := s.client.Get(context.TODO(), types.NamespacedName{Namespace: s.namespace, Name: opsrcName}, opsrc)
+			if err != nil {
+				return opsrc, err
+			}
+			if opsrc.Status.CurrentPhase.Reason != "" {
+				return opsrc, nil
+			}
+		}
+	}
+	return nil, nil
 }
