@@ -55,7 +55,7 @@ type purgingReconciler struct {
 // field and trigger reconciliation anew from "Validating" phase.
 //
 // If the purge fails the OperatorSource object is moved to "Failed" phase.
-func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *purgingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourcePurging {
 		err = phase.ErrWrongReconcilerInvoked
 		return

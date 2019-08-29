@@ -48,6 +48,8 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	opsrcWant := opsrcIn.DeepCopy()
 	opsrcWant.Status.Packages = "etcd,prometheus,amqp"
 
+	requeueWant := false
+
 	registryClient := mocks.NewAppRegistryClient(controller)
 
 	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
@@ -82,11 +84,12 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	// Then we expect a read to the datastore
 	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
-	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	opsrcGot, nextPhaseGot, requeueGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
 	assert.Equal(t, opsrcWant, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueGot)
 }
 
 // Use Case: Registry returns an empty list of metadata.
@@ -111,11 +114,13 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
 	factory.EXPECT().New(optionsWant).Return(registryClient, nil).Times(1)
 
+	requeueWant := false
+
 	// We expect the registry to return an empty manifest list.
 	manifests := []*datastore.RegistryMetadata{}
 	registryClient.EXPECT().ListPackages(opsrcIn.Spec.RegistryNamespace).Return(manifests, nil).Times(1)
 
-	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	opsrcGot, nextPhaseGot, requeueGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 	assert.Error(t, errGot)
 
 	nextPhaseWant := &shared.Phase{
@@ -125,6 +130,7 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 
 	assert.Equal(t, opsrcIn, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueGot)
 }
 
 // Use Case: Not configured, CatalogSourceConfig object has not been created yet.
@@ -138,6 +144,8 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
+
+	requeueWant := false
 
 	writer := mocks.NewDatastoreWriter(controller)
 	reader := mocks.NewDatastoreReader(controller)
@@ -194,11 +202,12 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 		Packages:        packages,
 	}
 
-	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	opsrcGot, nextPhaseGot, requeueGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
 	assert.Equal(t, opsrcIn, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueGot)
 }
 
 // Use Case: Not configured, CatalogSourceConfig object already exists due to
@@ -214,6 +223,8 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 		Name:    phase.Succeeded,
 		Message: phase.GetMessage(phase.Succeeded),
 	}
+
+	requeueWant := false
 
 	writer := mocks.NewDatastoreWriter(controller)
 	reader := mocks.NewDatastoreReader(controller)
@@ -265,11 +276,12 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 
 	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
-	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	opsrcGot, nextPhaseGot, requeueGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
 	assert.Equal(t, opsrcIn, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueGot)
 }
 
 // Use Case: Update of existing CatalogSourceConfig object fails.
@@ -285,6 +297,8 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 		Name:    phase.Configuring,
 		Message: updateError.Error(),
 	}
+
+	requeueWant := false
 
 	writer := mocks.NewDatastoreWriter(controller)
 	reader := mocks.NewDatastoreReader(controller)
@@ -333,9 +347,10 @@ func TestReconcile_UpdateError_MovedToFailedPhase(t *testing.T) {
 	kubeclient.EXPECT().Get(context.TODO(), gomock.Any(), gomock.Any()).Return(nil)
 	kubeclient.EXPECT().Update(context.TODO(), gomock.Any()).Return(updateError)
 
-	_, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	_, nextPhaseGot, requeueWant, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.Error(t, errGot)
 	assert.Equal(t, updateError, errGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueWant)
 }

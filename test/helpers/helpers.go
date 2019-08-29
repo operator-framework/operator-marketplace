@@ -413,6 +413,25 @@ func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName, namespace,
 	return nil
 }
 
+// WaitForOpsrcMarkedForDeletionWithFinalizer waits until an object with a finalizer is marked for deletion
+// but the finalizer has not yet been removed. This method should only be used in the case where
+// the finalizer will not be removed automatically, otherwise it will return an error in the case of
+// a race condition.
+func WaitForOpsrcMarkedForDeletionWithFinalizer(client test.FrameworkClient, name, namespace string) error {
+	resultOperatorSource := &v1.OperatorSource{}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, resultOperatorSource)
+		if err != nil {
+			return false, err
+		}
+		if resultOperatorSource.DeletionTimestamp != nil && len(resultOperatorSource.Finalizers) > 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+}
+
 // WaitForDeploymentScaled waits Timeout amount of time for the given deployment to be updated
 // with the specified number of replicas.
 func WaitForDeploymentScaled(client test.FrameworkClient, name, namespace string, replicas int32) error {
@@ -442,31 +461,41 @@ func RestartMarketplace(client test.FrameworkClient, namespace string) error {
 	if err != nil {
 		return err
 	}
-	replicas := marketplace.Spec.Replicas
-	zero := int32(0)
-	marketplace.Spec.Replicas = &zero
+	initialReplicas := marketplace.Spec.Replicas
+
+	// Scale down deployment
+	err = ScaleMarketplace(client, namespace, int32(0))
+	if err != nil {
+		return err
+	}
+
+	// Now scale it back up
+	ScaleMarketplace(client, namespace, *initialReplicas)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ScaleMarketplace scales the marketplace deployment to the specified replica scale size
+func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32) error {
+	marketplace := &apps.Deployment{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	if err != nil {
+		return err
+	}
+	marketplace.Spec.Replicas = &scale
 	err = client.Update(context.TODO(), marketplace)
 	if err != nil {
 		return err
 	}
-	// Wait for deployment to scale down
-	err = WaitForDeploymentScaled(client, "marketplace-operator", namespace, zero)
+	// Wait for deployment to scale
+	err = WaitForDeploymentScaled(client, "marketplace-operator", namespace, scale)
 	if err != nil {
 		return err
 	}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
-	if err != nil {
-		return err
-	}
-	marketplace.Spec.Replicas = replicas
-	err = client.Update(context.TODO(), marketplace)
-	if err != nil {
-		return err
-	}
-	err = WaitForSuccessfulDeployment(client, *marketplace)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 

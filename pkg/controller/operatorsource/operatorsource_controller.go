@@ -2,8 +2,11 @@ package operatorsource
 
 import (
 	"context"
+	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	operatorsourcehandler "github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
@@ -79,6 +82,15 @@ func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcil
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// If the object is not found but is one of the default operator sources, let's ensure it gets recreated.
+			if defaults.IsDefaultSource(request.Name) {
+				err = defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
+				if err != nil {
+					// If we run into an error when attempting to ensure the default, let's requeue and try again
+					return reconcile.Result{}, err
+				}
+			}
+
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -92,9 +104,12 @@ func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcil
 	// Needed because sdk does not get the gvk
 	instance.EnsureGVK()
 
-	err = r.OperatorSourceHandler.Handle(context.TODO(), instance)
+	requeue, err := r.OperatorSourceHandler.Handle(context.TODO(), instance)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+	if requeue {
+		return reconcile.Result{RequeueAfter: time.Second * 5}, nil
 	}
 
 	return reconcile.Result{}, nil

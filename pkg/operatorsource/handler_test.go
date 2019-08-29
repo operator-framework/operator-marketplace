@@ -32,6 +32,8 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	factory := mocks.NewMockPhaseReconcilerFactory(controller)
 	transitioner := mocks.NewPhaseTransitioner(controller)
 
+	requeueWant := false
+
 	cacheReconciler := mocks.NewPhaseReconciler(controller)
 	newCacheReconcilerFunc := func(logger *log.Entry, writer datastore.Writer, client client.Client) operatorsource.Reconciler {
 		return cacheReconciler
@@ -45,21 +47,23 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), opsrcIn).Return(phaseReconciler, nil).Times(1)
 
 	// We expect the pre-phase reconciler to return no next phase
-	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil)
+	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, false, nil)
 
 	// We expect the phase reconciler to successfully reconcile the object inside event.
 	nextPhaseExpected := &shared.Phase{
 		Name:    "validating",
 		Message: "validation is in progress",
 	}
-	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, nil).Times(1)
+	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, requeueWant, nil).Times(1)
 
 	// We expect the transitioner to indicate that the object has changed and needs update.
 	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
-	errGot := handler.Handle(ctx, opsrcIn)
+	requeueGot, errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
+
+	assert.Equal(t, requeueWant, requeueGot)
 
 	// We expect the object to be updated successfully.
 	namespacedName := types.NamespacedName{Name: "foo", Namespace: "marketplace"}
@@ -78,6 +82,8 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 
 	// Making two OperatorSource objects that are not equal to simulate a change.
 	opsrcIn, opsrcOut := helperNewOperatorSourceWithEndpoint("namespace", "foo", "local"), helperNewOperatorSourceWithEndpoint("namespace", "foo", "remote")
+
+	requeueWant := false
 
 	fakeclient := NewFakeClientWithOpsrc(opsrcIn)
 
@@ -98,17 +104,19 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), opsrcIn).Return(phaseReconciler, nil).Times(1)
 
 	// We expect the pre-phase reconciler to return no next phase
-	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil)
+	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, false, nil)
 
 	// We expect the phase reconcile to be successful.
-	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil).Times(1)
+	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, requeueWant, nil).Times(1)
 
 	// We expect transitioner to indicate that the object has not been changed.
 	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nil).Return(false).Times(1)
 
-	errGot := handler.Handle(ctx, opsrcIn)
+	requeueGot, errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
+
+	assert.Equal(t, requeueWant, requeueGot)
 
 	// We expect no changes to the object
 	namespacedName := types.NamespacedName{Name: "foo", Namespace: "namespace"}
@@ -130,6 +138,8 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 	factory := mocks.NewMockPhaseReconcilerFactory(controller)
 	transitioner := mocks.NewPhaseTransitioner(controller)
 
+	requeueWant := false
+
 	cacheReconciler := mocks.NewPhaseReconciler(controller)
 	newCacheReconcilerFunc := func(logger *log.Entry, writer datastore.Writer, client client.Client) operatorsource.Reconciler {
 		return cacheReconciler
@@ -145,7 +155,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 	factory.EXPECT().GetPhaseReconciler(gomock.Any(), opsrcIn).Return(phaseReconciler, nil).Times(1)
 
 	// We expect the pre-phase reconciler to return no next phase
-	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, nil)
+	cacheReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nil, false, nil)
 
 	// We expect the phase reconciler to throw an error.
 	reconcileErrorExpected := errors.New("reconciliation error")
@@ -153,14 +163,15 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 		Name:    "Failed",
 		Message: "Reconciliation has failed",
 	}
-	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, reconcileErrorExpected).Times(1)
+	phaseReconciler.EXPECT().Reconcile(ctx, opsrcIn).Return(opsrcOut, nextPhaseExpected, requeueWant, reconcileErrorExpected).Times(1)
 
 	// We expect transitioner to indicate that the object has been changed.
 	transitioner.EXPECT().TransitionInto(&opsrcOut.Status.CurrentPhase, nextPhaseExpected).Return(true).Times(1)
 
-	errGot := handler.Handle(ctx, opsrcIn)
+	requeueGot, errGot := handler.Handle(ctx, opsrcIn)
 
 	assert.Error(t, errGot)
+	assert.Equal(t, requeueGot, requeueWant)
 	assert.Equal(t, reconcileErrorExpected, errGot)
 
 	// We expect the object to be updated

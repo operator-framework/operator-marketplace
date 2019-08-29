@@ -43,7 +43,7 @@ type validatingReconciler struct {
 //
 // On success, it returns "Configuring" as the next phase.
 // On error, it returns "Failed" as the next phase.
-func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *validatingReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	if in.GetCurrentPhaseName() != phase.OperatorSourceValidating {
 		err = phase.ErrWrongReconcilerInvoked
 		return

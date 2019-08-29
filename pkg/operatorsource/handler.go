@@ -49,7 +49,7 @@ func NewHandler(mgr manager.Manager, client client.Client) Handler {
 // ctx represents the parent context.
 // event encapsulates the event fired by operator sdk.
 type Handler interface {
-	Handle(ctx context.Context, operatorSource *v1.OperatorSource) error
+	Handle(ctx context.Context, operatorSource *v1.OperatorSource) (bool, error)
 }
 
 // operatorsourcehandler implements the Handler interface
@@ -63,7 +63,7 @@ type operatorsourcehandler struct {
 	newCacheReconciler NewOutOfSyncCacheReconcilerFunc
 }
 
-func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSource) error {
+func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSource) (bool, error) {
 	logger := log.WithFields(log.Fields{
 		"type":      in.TypeMeta.Kind,
 		"namespace": in.GetNamespace(),
@@ -73,32 +73,32 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSourc
 	defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).RestoreSpecIfDefault(in)
 
 	outOfSyncCacheReconciler := h.newCacheReconciler(logger, h.datastore, h.client)
-	out, status, err := outOfSyncCacheReconciler.Reconcile(ctx, in)
+	out, status, _, err := outOfSyncCacheReconciler.Reconcile(ctx, in)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// The out of sync cache reconciler has handled the event. So we should
 	// transition into the new phase and return.
 	if status != nil {
-		return h.transition(ctx, logger, out, status, err)
+		return false, h.transition(ctx, logger, out, status, err)
 	}
 
 	// The out of sync cache reconciler has not handled the event, so let's use
 	// the regular phase reconciler to handle this event.
 	phaseReconciler, err := h.factory.GetPhaseReconciler(logger, in)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	out, status, err = phaseReconciler.Reconcile(ctx, in)
+	out, status, requeue, err := phaseReconciler.Reconcile(ctx, in)
 	if out == nil {
 		// If the reconciler didn't return an object, that means it must have been deleted.
 		// In that case, we should just return without attempting to modify it.
-		return err
+		return false, err
 	}
 
-	return h.transition(ctx, logger, out, status, err)
+	return requeue, h.transition(ctx, logger, out, status, err)
 }
 
 func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entry, opsrc *v1.OperatorSource, nextPhase *shared.Phase, reconciliationErr error) error {

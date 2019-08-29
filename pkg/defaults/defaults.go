@@ -240,7 +240,7 @@ func ensureAbsent(client wrapper.Client, def v1.OperatorSource, cluster *v1.Oper
 // ensurePresent ensure that that the default OperatorSource is present on the cluster
 func ensurePresent(client wrapper.Client, def v1.OperatorSource, cluster *v1.OperatorSource) error {
 	// Create if not present or is deleted
-	if cluster.Name == "" || !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
+	if cluster.Name == "" || (!cluster.ObjectMeta.DeletionTimestamp.IsZero() && len(cluster.Finalizers) == 0) {
 		err := client.Create(context.TODO(), &def)
 		if err != nil {
 			return err

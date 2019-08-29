@@ -40,7 +40,7 @@ type initialReconciler struct {
 // object. If nil is returned, it implies that no phase transition is expected.
 //
 // Upon success, it returns "Validating" as the next desired phase.
-func (r *initialReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *initialReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	if in.GetCurrentPhaseName() != phase.Initial {
 		err = phase.ErrWrongReconcilerInvoked
 		return
