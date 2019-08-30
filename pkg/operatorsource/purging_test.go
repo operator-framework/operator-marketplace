@@ -30,6 +30,8 @@ func TestReconcileWithPurging(t *testing.T) {
 		Message: phase.GetMessage(phase.Initial),
 	}
 
+	requeueWant := false
+
 	datastore := mocks.NewDatastoreWriter(controller)
 	fakeclient := NewFakeClient()
 	reconciler := operatorsource.NewPurgingReconciler(helperGetContextLogger(), datastore, fakeclient)
@@ -37,9 +39,10 @@ func TestReconcileWithPurging(t *testing.T) {
 	// We expect the operator source to be removed from the datastore.
 	datastore.EXPECT().RemoveOperatorSource(opsrcIn.GetUID()).Times(1)
 
-	opsrcGot, nextPhaseGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
+	opsrcGot, nextPhaseGot, requeueGot, errGot := reconciler.Reconcile(ctx, opsrcIn)
 
 	assert.NoError(t, errGot)
 	assert.Equal(t, opsrcWant, opsrcGot)
 	assert.Equal(t, nextPhaseWant, nextPhaseGot)
+	assert.Equal(t, requeueWant, requeueGot)
 }

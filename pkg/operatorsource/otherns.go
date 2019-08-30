@@ -29,7 +29,7 @@ type otherNamespaceReconciler struct {
 // Reconcile reconciles a OperatorSource object created in a namespace other
 // than the operator namespace. It returns "Failed" as the next desired phase
 // unless the objects is already in the "Failed" phase.
-func (r *otherNamespaceReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *otherNamespaceReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	// Do nothing as this object has already been placed in the failed phase.
 	if in.Status.CurrentPhase.Name == phase.Failed {
 		return

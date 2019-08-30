@@ -37,6 +37,19 @@ func RemoveFinalizer(objectMeta *metav1.ObjectMeta, deletingFinalizer string) {
 	return
 }
 
+// HasFinalizer checks to see if the finalizer exists in the object's ObjectMeta.
+func HasFinalizer(objectMeta *metav1.ObjectMeta, expectedFinalizer string) bool {
+	finalizerExists := false
+	for _, finalizer := range objectMeta.Finalizers {
+		if finalizer == expectedFinalizer {
+			finalizerExists = true
+			break
+		}
+	}
+
+	return finalizerExists
+}
+
 // IsObjectInOtherNamespace returns true if the namespace is not the watched
 // namespace of the operator. An false, error will be returned if there was an
 // error getting the watched namespace.

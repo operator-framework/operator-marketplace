@@ -148,6 +148,13 @@ func (s *OperatorSource) EnsureFinalizer() {
 	shared.EnsureFinalizer(&s.ObjectMeta, OpSrcFinalizer)
 }
 
+// HasFinalizer checks to see if the OpSrc finalizer
+// exists on the OpSrc. Returns true if the finalizer
+// can be found on the Opsrc's ObjectMeta.Finalizers list.
+func (s *OperatorSource) HasFinalizer() bool {
+	return shared.HasFinalizer(&s.ObjectMeta, OpSrcFinalizer)
+}
+
 func init() {
 	SchemeBuilder.Register(&OperatorSource{}, &OperatorSourceList{})
 }

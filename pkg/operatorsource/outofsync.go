@@ -48,7 +48,7 @@ type outOfSyncCacheReconciler struct {
 //
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
-func (r *outOfSyncCacheReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *outOfSyncCacheReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	objectInOtherNamespace, err := shared.IsObjectInOtherNamespace(in.GetNamespace())
 	if err != nil {
 		return

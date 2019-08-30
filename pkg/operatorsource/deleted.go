@@ -3,13 +3,13 @@ package operatorsource
 import (
 	"context"
 
+	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
-	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,39 +57,51 @@ type deletedReconciler struct {
 //
 // nextPhase represents the next desired phase for the given OperatorSource
 // object. If nil is returned, it implies that no phase transition is expected.
-func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, err error) {
+func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource) (out *v1.OperatorSource, nextPhase *shared.Phase, requeue bool, err error) {
 	out = in
 
-	// Delete the operator source manifests.
-	r.datastore.RemoveOperatorSource(out.UID)
-	grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
+	// Only attempt to clean up if the finalizer hasn't already been removed.
+	// Otherwise this phase has been requeued because the garbage collector hasn't
+	// finished its work yet.
+	if in.HasFinalizer() {
+		// Delete the operator source manifests.
+		r.datastore.RemoveOperatorSource(out.UID)
+		grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
 
-	// Delete the owned registry resources.
-	err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Namespace, v1.OperatorSourceKind)
+		// Delete the owned registry resources.
+		err = grpcCatalog.DeleteResources(ctx, in.Name, in.Namespace, in.Namespace, v1.OperatorSourceKind)
 
-	if err != nil {
-		// Something went wrong before we removed the finalizer, let's retry.
-		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
-		return
+		if err != nil {
+			// Something went wrong before we removed the finalizer, let's retry.
+			nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+			return
+		}
+
+		// Remove the opsrc finalizer from the object.
+		out.RemoveFinalizer()
+
+		// Update the client. Since there is no phase shift, the transitioner
+		// will not update it automatically like the normal phases.
+		err = r.client.Update(context.TODO(), out)
+		if err != nil {
+			// An error happened on update. If it was transient, we will retry.
+			// If not, and the finalizer was removed, then the delete will clean
+			// the object up anyway. Let's set the next phase for a possible retry.
+			nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+			return
+		}
+
+		r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
 	}
 
-	// Remove the opsrc finalizer from the object.
-	out.RemoveFinalizer()
-
-	// Update the client. Since there is no phase shift, the transitioner
-	// will not update it automatically like the normal phases.
-	err = r.client.Update(context.TODO(), out)
-	if err != nil {
-		// An error happened on update. If it was transient, we will retry.
-		// If not, and the finalizer was removed, then the delete will clean
-		// the object up anyway. Let's set the next phase for a possible retry.
-		nextPhase = phase.GetNextWithMessage(in.Status.CurrentPhase.Name, err.Error())
+	// Check if we want to requeue because this OpSrc is a default.
+	// We should keep requeueing into the deletion reconciler until the garbage
+	// collector cleans up the opsrc.
+	if defaults.IsDefaultSource(in.Name) {
+		r.logger.Info("Default opsrc being deleted. Requeueing until the garbage collector cleans up.")
+		requeue = true
 		return
 	}
-
-	r.logger.Info("Finalizer removed, now garbage collector will clean it up.")
-
-	defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).Ensure(r.client, in.Name)
 
 	return
 }
