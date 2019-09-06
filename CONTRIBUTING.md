@@ -38,7 +38,7 @@ $ oc apply -f deploy/operator.yaml
 
 ## Marketplace-operator on vanilla Kubernetes
 
-- To set up marketplace-operator on vanilla Kubernetes, [install Operator-Lifecycle-Manager(OLM)](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md) in a Kubernetes Cluster. 
+- To set up marketplace-operator on vanilla Kubernetes, [install Operator-Lifecycle-Manager(OLM)](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/install/install.md) in a Kubernetes Cluster. 
 - `cd` into the marketplace-operator repository and install the marketplace-operator using 
 ```
 $ kubectl apply -f deploy/upstream
