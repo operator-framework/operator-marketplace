@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: marketplace-operator
+  namespace: openshift-marketplace
+  labels:
+    name: marketplace-operator
+spec:
+  endpoints:
+  - port: metrics
+  namespaceSelector:
+    matchNames:
+    - openshift-marketplace
+  selector:
+    matchLabels:
+      name: marketplace-operator

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketplace-operator-metrics
+  namespace: openshift-marketplace
+  labels:
+    name: marketplace-operator
+spec:
+  selector:
+    name: marketplace-operator
+  ports:
+  - name: metrics
+    port: 8383
+    protocol: TCP
+    targetPort: 8383
