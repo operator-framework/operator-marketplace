@@ -14,7 +14,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	labelsutil "k8s.io/kubernetes/pkg/util/labels"
@@ -98,7 +97,7 @@ func (m *migrator) updateSubscriptions() ([]types.NamespacedName, []error) {
 		if builders.HasOwnerLabels(subscription.GetLabels(), v2.CatalogSourceConfigKind) {
 			// Try to infer the datastore CatalogSource from the Subscription
 			datastoreCs, err := findCatalogSource(&subscription, m.client)
-			if k8s_errors.IsNotFound(err) {
+			if err != nil {
 				// Infer the CatalogSource from the OperatorSource that has the package
 				datastoreCs, err = findCsFromOpsrc(&subscription, m.client)
 				if err != nil {
@@ -106,10 +105,6 @@ func (m *migrator) updateSubscriptions() ([]types.NamespacedName, []error) {
 					m.logger.Warnf(msg)
 					continue
 				}
-			} else if err != nil {
-				errors = append(errors, err)
-				m.logger.Errorf(err.Error())
-				continue
 			}
 
 			// Update the Subscription to reference the datastore CatalogSource
@@ -192,12 +187,15 @@ func (m *migrator) deleteDatastoreCscs(operatorNamespace string) []error {
 // 4.1.z Subscription.
 func findCatalogSource(subscription *olm.Subscription, client client.Client) (*olm.CatalogSource, error) {
 	associatedCscName := subscription.GetLabels()[builders.CscOwnerNameLabel]
-	possibleCsName := ExtractCsName(associatedCscName)
+	possibleCsName, err := ExtractCsName(associatedCscName)
+	if err != nil {
+		return nil, err
+	}
 	possibleCsNamespace := subscription.GetLabels()[builders.CscOwnerNamespaceLabel]
 	// Try and fetch the CatalogSource
 	datastoreCs := &olm.CatalogSource{}
 	namespacedName := types.NamespacedName{Name: possibleCsName, Namespace: possibleCsNamespace}
-	err := client.Get(context.TODO(), namespacedName, datastoreCs)
+	err = client.Get(context.TODO(), namespacedName, datastoreCs)
 	if err != nil {
 		return nil, err
 	}
@@ -251,9 +249,12 @@ func IsPackageInOpsrc(packageName string, opsrc *v1.OperatorSource) bool {
 // `installed-community-openshift-operators`, extractCsName
 // extracts `community` off the name, appends `operators`
 // to it, and returns `community-operators` as output
-func ExtractCsName(cscName string) string {
-	possibleCsName := strings.Split(cscName, "-")[1]
-	return fmt.Sprintf("%s-%s", possibleCsName, "operators")
+func ExtractCsName(cscName string) (string, error) {
+	possibleCsName := strings.Split(cscName, "-")
+	if len(possibleCsName) > 2 {
+		return fmt.Sprintf("%s-%s", possibleCsName[1], "operators"), nil
+	}
+	return "", fmt.Errorf("CatalogSourceConfig name %s implies it was not created by the UI", cscName) 
 }
 
 // newCatalogSourceConfig returns a newly built CatalogSourceConfig

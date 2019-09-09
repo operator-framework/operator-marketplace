@@ -50,6 +50,10 @@ func MigrationTestGroup(t *testing.T) {
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateCatalogSourceConfigDefinition(helpers.TestCatalogSourceConfigName, namespace, namespace))
 	require.NoError(t, err, "Could not create CatalogSourceConfig")
 
+	// Create a CatalogSourceConfig.
+	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateCatalogSourceConfigDefinition(helpers.TestNoHyphenCatalogSourceConfigName, namespace, namespace))
+	require.NoError(t, err, "Could not create CatalogSourceConfig")
+
 	// Create the installed CatalogSourceConfig.
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateInstalledCscDefinition(namespace))
 	require.NoError(t, err, "Could not create installed CatalogSourceConfig")
