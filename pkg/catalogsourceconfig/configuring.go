@@ -74,7 +74,8 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v2.CatalogSou
 		}
 		out.Spec.Source = newSource
 	} else if !r.reader.DoesSourceExist(out.Spec.Source) {
-		nextPhase = phase.GetNextWithMessage(phase.Configuring, fmt.Sprintf("Provided source (%s) does not exist", out.Spec.Source))
+		err = fmt.Errorf("Provided source (%s) does not exist", out.Spec.Source)
+		nextPhase = phase.GetNextWithMessage(phase.Configuring, err.Error())
 		return
 	}
 

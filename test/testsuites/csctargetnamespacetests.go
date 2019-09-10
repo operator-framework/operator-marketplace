@@ -70,7 +70,7 @@ func configuringStateWhenTargetNamespaceDoesNotExist(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
-	// Check that the CatalogSourceConfig with an non-existing targetNamespace eventually reaches the
+	// Check that the CatalogSourceConfig with an non-existent targetNamespace eventually reaches the
 	// configuring phase with the expected message.
 	expectedPhase := "Configuring"
 	expectedMessage := fmt.Sprintf("namespaces \"%s\" not found", targetNamespace)
