@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // OperatorHubTests is a test suite that tests various configuration combinations wrt
@@ -178,10 +180,18 @@ func testDisableNonDefault(t *testing.T) {
 
 	_ = updateOperatorHub(t, sources, false)
 
-	// Check if the cluster OperatorHub resource values are as expected
-	cluster := getClusterOperatorHub(t)
-	assert.True(t, len(cluster.Status.Sources) == len(helpers.DefaultSources)+1,
-		"Spurious elements in HubSourceStatus")
+	// Wait for the operatorhub update to complete
+	cluster := &apiconfigv1.OperatorHub{}
+	err = wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: "cluster"}, cluster)
+		if err != nil {
+			return false, err
+		}
+		if len(cluster.Status.Sources) == len(helpers.DefaultSources)+1 {
+			return true, nil
+		}
+		return false, nil
+	})
 
 	var testStatus apiconfigv1.HubSourceStatus
 	for _, sourceStatus := range cluster.Status.Sources {
