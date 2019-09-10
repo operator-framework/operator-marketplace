@@ -7,6 +7,7 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	apprclient "github.com/operator-framework/go-appr/appregistry"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 )
 
 // NewClientFactory return a factory which can be used to instantiate a new appregistry client
@@ -41,6 +42,8 @@ func (f *factory) New(options Options) (Client, error) {
 	}
 
 	transport := httptransport.New(u.Host, u.Path, []string{u.Scheme})
+	transport.Transport = metrics.GetRoundTripper()
+
 	transport.Consumers["application/x-gzip"] = runtime.ByteStreamConsumer()
 
 	// If a bearer token has been specified then we should pass it along in the headers

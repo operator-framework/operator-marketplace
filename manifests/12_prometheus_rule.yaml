@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: marketplace-alert-rules
+  namespace: openshift-marketplace
+  labels:
+    prometheus: alert-rules
+    role: alert-rules
+spec:
+  groups:
+    - name: ./marketplace.rules
+      rules:
+        - alert: community-operators-alert
+          expr: increase(app_registry_request_total{code!="200",opsrc="community-operators"}[10m]) > 10
+        - alert: certified-operators-alert
+          expr: increase(app_registry_request_total{code!="200",opsrc="certified-operators"}[10m]) > 10
+        - alert: redhat-operators-alert
+          expr: increase(app_registry_request_total{code!="200",opsrc="redhat-operators"}[10m]) > 10

@@ -3,4 +3,6 @@ kind: Namespace
 metadata:
     annotations:
         openshift.io/node-selector: ""
+    labels:
+      openshift.io/cluster-monitoring: "true"
     name: "openshift-marketplace"
