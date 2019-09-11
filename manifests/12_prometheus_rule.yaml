@@ -8,7 +8,7 @@ metadata:
     role: alert-rules
 spec:
   groups:
-    - name: ./marketplace.rules
+    - name: marketplace.rules
       rules:
         - alert: community-operators-alert
           expr: increase(app_registry_request_total{code!="200",opsrc="community-operators"}[10m]) > 10
