@@ -22,7 +22,7 @@ func PackageTests(t *testing.T) {
 
 	t.Run("resolve-missing-source", resolveMissingSource)
 	t.Run("unresolved-missing-source", unresolvedMissingSource)
-	t.Run("non-existing-source", nonExistingSource)
+	t.Run("resolve-non-existing-source", resolveNonExistingSource)
 	t.Run("source-missing-packages", sourceMissingPackages)
 }
 
@@ -165,19 +165,35 @@ func unresolvedMissingSource(t *testing.T) {
 }
 
 // nonExistingSource ensures that if the provided source does not exist the CatalogSourceConfig
-// will be placed in the Configuring phase with the expected messages.
-func nonExistingSource(t *testing.T) {
+// will be placed in the Configuring phase with the expected messages. Then, the non-existent
+// OperatorSource is created and a check is made to ensure that the CatalogSourceConfig reaches
+// the succeeded state.
+func resolveNonExistingSource(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	assert.NoError(t, err)
 
-	source := "bad-source"
-	err = runSourceTest(namespace,
-		source,
-		"camel-k-marketplace-e2e-tests",
-		"Configuring",
-		fmt.Sprintf("Provided source (%s) does not exist", source),
-	)
+	// Create the CatalogSourceConfig runtime object with a source that does not exist.
+	source := "missing-source"
+	csc, err := createCscRuntimeObject(namespace, source, "camel-k-marketplace-e2e-tests")
+
+	// Check that the CatalogSourceConfig is stuck in the configuring phase and is complaining about the missing source.
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, "Configuring", fmt.Sprintf("Provided source (%s) does not exist", source))
 	assert.NoError(t, err)
+
+	// Create the missing OperatorSource.
+	missingOpSrc := helpers.CreateOperatorSourceDefinition(source, namespace)
+	err = helpers.CreateRuntimeObjectNoCleanup(test.Global.Client, missingOpSrc)
+	assert.NoError(t, err)
+
+	// Check that the CatalogSourceConfig reaches the succeeded phase.
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, "Succeeded", "The object has been successfully reconciled")
+	assert.NoError(t, err)
+
+	// Delete the OperatorSource.
+	err = helpers.DeleteRuntimeObject(test.Global.Client, missingOpSrc)
+
+	// Cleanup the CatalogSourceConfig.
+	sourceTestCleanup(csc, namespace, cscName)
 }
 
 // sourceMissingPackages ensures that if the provided source does not contain the expected
@@ -197,6 +213,24 @@ func sourceMissingPackages(t *testing.T) {
 }
 
 func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage string) error {
+	// Create the CatalogSourceConfig.
+	csc, err := createCscRuntimeObject(namespace, source, packages)
+	if err != nil {
+		return err
+	}
+
+	// Check that the CatalogSourceConfig with an non-existent targetNamespace eventually reaches the
+	// configuring phase with the expected message.
+	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
+	if err != nil {
+		return err
+	}
+
+	// Delete the CatalogSourceConfig.
+	return sourceTestCleanup(csc, namespace, cscName)
+}
+
+func createCscRuntimeObject(namespace, source, packages string) (*v2.CatalogSourceConfig, error) {
 	// Get global framework variables.
 	client := test.Global.Client
 
@@ -217,20 +251,15 @@ func runSourceTest(namespace, source, packages, expectedPhase, expectedMessage s
 	// Create the CatalogSourceConfig and if an error occurs do not run tests that
 	// rely on the existence of the CatalogSourceConfig.
 	// The CatalogSourceConfig is created with nil ctx and must be deleted manually before test suite exits.
-	err := helpers.CreateRuntimeObject(client, nil, csc)
-	if err != nil {
-		return err
-	}
+	return csc, helpers.CreateRuntimeObject(client, nil, csc)
+}
 
-	// Check that the CatalogSourceConfig with an non-existing targetNamespace eventually reaches the
-	// configuring phase with the expected message.
-	_, err = helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, cscName, namespace, expectedPhase, expectedMessage)
-	if err != nil {
-		return err
-	}
+func sourceTestCleanup(csc *v2.CatalogSourceConfig, namespace, name string) error {
+	// Get global framework variables.
+	client := test.Global.Client
 
 	// Delete the CatalogSourceConfig.
-	err = helpers.DeleteRuntimeObject(client, csc)
+	err := helpers.DeleteRuntimeObject(client, csc)
 	if err != nil {
 		return err
 	}
