@@ -70,6 +70,11 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 
 	// Update the CatalogSource if it exists else create one.
 	if err == nil {
+		// Check for CatalogSource's ownership via labels
+		if !isOwnedBy(key.Name, key.Namespace, owner, catalogSourceGet.GetLabels()) {
+			r.log.Errorf("Deployment %s exists but belongs to a different object %s/%s", catalogSourceGet.GetName(), owner, key)
+			return fmt.Errorf("Deployment %s exists but belongs to a different object", catalogSourceGet.GetName())
+		}
 		catalogSourceGet.Spec.Address = registry.GetAddress()
 		r.log.Infof("Updating CatalogSource %s", catalogSourceGet.Name)
 		err = r.client.Update(context.TODO(), catalogSourceGet)
@@ -218,4 +223,19 @@ func (r *GrpcCatalog) DeleteResources(ctx context.Context, name, namespace, targ
 	}
 
 	return utilerrors.NewAggregate(allErrors)
+}
+
+// isOwnedBy ensures that a CatalogSource is owned by
+// appropriate OperatorSource or CatalogSourceConfig
+func isOwnedBy(name, namespace, owner string, labels map[string]string) bool {
+	ownerLabels := builders.GetOwnerLabel(name, namespace, owner)
+	for k, v := range ownerLabels {
+		value, ok := labels[k]
+		if ok && value == v {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
 }

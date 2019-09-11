@@ -109,6 +109,21 @@ func (r *registry) GetAddress() string {
 	return r.address
 }
 
+// isOwnedBy ensures that a specific object such as deployment is owned by
+// appropriate OperatorSource or CatalogSourceConfig
+func (r *registry) isOwnedBy(labels map[string]string) bool {
+	ownerLabels := builders.GetOwnerLabel(r.key.Name, r.key.Namespace, r.owner)
+	for k, v := range ownerLabels {
+		value, ok := labels[k]
+		if ok && value == v {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
 // ensureDeployment ensures that registry Deployment is present for serving
 // the the grpc interface for the packages from the given app registries.
 // needServiceAccount indicates that the deployment is for a private registry
@@ -126,6 +141,11 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 		}
 		r.log.Infof("Created Deployment %s with registry command: %s", deployment.GetName(), registryCommand)
 	} else {
+		// Check for Deployment's ownership via labels
+		if !r.isOwnedBy(deployment.GetLabels()) {
+			r.log.Errorf("Deployment %s exists but belongs to a different object %s/%s", deployment.GetName(), r.owner, r.key)
+			return fmt.Errorf("Deployment %s exists but belongs to a different object", deployment.GetName())
+		}
 		// Check if the list of containers is empty. Based on that we will either create a spec
 		// from scratch or update the existing container spec.
 		if len(deployment.Spec.Template.Spec.Containers) == 0 {
@@ -177,6 +197,11 @@ func (r *registry) ensureRole() error {
 		}
 		r.log.Infof("Created Role %s", role.GetName())
 	} else {
+		// Check for Role's ownership via labels
+		if !r.isOwnedBy(role.GetLabels()) {
+			r.log.Errorf("Role %s exists but belongs to a different object %s/%s", role.GetName(), r.owner, r.key)
+			return fmt.Errorf("Role %s exists but belongs to a different object", role.GetName())
+		}
 		// Update the Rules to be on the safe side
 		role.Rules = getRules()
 		err = r.client.Update(context.TODO(), role)
@@ -202,6 +227,11 @@ func (r *registry) ensureRoleBinding() error {
 		}
 		r.log.Infof("Created RoleBinding %s", roleBinding.GetName())
 	} else {
+		// Check for RoleBinding's ownership via label
+		if !r.isOwnedBy(roleBinding.GetLabels()) {
+			r.log.Errorf("RoleBinding %s exists but belongs to a different object %s/%s", roleBinding.GetName(), r.owner, r.key)
+			return fmt.Errorf("RoleBinding %s exists but belongs to a different object", roleBinding.GetName())
+		}
 		// Update the Rules to be on the safe side
 		roleBinding.RoleRef = builders.NewRoleRef(r.key.Name)
 		err = r.client.Update(context.TODO(), roleBinding)
@@ -219,6 +249,11 @@ func (r *registry) ensureService() error {
 	service := new(builders.ServiceBuilder).WithTypeMeta().Service()
 	// Delete the Service so that we get a new ClusterIP
 	if err := r.client.Get(context.TODO(), r.key, service); err == nil {
+		// Check for Service's ownership via label
+		if !r.isOwnedBy(service.GetLabels()) {
+			r.log.Errorf("Service %s exists but belongs to a different object %s/%s", service.GetName(), r.owner, r.key)
+			return fmt.Errorf("Service %s exists but belongs to a different object", service.GetName())
+		}
 		r.log.Infof("Service %s is present", service.GetName())
 		err := r.client.Delete(context.TODO(), service)
 		if err != nil {
@@ -252,6 +287,11 @@ func (r *registry) ensureServiceAccount() error {
 		}
 		r.log.Infof("Created ServiceAccount %s", serviceAccount.GetName())
 	} else {
+		// Check for ServiceAccount's ownership via label
+		if !r.isOwnedBy(serviceAccount.GetLabels()) {
+			r.log.Errorf("ServiceAccount %s exists but belongs to a different object %s/%s", serviceAccount.GetName(), r.owner, r.key)
+			return fmt.Errorf("ServiceAccount %s exists but belongs to a different object", serviceAccount.GetName())
+		}
 		r.log.Infof("ServiceAccount %s is present", serviceAccount.GetName())
 	}
 	return nil
