@@ -3,7 +3,7 @@ Marketplace is a conduit to bring off-cluster operators to your cluster.
 
 ## Prerequisites
 In order to deploy the Marketplace Operator, you must:
-1. Have an OKD or a Kubernetes cluster with Operator Lifecycle Manager (OLM) [installed](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md).
+1. Have an OKD or a Kubernetes cluster with Operator Lifecycle Manager (OLM) [installed](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/install/install.md).
 2. Be logged in as a user with Cluster Admin role.
 
 ## Using the Marketplace Operator
@@ -59,7 +59,7 @@ Please note that the Marketplace operator uses `CatalogSourceConfigs` and `Catal
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
 
 ### Deploying the Marketplace Operator with Kubernetes
-First ensure that the [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md#install-the-latest-released-version-of-olm-for-upstream-kubernetes) is installed on your cluster.
+First ensure that the [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/install/install.md#install-the-latest-released-version-of-olm-for-upstream-kubernetes) is installed on your cluster.
 
 #### Deploying the Marketplace Operator
 ```bash
