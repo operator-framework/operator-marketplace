@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -39,7 +40,9 @@ func helperNewOperatorSourceWithPackage(packages string) *v1.OperatorSource {
 // ExtractCsName extracts the CatalogSource name from a given
 // CatalogSourceConfig name correctly
 func TestMigrator_InfersDatastoreCatalogSource_Correctly(t *testing.T) {
-	assert.Equal(t, migrator.ExtractCsName(TestInstalledCscName), TestDatastoreCatalogSourceName)
+	extractedCsName, err := migrator.ExtractCsName(TestInstalledCscName)
+	require.NoError(t, err)
+	assert.Equal(t, extractedCsName, TestDatastoreCatalogSourceName)
 }
 
 // TestMigrator_ReportsPackageInOpsrc_True tests if IsPackageInOpsrc

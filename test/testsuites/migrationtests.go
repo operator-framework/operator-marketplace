@@ -25,6 +25,7 @@ func MigrationTests(t *testing.T) {
 	t.Run("user-created-subscriptions-are-not-updated", testUserCreatedSubscriptions)
 	t.Run("catalogsourceconfigs-not-deleted", testCatalogSourceConfigsNotDeleted)
 	t.Run("bad-subscription-ignored", testCatalogSourceConfigsNotDeleted)
+	t.Run("bad-catalogsourceconfig-name-resolved", testBadCatalogSourceConfigNameResolved)
 }
 
 // testDatastoreAndInstalledCatalogSourceConfigsCleanedUp ensures that after a cluster is migrated
@@ -117,4 +118,18 @@ func testInvalidSubscriptionIgnored(t *testing.T) {
 
 	err = helpers.CheckSubscriptionNotUpdated(test.Global.Client, namespace, helpers.TestInvalidSubscriptionName, helpers.TestInvalidCscName)
 	require.NoError(t, err, fmt.Sprintf("User-created Subscription %s was updated after migration", helpers.TestInvalidSubscriptionName))
+}
+
+// testBadCatalogSourceConfigNameResolved ensures that a catalogsource with a 
+// non-hyphenated name does not crash the pod during migration 
+func testBadCatalogSourceConfigNameResolved(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	// Check non-hyphenated CatalogSourceConfig is still there after migration
+	err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: helpers.TestNoHyphenCatalogSourceConfigName, Namespace: namespace}, &v2.CatalogSourceConfig{})
+	require.NoError(t, err, fmt.Sprintf("Non-hyphenated CatalogSourceConfig %s was deleted after migration", helpers.TestNoHyphenCatalogSourceConfigName))
 }

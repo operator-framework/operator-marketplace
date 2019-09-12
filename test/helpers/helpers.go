@@ -50,6 +50,9 @@ const (
 	// TestCatalogSourceConfigName is the name of the test CatalogSourceConfig.
 	TestCatalogSourceConfigName string = "test-csc"
 
+	// TestNoHyphenCatalogSourceConfigName is the name of a non-hyphenated test CatalogSourceConfig.
+	TestNoHyphenCatalogSourceConfigName string = "testcsc"
+
 	// TestCatalogSourceConfigTargetNamespace is the target namespace used in the test
 	// CatalogSourceConfig.
 	TestCatalogSourceConfigTargetNamespace string = "default"
