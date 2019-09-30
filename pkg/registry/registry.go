@@ -397,8 +397,8 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 								Command: action,
 							},
 						},
-						InitialDelaySeconds: 5,
-						FailureThreshold:    30,
+						InitialDelaySeconds: 30,
+						FailureThreshold:    10,
 					},
 					LivenessProbe: &core.Probe{
 						Handler: core.Handler{
@@ -406,8 +406,8 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 								Command: action,
 							},
 						},
-						InitialDelaySeconds: 5,
-						FailureThreshold:    30,
+						InitialDelaySeconds: 30,
+						FailureThreshold:    10,
 					},
 					Resources: core.ResourceRequirements{
 						Requests: core.ResourceList{
