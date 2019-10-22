@@ -26,6 +26,8 @@ func OperatorHubTests(t *testing.T) {
 	t.Run("disable-two-test", testDisableTwo)
 	t.Run("disable-enable-test", testDisableEnable)
 	t.Run("disable-non-default", testDisableNonDefault)
+	t.Run("disable-all-check-cluster-status", testClusterStatusDefaultsDisabled)
+	t.Run("disable-some-check-cluster-status",testSomeClusterStatusDefaultsDisabled)
 }
 
 // testDisable tests disabling a default OperatorSource and ensures that it is not present on the cluster
@@ -211,6 +213,118 @@ func testDisableNonDefault(t *testing.T) {
 	err = checkOpSrcAndChildrenArePresent(helpers.TestOperatorSourceName, namespace)
 	assert.NoError(t, err, "Non-default OperatorSource resources are not present")
 	resetClusterOperatorHub(t, namespace)
+}
+
+// testClusterStatusDefaultsDisabled tests that, when all default operator sources are disabled,
+// the clusterstatus sets Available=True
+func testClusterStatusDefaultsDisabled(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get global framework variables.
+	client := test.Global.Client
+
+	// Get namespace
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	// First set the OperatorHub to disable all the default operator sources
+	err = toggle(t, 3, true, true)
+	require.NoError(t, err, "Error updating cluster OperatorHub")
+
+	err = checkDeleted(3, namespace)
+	assert.NoError(t, err, "All default OperatorSource(s) have not been disabled")
+
+	err = checkClusterOperatorHub(t, 3)
+	assert.NoError(t, err, "Incorrect cluster OperatorHub")
+
+	// Restart marketplace operator
+	err = helpers.RestartMarketplace(test.Global.Client, namespace)
+	require.NoError(t, err, "Could not restart marketplace operator")
+
+	// Check that the ClusterOperator resource has the correct status
+	clusterOperatorName := "marketplace"
+	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
+		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
+		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
+
+	// Poll to ensure ClusterOperator is present and has the correct status
+	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
+	namespacedName := types.NamespacedName{Name: clusterOperatorName, Namespace: namespace}
+	result := &apiconfigv1.ClusterOperator{}
+	RetryInterval := time.Second * 5
+	Timeout := time.Minute * 5
+	err = wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, result)
+		if err != nil {
+			return false, err
+		}
+		for _, condition := range result.Status.Conditions {
+			if expectedTypeStatus[condition.Type] != condition.Status {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	assert.NoError(t, err, "ClusterOperator never reached expected status")
+}
+
+// testSomeClusterStatusDefaultsDisabled tests that, when some default operator sources are disabled,
+// the clusterstatus sets Available=false
+func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
+	ctx := test.NewTestCtx(t)
+	defer ctx.Cleanup()
+
+	// Get global framework variables.
+	client := test.Global.Client
+
+	// Get namespace
+	namespace, err := test.NewTestCtx(t).GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+	// First set the OperatorHub to disable first two default operator sources
+	err = toggle(t, 2, true, false)
+	require.NoError(t, err, "Error updating cluster OperatorHub")
+
+	err = checkDeleted(2, namespace)
+	assert.NoError(t, err, "First two default OperatorSource(s) have not been disabled")
+
+	err = checkClusterOperatorHub(t, 2)
+	assert.NoError(t, err, "Incorrect cluster OperatorHub")
+
+	// Restart marketplace operator
+	err = helpers.RestartMarketplace(test.Global.Client, namespace)
+	require.NoError(t, err, "Could not restart marketplace operator")
+
+	// Check that the ClusterOperator resource has the correct status
+	clusterOperatorName := "marketplace"
+	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
+		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
+
+	// Poll to ensure ClusterOperator is present and has the correct status
+	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
+	namespacedName := types.NamespacedName{Name: clusterOperatorName, Namespace: namespace}
+	result := &apiconfigv1.ClusterOperator{}
+	RetryInterval := time.Second * 5
+	Timeout := time.Minute * 5
+	err = wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, result)
+		if err != nil {
+			return false, err
+		}
+		for _, condition := range result.Status.Conditions {
+			if expectedTypeStatus[condition.Type] != condition.Status {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	assert.NoError(t, err, "ClusterOperator never reached expected status")
 }
 
 // getClusterOperatorHub gets the "cluster" OperatorHub resource
