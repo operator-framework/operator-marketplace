@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testsuites"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -63,7 +63,7 @@ func MigrationTestGroup(t *testing.T) {
 	require.NoError(t, err, "Could not create datastore CatalogSourceConfig")
 	// Wait for the child resources to deploy successfully
 	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestDatastoreCscName, namespace, namespace, v2.CatalogSourceConfigKind)
-	require.NoError(t, err, fmt.Sprintf("Could not ensure CatalogSourceConfig %s's child resources were created.", helpers.TestDatastoreCscName))
+	require.NoError(t, err, fmt.Sprintf("Could not ensure CatalogSourceConfig %s's child resources were created. Error: %s", helpers.TestDatastoreCscName, err))
 
 	// Restart marketplace operator
 	err = helpers.RestartMarketplace(test.Global.Client, namespace)

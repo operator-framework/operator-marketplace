@@ -11,8 +11,8 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -315,20 +315,20 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 	resultCatalogSource := &olm.CatalogSource{}
 	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not create CatalogSource: %s", err)
 	}
 
 	// Check owner labels are correctly set.
 	err = checkOwnerLabels(resultCatalogSource.Labels, owner)
 	if err != nil {
-		return err
+		return fmt.Errorf("Owner labels were not set correctly: %s", err)
 	}
 
 	// Check that the Service was created.
 	resultService := &corev1.Service{}
 	err = WaitForResult(client, resultService, namespace, cscName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not create service: %s", err)
 	}
 
 	// Check owner labels are correctly set.
@@ -341,7 +341,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 	resultDeployment := &apps.Deployment{}
 	err = WaitForResult(client, resultDeployment, namespace, cscName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not create deployment: %s", err)
 	}
 
 	// Check owner labels are correctly set.
@@ -353,7 +353,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 	// Now check that the Deployment is ready.
 	err = WaitForSuccessfulDeployment(client, *resultDeployment)
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not roll out deployment: %s", err)
 	}
 	return nil
 }
