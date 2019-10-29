@@ -269,6 +269,8 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 		return true, nil
 	})
 	assert.NoError(t, err, "ClusterOperator never reached expected status")
+
+	resetClusterOperatorHub(t, namespace)
 }
 
 // testSomeClusterStatusDefaultsDisabled tests that, when some default operator sources are disabled,
@@ -325,6 +327,8 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 		return true, nil
 	})
 	assert.NoError(t, err, "ClusterOperator never reached expected status")
+
+	resetClusterOperatorHub(t, namespace)
 }
 
 // getClusterOperatorHub gets the "cluster" OperatorHub resource
