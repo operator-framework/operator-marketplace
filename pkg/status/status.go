@@ -13,6 +13,7 @@ import (
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +27,7 @@ const (
 
 	// minSyncsBeforeReporting is the minimum number of syncs we wish to see
 	// before reporting that the operator is available
-	minSyncsBeforeReporting = 4
+	minSyncsBeforeReporting = 3
 
 	// successRatio is the ratio of successful syncs / total syncs that we
 	// want to see in order to report that the marketplace operator is not degraded.
@@ -358,8 +359,20 @@ func (s *status) monitorClusterStatus() {
 				break
 			}
 
-			// Wait until the operator has reconciled the minimum number of syncs.
 			_, syncEvents := s.syncRatio.GetSyncs()
+
+			// no default operator sources are present, so assume we are in a good state
+			if operatorhub.GetSingleton().Disabled() && syncEvents == 0 {
+				reason := "NoDefaultOpSrcEnabled"
+				conditionListBuilder := clusterStatusListBuilder()
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", s.version), reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", s.version), reason)
+				statusErr = s.setStatus(statusConditions)
+				break
+			}
+
+			// Wait until the operator has reconciled the minimum number of syncs.
 			if syncEvents < minSyncsBeforeReporting {
 				log.Debugf("[status] Waiting to observe %d additional sync(s)", minSyncsBeforeReporting-syncEvents)
 				break
