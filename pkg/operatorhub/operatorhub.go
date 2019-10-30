@@ -32,6 +32,7 @@ type operatorhub struct {
 type OperatorHub interface {
 	Get() map[string]bool
 	Set(spec configv1.OperatorHubSpec)
+	Disabled() bool
 }
 
 // GetSingleton returns the singleton instance of HubConfig
@@ -44,6 +45,19 @@ func (o *operatorhub) Get() map[string]bool {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	return o.current
+}
+
+// Disabled returns true if all defaults are disabled
+func (o *operatorhub) Disabled() bool {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
+	for _, disabled := range o.current {
+		if disabled == false {
+			return false
+		}
+	}
+	return true
 }
 
 // Set sets the current configuration based on the spec. If the spec is empty,
