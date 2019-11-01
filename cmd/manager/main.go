@@ -22,6 +22,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
+	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
@@ -43,6 +44,8 @@ const (
 	updateNotificationSendWait = time.Duration(10) * time.Minute
 )
 
+var version = flag.Bool("version", false, "displays marketplace source commit info.")
+
 func printVersion() {
 	log.Printf("Go Version: %s", runtime.Version())
 	log.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
@@ -58,6 +61,13 @@ func main() {
 	flag.StringVar(&defaults.Dir, "defaultsDir",
 		"", "the directory where the default OperatorSources are stored")
 	flag.Parse()
+
+	// Check if version flag was set
+	if *version {
+		fmt.Print(sourceCommit.String())
+		// Exit immediately
+		os.Exit(0)
+	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
