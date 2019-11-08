@@ -126,13 +126,13 @@ func NewFakeClientWithOpsrc(opsrc *v1.OperatorSource) client.Client {
 	return fake.NewFakeClientWithScheme(scheme, objs...)
 }
 
-func NewFakeClientWithChildResources(deployment *appsv1.Deployment, service *corev1.Service, cs *v1alpha1.CatalogSource) client.Client {
+func NewFakeClientWithChildResources(deployment *appsv1.Deployment, service *corev1.Service, namespace *corev1.Namespace, cs *v1alpha1.CatalogSource) client.Client {
 	objs := []runtime.Object{
 		deployment,
 	}
 
 	scheme := runtime.NewScheme()
-	scheme.AddKnownTypes(v1.SchemeGroupVersion, deployment, service, cs)
+	scheme.AddKnownTypes(v1.SchemeGroupVersion, deployment, service, namespace, cs)
 	apis.AddToScheme(scheme)
 
 	return fake.NewFakeClientWithScheme(scheme, objs...)
