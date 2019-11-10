@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -35,7 +36,7 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	writer := mocks.NewDatastoreWriter(controller)
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
-	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &corev1.Namespace{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
 	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
@@ -47,6 +48,9 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	opsrcWant.Status.Packages = "etcd,prometheus,amqp"
 
 	requeueWant := false
+
+	fakeNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "marketplace"}}
+	fakeclient.Create(context.TODO(), fakeNamespace)
 
 	registryClient := mocks.NewAppRegistryClient(controller)
 
@@ -107,6 +111,9 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
 
+	fakeNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "marketplace"}}
+	fakeclient.Create(context.TODO(), fakeNamespace)
+
 	registryClient := mocks.NewAppRegistryClient(controller)
 
 	optionsWant := appregistry.Options{Source: opsrcIn.Spec.Endpoint}
@@ -149,13 +156,16 @@ func TestReconcile_NotConfigured_NewCatalogConfigSourceObjectCreated(t *testing.
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	registryClient := mocks.NewAppRegistryClient(controller)
-	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &corev1.Namespace{}, &v1alpha1.CatalogSource{})
 	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
 	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
+
+	fakeNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "marketplace"}}
+	fakeclient.Create(context.TODO(), fakeNamespace)
 
 	labelsNeed := map[string]string{
 		"opsrc-group": "Community",
@@ -270,7 +280,10 @@ func TestReconcile_CatalogSourceConfigAlreadyExists_Updated(t *testing.T) {
 	// Then we expect a read to the datastore
 	reader.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&datastore.OpsrcRef{}, nil).AnyTimes()
 
-	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &v1alpha1.CatalogSource{})
+	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &corev1.Namespace{}, &v1alpha1.CatalogSource{})
+
+	fakeNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "marketplace"}}
+	fakeclient.Create(context.TODO(), fakeNamespace)
 
 	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
 
