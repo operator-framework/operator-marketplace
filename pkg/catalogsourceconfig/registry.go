@@ -25,6 +25,8 @@ const (
 	portNumber                 = 50051
 	portName                   = "grpc"
 	deploymentUpdateAnnotation = "openshift-marketplace-update-hash"
+	linuxNodeSelectorKey       = "beta.kubernetes.io/os"
+	linuxNodeSelectorValue     = "linux"
 )
 
 var action = []string{"grpc_health_probe", "-addr=localhost:50051"}
@@ -322,6 +324,9 @@ func (r *registry) newPodTemplateSpec(registryCommand []string, needServiceAccou
 						FailureThreshold:    30,
 					},
 				},
+			},
+			NodeSelector: map[string]string{
+				linuxNodeSelectorKey: linuxNodeSelectorValue,
 			},
 		},
 	}
