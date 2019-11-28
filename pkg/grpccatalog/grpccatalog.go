@@ -53,6 +53,16 @@ func (r *GrpcCatalog) EnsureResources(key types.NamespacedName, displayName, pub
 		return err
 	}
 
+	// Check that the target namespace actually exists
+	namespaceKey := types.NamespacedName{
+		Name: targetNamespace,
+	}
+	err = r.client.Get(context.TODO(), namespaceKey, &core.Namespace{})
+	if err != nil {
+		r.log.Errorf("Unable to ensure Catalog resources : %v", err)
+		return err
+	}
+
 	// Ensure that a registry deployment is available
 	registry := registry.NewRegistry(r.log, r.client, r.reader, key, source, packages, registry.ServerImage, owner)
 	err = registry.Ensure()
