@@ -48,43 +48,98 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  preserveUnknownFields: false
   validation:
     openAPIV3Schema:
-      description: OperatorSource is used to define the external datastore we are using to store operator bundles.
+      description: OperatorSource is used to define the external datastore we are using
+        to store operator bundles.
       properties:
-        spec:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
           type: object
-          description: Spec for an OperatorSource.
+        spec:
+          description: OperatorSourceSpec defines the desired state of OperatorSource
+          properties:
+            authorizationToken:
+              description: AuthorizationToken is the authorization token used to access
+                private repositories in remote registry associated with the operator
+                source.
+              properties:
+                secretName:
+                  description: SecretName is the name of the kubernetes Secret object.
+                  type: string
+              type: object
+            displayName:
+              description: DisplayName is passed along to the CatalogSourceConfig
+                to be used by the resulting CatalogSource to be used as a pretty name.
+              type: string
+            endpoint:
+              description: Endpoint points to the remote app registry server from
+                where operator manifests can be fetched.
+              type: string
+            publisher:
+              description: Publisher is passed along to the CatalogSourceConfig to
+                be used by the resulting CatalogSource that defines what entity published
+                the artifacts from the OperatorSource.
+              type: string
+            registryNamespace:
+              description: RegistryNamespace refers to the namespace in app registry.
+                Only operator manifests under this namespace will be visible. Please
+                note that this is not a k8s namespace.
+              type: string
+            type:
+              description: Type of operator source.
+              type: string
+          type: object
           required:
           - type
           - endpoint
           - registryNamespace
-          properties:
-            type:
-              type: string
-              description: The type of the OperatorSource
-              pattern: 'appregistry'
-            endpoint:
-              type: string
-              description: Points to the remote app registry server from where operator manifests can be fetched.
-            registryNamespace:
-              type: string
-              description: |-
-                The namespace in app registry.
-                Only operator manifests under this namespace will be visible.
-                Please note that this is not a k8s namespace.
-            publisher:
-              type: string
-              description: It represents the entity that published the operator(s) associated with the OperatorSource.
-            displayName:
-              type: string
-              description: DisplayName is passed along to the CatalogSourceConfig to be used by the resulting CatalogSource to be used as a pretty name.
-            authorizationToken:
-              type: object
-              description: This is where a user can specify an authorization token that can be used to access private repositories in the remote registry associated with the OperatorSource.
-              properties:
-                secretName:
-                  type: string
-                  description: It is the name of the kubernetes secret object that contains the authorization token to access private repositories.
         status:
+          description: OperatorSourceStatus defines the observed state of OperatorSource
+          properties:
+            currentPhase:
+              description: Current phase of the OperatorSource object
+              properties:
+                lastTransitionTime:
+                  description: Last time the object has transitioned from one phase
+                    to another
+                  format: date-time
+                  type: string
+                lastUpdateTime:
+                  description: Last time the status of the object was updated
+                  format: date-time
+                  type: string
+                phase:
+                  description: Current phase of the object
+                  properties:
+                    message:
+                      description: A human readable message indicating why the object
+                        is in this phase
+                      type: string
+                    name:
+                      description: Name of the phase
+                      type: string
+                  type: object
+              type: object
+            packages:
+              description: Packages is a comma separated list of package(s) each of
+                which has been downloaded and processed by Marketplace operator from
+                the specified endpoint.
+              type: string
           type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
