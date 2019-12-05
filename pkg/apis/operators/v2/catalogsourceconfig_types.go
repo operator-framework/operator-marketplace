@@ -19,7 +19,7 @@ const (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// CatalogSourceConfig is the Schema for the catalogsourceconfigs API
+// CatalogSourceConfig is used to enable an operator present in the OperatorSource to your cluster. Behind the scenes, it will configure an OLM CatalogSource so that the operator can then be managed by OLM.
 // +k8s:openapi-gen=true
 type CatalogSourceConfig struct {
 	metav1.TypeMeta   `json:",inline"`

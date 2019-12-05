@@ -47,11 +47,11 @@ func (t *transitioner) TransitionInto(currentPhase *shared.ObjectPhase, nextPhas
 	}
 
 	now := metav1.NewTime(t.clock.Now())
-	currentPhase.LastUpdateTime = now
+	currentPhase.LastUpdateTime = &now
 	currentPhase.Message = nextPhase.Message
 
 	if currentPhase.Name != nextPhase.Name {
-		currentPhase.LastTransitionTime = now
+		currentPhase.LastTransitionTime = &now
 		currentPhase.Name = nextPhase.Name
 	}
 

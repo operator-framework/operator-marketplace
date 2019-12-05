@@ -24,8 +24,14 @@ package shared
 func (in *ObjectPhase) DeepCopyInto(out *ObjectPhase) {
 	*out = *in
 	out.Phase = in.Phase
-	in.LastTransitionTime.DeepCopyInto(&out.LastTransitionTime)
-	in.LastUpdateTime.DeepCopyInto(&out.LastUpdateTime)
+	if in.LastTransitionTime != nil {
+		in, out := &in.LastTransitionTime, &out.LastTransitionTime
+		*out = (*in).DeepCopy()
+	}
+	if in.LastUpdateTime != nil {
+		in, out := &in.LastUpdateTime, &out.LastUpdateTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
