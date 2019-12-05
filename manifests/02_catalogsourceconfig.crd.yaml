@@ -35,35 +35,89 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  preserveUnknownFields: false
   validation:
     openAPIV3Schema:
-      description: CatalogSourceConfig is used to enable an operator present in the OperatorSource to your cluster. Behind the scenes, it will configure an OLM CatalogSource so that the operator can then be managed by OLM.
+      description: CatalogSourceConfig is used to enable an operator present in the
+        OperatorSource to your cluster. Behind the scenes, it will configure an OLM
+        CatalogSource so that the operator can then be managed by OLM.
       properties:
-        spec:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
           type: object
-          description: Spec for a CatalogSourceConfig
-          required:
-          - targetNamespace
-          - packages
-          - source
+        spec:
+          description: CatalogSourceConfigSpec defines the desired state of CatalogSourceConfig
           properties:
-            source:
+            csDisplayName:
+              description: DisplayName is passed along to the CatalogSource to be
+                used as a pretty name.
               type: string
-              description: The name of the OperatorSource that the packages originate from
-              # This pattern accepts valid metadata.name values and empty strings.
-              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-            targetNamespace:
+            csPublisher:
+              description: Publisher is passed along to the CatalogSource to be used
+                to define what entity published the artifacts from the OperatorSource.
               type: string
-              description: The namespace where the operators will be enabled
             packages:
               type: string
-              description: Comma separated list of operator(s) without spaces which will be enabled in the target namespace
-            csDisplayName:
+            source:
+              description: The name of the OperatorSource that the packages originate
+                from
               type: string
-              description: DisplayName is passed along to the CatalogSource to be used as a pretty name.
-            csPublisher:
+            targetNamespace:
               type: string
-              description: It represents the entity that published the operator(s) specified in packages.
-        status:
+          required:
+          - packages
+          - source
+          - targetNamespace
           type: object
-
+        status:
+          description: CatalogSourceConfigStatus defines the observed state of CatalogSourceConfig
+          properties:
+            currentPhase:
+              description: Current phase of the CatalogSourceConfig object.
+              properties:
+                lastTransitionTime:
+                  description: Last time the object has transitioned from one phase
+                    to another
+                  format: date-time
+                  type: string
+                lastUpdateTime:
+                  description: Last time the status of the object was updated
+                  format: date-time
+                  type: string
+                phase:
+                  description: Current phase of the object
+                  properties:
+                    message:
+                      description: A human readable message indicating why the object
+                        is in this phase
+                      type: string
+                    name:
+                      description: Name of the phase
+                      type: string
+                  type: object
+              type: object
+            packageRepositioryVersions:
+              additionalProperties:
+                type: string
+              description: Map of packages (key) and their app registry package version
+                (value)
+              type: object
+          type: object
+      type: object
+  version: v2
+  versions:
+  - name: v2
+    served: true
+    storage: true
+  - name: v1
+    served: true
+    storage: false
