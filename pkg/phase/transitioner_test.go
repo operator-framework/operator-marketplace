@@ -68,11 +68,12 @@ func TestTransitionInto_BothPhaseAndMessageAreDifferent_TrueExpected(t *testing.
 
 	changedGot := transitioner.TransitionInto(&opsrcIn.Status.CurrentPhase, nextPhaseAfterValidating)
 
+	expectedTime := metav1.NewTime(now)
 	assert.True(t, changedGot)
 	assert.Equal(t, phaseWantValidating.Name, opsrcIn.Status.CurrentPhase.Name)
 	assert.Equal(t, phaseWantValidating.Message, opsrcIn.Status.CurrentPhase.Message)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastTransitionTime)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastUpdateTime)
+	assert.Equal(t, &expectedTime, opsrcIn.Status.CurrentPhase.LastTransitionTime)
+	assert.Equal(t, &expectedTime, opsrcIn.Status.CurrentPhase.LastUpdateTime)
 }
 
 // Use Case: Phase specified in both objects are same but Message is different.
@@ -106,9 +107,10 @@ func TestTransitionInto_MessageIsDifferent_TrueExpected(t *testing.T) {
 
 	changedGot := transitioner.TransitionInto(&opsrcIn.Status.CurrentPhase, nextPhase)
 
+	expectedTime := metav1.NewTime(now)
 	assert.True(t, changedGot)
 	assert.Equal(t, phaseWant.Name, opsrcIn.Status.CurrentPhase.Name)
 	assert.Equal(t, phaseWant.Message, opsrcIn.Status.CurrentPhase.Message)
 	assert.Empty(t, opsrcIn.Status.CurrentPhase.LastTransitionTime)
-	assert.Equal(t, metav1.NewTime(now), opsrcIn.Status.CurrentPhase.LastUpdateTime)
+	assert.Equal(t, &expectedTime, opsrcIn.Status.CurrentPhase.LastUpdateTime)
 }

@@ -28,7 +28,7 @@ type OperatorSourceList struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// OperatorSource is the Schema for the operatorsources API
+// OperatorSource is used to define the external datastore we are using to store operator bundles.
 // +k8s:openapi-gen=true
 type OperatorSource struct {
 	metav1.TypeMeta   `json:",inline"`

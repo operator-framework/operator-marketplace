@@ -18,8 +18,8 @@ type ObjectPhase struct {
 	Phase `json:"phase,omitempty"`
 
 	// Last time the object has transitioned from one phase to another
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
 
 	// Last time the status of the object was updated
-	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
 }
