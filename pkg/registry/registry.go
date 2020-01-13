@@ -272,7 +272,7 @@ func (r *registry) ensureService() error {
 	}
 	r.log.Infof("Created Service %s", service.GetName())
 
-	r.address = service.Spec.ClusterIP + ":" + strconv.Itoa(int(service.Spec.Ports[0].Port))
+	r.address = fmt.Sprintf("%s.%s.svc:%s", service.Name, service.Namespace, strconv.Itoa(int(service.Spec.Ports[0].Port)))
 	return nil
 }
 
