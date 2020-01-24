@@ -27,7 +27,7 @@ func OperatorHubTests(t *testing.T) {
 	t.Run("disable-enable-test", testDisableEnable)
 	t.Run("disable-non-default", testDisableNonDefault)
 	t.Run("disable-all-check-cluster-status", testClusterStatusDefaultsDisabled)
-	t.Run("disable-some-check-cluster-status",testSomeClusterStatusDefaultsDisabled)
+	t.Run("disable-some-check-cluster-status", testSomeClusterStatusDefaultsDisabled)
 }
 
 // testDisable tests disabling a default OperatorSource and ensures that it is not present on the cluster
@@ -67,10 +67,10 @@ func testDisableAll(t *testing.T) {
 	err = toggle(t, 0, true, true)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
-	err = checkDeleted(3, namespace)
+	err = checkDeleted(4, namespace)
 	assert.NoError(t, err, "All default OperatorSource(s) have not been disabled")
 
-	err = checkClusterOperatorHub(t, 3)
+	err = checkClusterOperatorHub(t, 4)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
 }
@@ -97,7 +97,10 @@ func testDisableAllEnableOne(t *testing.T) {
 	err = checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[2].Name, namespace)
 	assert.NoError(t, err, "Default OperatorSource has not been disabled")
 
-	err = checkClusterOperatorHub(t, 2)
+	err = checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[3].Name, namespace)
+	assert.NoError(t, err, "Default OperatorSource has not been disabled")
+
+	err = checkClusterOperatorHub(t, 3)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
 }
@@ -229,13 +232,13 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	require.NoError(t, err, "Could not get namespace")
 
 	// First set the OperatorHub to disable all the default operator sources
-	err = toggle(t, 3, true, true)
+	err = toggle(t, 4, true, true)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
-	err = checkDeleted(3, namespace)
+	err = checkDeleted(4, namespace)
 	assert.NoError(t, err, "All default OperatorSource(s) have not been disabled")
 
-	err = checkClusterOperatorHub(t, 3)
+	err = checkClusterOperatorHub(t, 4)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
 	// Restart marketplace operator
