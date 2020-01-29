@@ -7,10 +7,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	mocks "github.com/operator-framework/operator-marketplace/pkg/mocks/operatorsource_mocks"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +40,7 @@ func TestHandle_PhaseHasChanged_UpdateExpected(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc, &status.NoOpReporter{})
 
 	ctx := context.TODO()
 
@@ -96,7 +97,7 @@ func TestHandle_PhaseHasNotChanged_NoUpdateExpected(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc, &status.NoOpReporter{})
 
 	ctx := context.TODO()
 
@@ -145,7 +146,7 @@ func TestHandle_UpdateError_ReconciliationErrorReturned(t *testing.T) {
 		return cacheReconciler
 	}
 
-	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc)
+	handler := operatorsource.NewHandlerWithParams(fakeclient, writer, factory, transitioner, newCacheReconcilerFunc, &status.NoOpReporter{})
 
 	ctx := context.TODO()
 

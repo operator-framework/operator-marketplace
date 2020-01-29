@@ -44,6 +44,7 @@ spec:
           args:
           - -registryServerImage=quay.io/openshift/origin-operator-registry
           - -defaultsDir=/defaults
+          - -clusterOperatorName=marketplace
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:

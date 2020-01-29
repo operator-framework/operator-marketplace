@@ -16,6 +16,7 @@ import (
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
@@ -60,6 +61,8 @@ func main() {
 		registry.DefaultServerImage, "the image to use for creating the operator registry pod")
 	flag.StringVar(&defaults.Dir, "defaultsDir",
 		"", "the directory where the default OperatorSources are stored")
+	var clusterOperatorName string
+	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.Parse()
 
 	// Check if version flag was set
@@ -118,8 +121,18 @@ func main() {
 		}
 	}
 
+	stopCh := signals.SetupSignalHandler()
+
+	var statusReporter status.Reporter = &status.NoOpReporter{}
+	if clusterOperatorName != "" {
+		statusReporter, err = status.NewReporter(cfg, mgr, namespace, clusterOperatorName, os.Getenv("RELEASE_VERSION"), stopCh)
+		if err != nil {
+			exit(err)
+		}
+	}
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, options.ControllerOptions{SyncSender: statusReporter}); err != nil {
 		exit(err)
 	}
 
@@ -152,10 +165,10 @@ func main() {
 		exit(err)
 	}
 
-	stopCh := signals.SetupSignalHandler()
-
 	// set ClusterOperator status to report Migration
-	status.ReportMigration(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)
+	if err := statusReporter.ReportMigration(); err != nil {
+		exit(err)
+	}
 
 	client, err := client.New(cfg, client.Options{})
 	if err != nil {
@@ -170,7 +183,7 @@ func main() {
 	}
 
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
-	statusReportingDoneCh := status.StartReporting(cfg, mgr, namespace, os.Getenv("RELEASE_VERSION"), stopCh)
+	statusReportingDoneCh := statusReporter.StartReporting()
 
 	go registrySyncer.Sync(stopCh)
 	go catalogsourceconfig.Syncer.Sync(stopCh)

@@ -3,8 +3,9 @@ package catalogsourceconfig
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
@@ -20,8 +21,8 @@ import (
 
 // Add creates a new CatalogSourceConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	reconciler, err := newReconciler(mgr)
+func Add(mgr manager.Manager, o options.ControllerOptions) error {
+	reconciler, err := newReconciler(mgr, o)
 	if err != nil {
 		return err
 	}
@@ -29,7 +30,7 @@ func Add(mgr manager.Manager) error {
 }
 
 // newReconciler returns a new ReconcileCatalogSourceConfig
-func newReconciler(mgr manager.Manager) (*ReconcileCatalogSourceConfig, error) {
+func newReconciler(mgr manager.Manager, o options.ControllerOptions) (*ReconcileCatalogSourceConfig, error) {
 	// The default client serves read requests from the cache which contains
 	// objects only from the namespace the operator is watching. Given we need
 	// to query other namespaces for CatalogSources, we create our own client
@@ -45,8 +46,9 @@ func newReconciler(mgr manager.Manager) (*ReconcileCatalogSourceConfig, error) {
 	}
 
 	return &ReconcileCatalogSourceConfig{
-		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr, client),
+		CatalogSourceConfigHandler: catalogsourceconfighandler.NewHandler(mgr, client, o.SyncSender),
 		client:                     client,
+		syncSender:                 o.SyncSender,
 	}, nil
 }
 
@@ -79,6 +81,7 @@ var _ reconcile.Reconciler = &ReconcileCatalogSourceConfig{}
 type ReconcileCatalogSourceConfig struct {
 	CatalogSourceConfigHandler catalogsourceconfighandler.Handler
 	client                     client.Client
+	syncSender                 status.SyncSender
 }
 
 // Reconcile reads that state of the cluster for a CatalogSourceConfig object and makes changes based on the state read
@@ -89,7 +92,7 @@ type ReconcileCatalogSourceConfig struct {
 func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling CatalogSourceConfig %s/%s\n", request.Namespace, request.Name)
 	// Reconcile kicked off, message Sync Channel
-	status.SendSyncMessage(nil)
+	r.syncSender.SendSyncMessage(nil)
 
 	// Fetch the CatalogSourceConfig instance
 	instance := &v2.CatalogSourceConfig{}
@@ -102,7 +105,7 @@ func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (rec
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - report a failed sync and requeue the request.
-		status.SendSyncMessage(err)
+		r.syncSender.SendSyncMessage(err)
 		return reconcile.Result{}, err
 	}
 
