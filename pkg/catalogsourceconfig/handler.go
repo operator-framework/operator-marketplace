@@ -5,15 +5,15 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
-	operatorstatus "github.com/operator-framework/operator-marketplace/pkg/status"
+	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/sirupsen/logrus"
 )
 
-func NewHandler(mgr manager.Manager, client client.Client) Handler {
+func NewHandler(mgr manager.Manager, client client.Client, ss status.SyncSender) Handler {
 	cache := NewCache()
 	return &catalogsourceconfighandler{
 		client: client,
@@ -25,6 +25,7 @@ func NewHandler(mgr manager.Manager, client client.Client) Handler {
 		transitioner: phase.NewTransitioner(),
 		reader:       datastore.Cache,
 		cache:        cache,
+		syncSender:   ss,
 	}
 }
 
@@ -42,7 +43,8 @@ type catalogsourceconfighandler struct {
 	// A cached item is removed when an update is detected.
 	// Note: This is a temporary construct which will be removed when we move to
 	// using the Operator Registry as the data store for CatalogSources
-	cache Cache
+	cache      Cache
+	syncSender status.SyncSender
 }
 
 // Handle handles a new event associated with the CatalogSourceConfig type.
@@ -75,7 +77,7 @@ func (h *catalogsourceconfighandler) Handle(ctx context.Context, in *v2.CatalogS
 		log.Errorf("Failed to update object - %v", updateErr)
 
 		// Error updating the object - report a failed sync.
-		operatorstatus.SendSyncMessage(updateErr)
+		h.syncSender.SendSyncMessage(updateErr)
 
 		if err == nil {
 			// No reconciliation err, but update of object has failed!

@@ -5,6 +5,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,7 +21,7 @@ import (
 
 // Add creates a new OperatorHub Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
+func Add(mgr manager.Manager, _ options.ControllerOptions) error {
 	return add(mgr, newReconciler(mgr))
 }
 

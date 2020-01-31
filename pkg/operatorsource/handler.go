@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
@@ -17,17 +17,18 @@ import (
 )
 
 // NewHandlerWithParams returns a new Handler.
-func NewHandlerWithParams(client client.Client, datastore datastore.Writer, factory PhaseReconcilerFactory, transitioner phase.Transitioner, newCacheReconciler NewOutOfSyncCacheReconcilerFunc) Handler {
+func NewHandlerWithParams(client client.Client, datastore datastore.Writer, factory PhaseReconcilerFactory, transitioner phase.Transitioner, newCacheReconciler NewOutOfSyncCacheReconcilerFunc, ss status.SyncSender) Handler {
 	return &operatorsourcehandler{
 		client:             client,
 		datastore:          datastore,
 		factory:            factory,
 		transitioner:       transitioner,
 		newCacheReconciler: newCacheReconciler,
+		syncSender:         ss,
 	}
 }
 
-func NewHandler(mgr manager.Manager, client client.Client) Handler {
+func NewHandler(mgr manager.Manager, client client.Client, ss status.SyncSender) Handler {
 	return &operatorsourcehandler{
 		client:    client,
 		datastore: datastore.Cache,
@@ -39,6 +40,7 @@ func NewHandler(mgr manager.Manager, client client.Client) Handler {
 		},
 		transitioner:       phase.NewTransitioner(),
 		newCacheReconciler: NewOutOfSyncCacheReconciler,
+		syncSender:         ss,
 	}
 }
 
@@ -61,6 +63,7 @@ type operatorsourcehandler struct {
 	factory            PhaseReconcilerFactory
 	transitioner       phase.Transitioner
 	newCacheReconciler NewOutOfSyncCacheReconcilerFunc
+	syncSender         status.SyncSender
 }
 
 func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSource) (bool, error) {
@@ -117,7 +120,7 @@ func (h *operatorsourcehandler) transition(ctx context.Context, logger *log.Entr
 		logger.Errorf("Failed to update object - %v", updateErr)
 
 		// Error updating the object - report a failed sync.
-		status.SendSyncMessage(updateErr)
+		h.syncSender.SendSyncMessage(updateErr)
 
 		if reconciliationErr == nil {
 			// No reconciliation err, but update of object has failed!

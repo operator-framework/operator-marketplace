@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	operatorsourcehandler "github.com/operator-framework/operator-marketplace/pkg/operatorsource"
@@ -22,17 +23,18 @@ import (
 
 // Add creates a new OperatorSource Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, o options.ControllerOptions) error {
+	return add(mgr, newReconciler(mgr, o))
 }
 
 // newReconciler returns a new ReconcileOperatorSource
-func newReconciler(mgr manager.Manager) *ReconcileOperatorSource {
+func newReconciler(mgr manager.Manager, o options.ControllerOptions) *ReconcileOperatorSource {
 	client := mgr.GetClient()
-	handler := operatorsourcehandler.NewHandler(mgr, client)
+	handler := operatorsourcehandler.NewHandler(mgr, client, o.SyncSender)
 	return &ReconcileOperatorSource{
 		client:                client,
 		OperatorSourceHandler: handler,
+		syncSender:            o.SyncSender,
 	}
 }
 
@@ -65,6 +67,7 @@ var _ reconcile.Reconciler = &ReconcileOperatorSource{}
 type ReconcileOperatorSource struct {
 	OperatorSourceHandler operatorsourcehandler.Handler
 	client                client.Client
+	syncSender            status.SyncSender
 }
 
 // Reconcile reads that state of the cluster for a OperatorSource object and makes changes based on the state read
@@ -75,7 +78,7 @@ type ReconcileOperatorSource struct {
 func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling OperatorSource %s/%s\n", request.Namespace, request.Name)
 	// Reconcile kicked off, message Sync Channel with sync event
-	status.SendSyncMessage(nil)
+	r.syncSender.SendSyncMessage(nil)
 
 	// Fetch the OperatorSource instance
 	instance := &v1.OperatorSource{}
@@ -97,7 +100,7 @@ func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcil
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - report a failed sync and requeue the request.
-		status.SendSyncMessage(err)
+		r.syncSender.SendSyncMessage(err)
 		return reconcile.Result{}, err
 	}
 

@@ -7,6 +7,7 @@ import (
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +23,7 @@ import (
 
 // Add creates a new ConfigMap Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
+func Add(mgr manager.Manager, _ options.ControllerOptions) error {
 	return add(mgr, newReconciler(mgr))
 }
 
