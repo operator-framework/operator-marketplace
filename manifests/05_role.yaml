@@ -131,3 +131,19 @@ rules:
   - create
   - delete
   - update
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: operatorhub-config-reader
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-cluster-reader: "true"
+rules:
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - operatorhubs
+  verbs:
+  - get
+  - list
+  - watch
