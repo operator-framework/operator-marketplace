@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -19,6 +20,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -45,9 +48,14 @@ const (
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
 
-	// Marketplace is always upgradeable and should include this message in the Upgradeable
-	// ClusterOperatorStatus condition.
+	// Since Openshift 4.4, Marketplace is only upgradeable if there are no custom (non-default)
+	// OperatorSources or CatalogSourceConifgs, and includes either a upgradeable message
+	// or a deprecatedAPIMessage in the Upgradeable ClusterOperatorStatus condition, conditioned
+	// on the presence of custom resources
+
 	upgradeableMessage = "Marketplace is upgradeable"
+
+	deprecatedAPIMessage = "The cluster has custom OperatorSource/CatalogSourceConfig, which are deprecated in future versions. Please visit this link for further deatils: https://docs.openshift.com/container-platform/4.5/release_notes/ocp-4-5-release-notes.html#ocp-4-5-marketplace-apis-deprecated "
 )
 
 type SyncSender interface {
@@ -242,6 +250,10 @@ func (r *reporter) monitorClusterStatus() {
 		close(r.monitorDoneCh)
 	}()
 	for {
+		operatorUpgradeable, err := checkOperatorUpgradeablity()
+		if err != nil {
+			log.Errorf("Could not determine operator upgradaeblity. Error: %s", err.Error())
+		}
 		select {
 		case <-r.stopCh:
 			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
@@ -250,7 +262,11 @@ func (r *reporter) monitorClusterStatus() {
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
 			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
-			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+			if operatorUpgradeable {
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+			} else {
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+			}
 			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 			statusErr := r.setStatus(statusConditions)
 			if statusErr != nil {
@@ -274,7 +290,11 @@ func (r *reporter) monitorClusterStatus() {
 				reason := "OperatorStarting"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", r.version), reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				if operatorUpgradeable {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				} else {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+				}
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
@@ -289,7 +309,11 @@ func (r *reporter) monitorClusterStatus() {
 				reason := "NoDefaultOpSrcEnabled"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				if operatorUpgradeable {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				} else {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+				}
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 				statusErr = r.setStatus(statusConditions)
 				break
@@ -306,7 +330,11 @@ func (r *reporter) monitorClusterStatus() {
 				reason := "OperatorAvailable"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				if operatorUpgradeable {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
+				} else {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+				}
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 				statusErr = r.setStatus(statusConditions)
 				break
@@ -317,7 +345,11 @@ func (r *reporter) monitorClusterStatus() {
 			if ratio != nil {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
 				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
+				if operatorUpgradeable {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
+				} else {
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+				}
 				if isSucceeding {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
 				} else {
@@ -416,4 +448,34 @@ func (NoOpReporter) StartReporting() <-chan struct{} {
 
 func (NoOpReporter) ReportMigration() error {
 	return nil
+}
+
+// checkOperatorUpgradeablity checks for the presence of CatalogSourceConfigs,
+// and OperatorSources in the cluster. Since both the APIs are scheduled to be
+// deprecated/are already deprecated, checkOperatorUpgradeablity returns false
+// if it detects the presence of any CSC or Opsrc in the cluster to indicate
+// that the cluster is not upgradable to future versions.
+func checkOperatorUpgradeablity() (bool, error) {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return false, err
+	}
+	kubeClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		return false, err
+	}
+	cscs := &v2.CatalogSourceConfigList{}
+	options := &client.ListOptions{}
+	if err := kubeClient.List(context.TODO(), options, cscs); err != nil {
+		return false, err
+	}
+	opsrcs := &v1.OperatorSourceList{}
+	err = kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs)
+	if err != nil {
+		return false, err
+	}
+	if len(cscs.Items) > 0 || len(opsrcs.Items) > 0 {
+		return false, nil
+	}
+	return true, nil
 }

@@ -77,6 +77,7 @@ type ReconcileOperatorSource struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling OperatorSource %s/%s\n", request.Namespace, request.Name)
+	log.Warning("DEPRECATION NOTICE: The OperatorSource API is deprecated in future versions. Please visit this link for futher details: https://docs.openshift.com/container-platform/4.5/release_notes/ocp-4-5-release-notes.html#ocp-4-5-marketplace-apis-deprecated")
 	// Reconcile kicked off, message Sync Channel with sync event
 	r.syncSender.SendSyncMessage(nil)
 
