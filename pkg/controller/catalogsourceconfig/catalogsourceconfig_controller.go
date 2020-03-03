@@ -91,6 +91,7 @@ type ReconcileCatalogSourceConfig struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling CatalogSourceConfig %s/%s\n", request.Namespace, request.Name)
+	log.Warning("DEPRECATION NOTICE: The CatalogSourceConfig API is deprecated in future versions. Please visit this link for futher details: https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated")
 	// Reconcile kicked off, message Sync Channel
 	r.syncSender.SendSyncMessage(nil)
 

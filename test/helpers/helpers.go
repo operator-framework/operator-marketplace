@@ -39,6 +39,10 @@ const (
 	// the CreateOperatorSource function.
 	TestOperatorSourceName string = "test-operators"
 
+	// TestOpsrcNameForClusterOperator is the name of an OperatorSource that is created
+	// for testing ClusterOperator status on custom OperatorSource creation
+	TestOpsrcNameForClusterOperator string = "test-operators-for-co"
+
 	// TestOperatorSourceLabelKey is a label key added to the opeator source returned
 	// by the CreateOperatorSource function.
 	TestOperatorSourceLabelKey string = "opsrc-group"
@@ -49,6 +53,10 @@ const (
 
 	// TestCatalogSourceConfigName is the name of the test CatalogSourceConfig.
 	TestCatalogSourceConfigName string = "test-csc"
+
+	// TestCscNameForClusterOperator is the name of a CatalogSourceConfig that is created
+	// for testing ClusterOperator status on CatalogSourceConfig creation
+	TestCscNameForClusterOperator string = "test-csc-for-co"
 
 	// TestNoHyphenCatalogSourceConfigName is the name of a non-hyphenated test CatalogSourceConfig.
 	TestNoHyphenCatalogSourceConfigName string = "testcsc"

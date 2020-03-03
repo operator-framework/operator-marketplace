@@ -248,7 +248,7 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
-		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
@@ -277,7 +277,7 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 }
 
 // testSomeClusterStatusDefaultsDisabled tests that, when some default operator sources are disabled,
-// the clusterstatus sets Available=false
+// the clusterstatus sets Available=True
 func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
@@ -306,9 +306,9 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
-		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
-		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
 
 	// Poll to ensure ClusterOperator is present and has the correct status
