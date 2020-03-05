@@ -11,14 +11,14 @@ const (
 	// TrustedCaConfigMapName is the name of the Marketplace ConfigMap that stores Certificate Authority bundle.
 	TrustedCaConfigMapName = "marketplace-trusted-ca"
 
-	// trustedCaMountPath is the path to the directory where the Certificate Authority volume should be mounted.
-	trustedCaMountPath = "/etc/pki/ca-trust/extracted/pem/"
+	// TrustedCaMountPath is the path to the directory where the Certificate Authority volume should be mounted.
+	TrustedCaMountPath = "/etc/pki/ca-trust/extracted/pem/"
 
-	// caBundleKey is the key in the ConfigMap that stores Certificate Authoritie bundle.
-	caBundleKey = "ca-bundle.crt"
+	// CABundleKey is the key in the ConfigMap that stores Certificate Authoritie bundle.
+	CABundleKey = "ca-bundle.crt"
 
-	// caBundlePath is the path where we will mount the Certificate Authorities bundle.
-	caBundlePath = "tls-ca-bundle.pem"
+	// CABundlePath is the path where we will mount the Certificate Authorities bundle.
+	CABundlePath = "tls-ca-bundle.pem"
 )
 
 // MountCaConfigMap adds a Volume and VolumeMount for the Certificate Authority ConfigMap on
@@ -35,8 +35,8 @@ func MountCaConfigMap(template *corev1.PodTemplateSpec) {
 					},
 					Items: []corev1.KeyToPath{
 						corev1.KeyToPath{
-							Key:  caBundleKey,
-							Path: caBundlePath,
+							Key:  CABundleKey,
+							Path: CABundlePath,
 						},
 					},
 				},
@@ -48,7 +48,7 @@ func MountCaConfigMap(template *corev1.PodTemplateSpec) {
 	template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		corev1.VolumeMount{
 			Name:      TrustedCaConfigMapName,
-			MountPath: trustedCaMountPath,
+			MountPath: TrustedCaMountPath,
 		},
 	}
 }
@@ -56,5 +56,5 @@ func MountCaConfigMap(template *corev1.PodTemplateSpec) {
 // getCaOnDisk returns the contents of the Certificate Authority bundle on disk as a byte
 // array or returns the error encountered when attempting to do so.
 func getCaOnDisk() ([]byte, error) {
-	return ioutil.ReadFile(filepath.Join(trustedCaMountPath, caBundlePath))
+	return ioutil.ReadFile(filepath.Join(TrustedCaMountPath, CABundlePath))
 }

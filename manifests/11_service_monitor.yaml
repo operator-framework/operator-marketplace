@@ -7,7 +7,18 @@ metadata:
     name: marketplace-operator
 spec:
   endpoints:
-  - port: metrics
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      interval: 30s
+      metricRelabelings:
+        - action: drop
+          regex: etcd_(debugging|disk|request|server).*
+          sourceLabels:
+            - __name__
+      port: https-metrics
+      scheme: https
+      tlsConfig:
+        caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+        serverName: marketplace-operator-metrics.openshift-marketplace.svc
   namespaceSelector:
     matchNames:
     - openshift-marketplace
