@@ -12,8 +12,8 @@ required = [
 
 [[override]]
   name = "k8s.io/code-generator"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
+  # revision for tag "kubernetes-1.17.3"
+  revision = "4ae19cfe9b46bf48d232c065a9078d1dff3de06c"
 
 [[override]]
   name = "k8s.io/kube-openapi"
@@ -29,23 +29,23 @@ required = [
 
 [[override]]
   name = "k8s.io/api"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "05914d821849570fba9eacfb29466f2d8d3cd229"
+  # revision for tag "kubernetes-1.17.3"
+  revision = "ef0cd3ac5f239dcd07b58dc7f6f0698d7aa74efd"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "0fe22c71c47604641d9aa352c785b7912c200562"
+  # revision for tag "kubernetes-1.17.3"
+  revision = "ee42d6166f481443ff2894b657bc866d6145d3aa"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "2b1284ed4c93a43499e781493253e2ac5959c4fd"
+  # revision for tag "kubernetes-1.17.3"
+  revision = "731dcecc205498f52a21b12e311af095efb4b188"
 
 [[override]]
   name = "k8s.io/client-go"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "8d9ed539ba3134352c586810e749e58df4e94e4f"
+  # revision for tag "kubernetes-1.17.3"
+  revision = "ae93ed28af1516427c76ef4e784b9ba231664e0f"
 
 [[override]]
   name = "sigs.k8s.io/controller-runtime"
