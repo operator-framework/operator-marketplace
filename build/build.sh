@@ -9,11 +9,7 @@ if ! which go > /dev/null; then
 	exit 1
 fi
 
-GIT_COMMIT=$(git rev-parse HEAD)
-
-if [ $SOURCE_GIT_COMMIT ]; then
-	GIT_COMMIT=$SOURCE_GIT_COMMIT
-fi
+GIT_COMMIT=${SOURCE_GIT_COMMIT:-$(git rev-parse HEAD)}
 
 BIN_DIR="$(pwd)/build/_output/bin"
 mkdir -p ${BIN_DIR}
