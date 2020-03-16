@@ -1340,14 +1340,6 @@
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
 
 [[projects]]
-  digest = "1:a87ae7b65dbe78371c8288e13b6f1ab90a3ee72c8593cec31bca425d86044ed5"
-  name = "k8s.io/kubernetes"
-  packages = ["pkg/util/labels"]
-  pruneopts = "NT"
-  revision = "4485c6f18cee9a5d3c3b4e523bd27972b1b53892"
-  version = "v1.15.1"
-
-[[projects]]
   digest = "1:06035489efbd51ccface65fc878ceeb849aba05b2f9443c8993f363fc96e80ac"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
@@ -1462,7 +1454,6 @@
     "k8s.io/gengo/args",
     "k8s.io/kube-openapi/cmd/openapi-gen",
     "k8s.io/kube-openapi/pkg/common",
-    "k8s.io/kubernetes/pkg/util/labels",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",

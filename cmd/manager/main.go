@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -19,7 +20,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
-	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
@@ -182,23 +182,6 @@ func main() {
 
 	// Handle the defaults
 	err = ensureDefaults(cfg, mgr.GetScheme())
-	if err != nil {
-		exit(err)
-	}
-
-	// set ClusterOperator status to report Migration
-	if err := statusReporter.ReportMigration(); err != nil {
-		exit(err)
-	}
-
-	client, err := client.New(cfg, client.Options{})
-	if err != nil {
-		exit(err)
-	}
-
-	// Perform migration logic to upgrade cluster from 4.1.z to 4.2.z
-	migrator := migrator.NewMigrator(client)
-	err = migrator.Migrate(namespace)
 	if err != nil {
 		exit(err)
 	}

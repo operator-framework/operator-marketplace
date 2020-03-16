@@ -64,7 +64,6 @@ type SyncSender interface {
 
 type Reporter interface {
 	StartReporting() <-chan struct{}
-	ReportMigration() error
 	SyncSender
 }
 
@@ -402,18 +401,6 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 	}, nil
 }
 
-// ReportMigration sets the clusterOperator status to signal that migration logic is in progress,
-// while upgrading from openshift 4.1.z to openshift 4.2.z
-func (r *reporter) ReportMigration() error {
-	conditionListBuilder := clusterStatusListBuilder()
-	conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Performing migration logic to progress towards release version: %s", r.version), "Upgrading")
-	msg := fmt.Sprintf("Determining status")
-	conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, "Upgrading")
-	conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, "Upgrading")
-	statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, "Upgrading")
-	return r.setStatus(statusConditions)
-}
-
 // StartReporting ensures that the cluster supports reporting ClusterOperator status
 // and returns a channel that reports if it is actively reporting.
 func (r *reporter) StartReporting() <-chan struct{} {
@@ -450,10 +437,6 @@ func (NoOpReporter) StartReporting() <-chan struct{} {
 	ch := make(chan struct{})
 	close(ch)
 	return ch
-}
-
-func (NoOpReporter) ReportMigration() error {
-	return nil
 }
 
 // CheckOperatorUpgradeablity checks for the presence of CatalogSourceConfigs,
