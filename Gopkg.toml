@@ -98,6 +98,3 @@ required = [
   branch = "release-4.2"
   name = "github.com/openshift/client-go"
 
-[[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "1.14.0"
