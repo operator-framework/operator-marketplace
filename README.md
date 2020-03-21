@@ -119,7 +119,7 @@ $ kubectl delete clusterserviceversion jaeger-operator.v1.8.2 -n marketplace
 
 ## Populating your own App Registry OperatorSource
 
-Follow the steps [here](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md) to upload operator artifacts to `quay.io`.
+Follow the steps [here](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md#push-to-quayio) to upload operator artifacts to `quay.io`.
 
 Once your operator artifact is pushed to `quay.io` you can use an `OperatorSource` to add your operator offering to Marketplace. An example `OperatorSource` is provided [here][upstream-community-operators].
 
