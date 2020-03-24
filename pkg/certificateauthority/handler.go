@@ -39,7 +39,7 @@ func (h *configmapHandler) Handle(ctx context.Context, in *corev1.ConfigMap) err
 	})
 
 	// Retrieve the Certificate Authority bundle from the ConfigMap.
-	caBundle := in.Data[caBundleKey]
+	caBundle := in.Data[CABundleKey]
 
 	// Retrieve the Certificate Authority bundle from Disk.
 	// If an error is returned and is not related to a nonexistant file, return an error.

@@ -1,7 +1,9 @@
 package metrics
 
 import (
+	"crypto/tls"
 	"fmt"
+	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,8 +15,11 @@ const (
 	// metricsPath is the path that marketplace exposes its metrics at.
 	metricsPath = "/metrics"
 
-	// metricsPort is the port that marketplace exposes its metrics at.
+	// metricsPort is the port that marketplace exposes its metrics over http.
 	metricsPort = 8383
+
+	// metricsTLSPort is the port that marketplace exposes its metrics over https.
+	metricsTLSPort = 8081
 )
 
 var (
@@ -42,14 +47,14 @@ var (
 	)
 )
 
-// init enables marketplace to serve prometheus metrics.
-func init() {
+// ServePrometheus enables marketplace to serve prometheus metrics.
+func ServePrometheus(useTLS bool, cert, key string) error {
 	// Register metrics for the operator with the prometheus.
 	log.Info("[metrics] Registering marketplace metrics")
 	err := registerMetrics()
 	if err != nil {
 		log.Infof("[metrics] Unable to register marketplace metrics: %v", err)
-		return
+		return err
 	}
 
 	// Wrap the default RoundTripper with middleware.
@@ -61,8 +66,44 @@ func init() {
 	// Start the server and expose the registered metrics.
 	log.Info("[metrics] Serving marketplace metrics")
 	http.Handle(metricsPath, promhttp.Handler())
-	port := fmt.Sprintf(":%d", metricsPort)
-	go http.ListenAndServe(port, nil)
+
+	if useTLS {
+		tlsGetCertFn, err := filemonitor.OLMGetCertRotationFn(log.New(), cert, key)
+		if err != nil {
+			log.Errorf("Certificate monitoring for metrics (https) failed: %v", err)
+			return err
+		}
+
+		go func() {
+			httpsServer := &http.Server{
+				Addr:    fmt.Sprintf(":%d", metricsTLSPort),
+				Handler: nil,
+				TLSConfig: &tls.Config{
+					GetCertificate: tlsGetCertFn,
+				},
+			}
+			err := httpsServer.ListenAndServeTLS("", "")
+			if err != nil {
+				if err == http.ErrServerClosed {
+					log.Errorf("Metrics (https) server closed")
+					return
+				}
+				log.Errorf("Metrics (https) serving failed: %v", err)
+			}
+		}()
+	} else {
+		go func() {
+			err := http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil)
+			if err != nil {
+				if err == http.ErrServerClosed {
+					log.Errorf("Metrics (http) server closed")
+					return
+				}
+				log.Errorf("Metrics (http) serving failed: %v", err)
+			}
+		}()
+	}
+	return nil
 }
 
 // registerMetrics registers marketplace prometheus metrics.
