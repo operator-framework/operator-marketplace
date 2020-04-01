@@ -65,3 +65,13 @@ spec:
           for: 15m
           labels:
             severity: warning
+    - name: custom-resource-detected
+      rules:
+        - alert: CustomResourceDetected
+          annotations:
+            summary: Indicates the presence of a custom OperatorSource or a CatalogSourceConifg in the cluster
+            message: The cluster has custom OperatorSource/CatalogSourceConfig, which are deprecated from OCP 4.5. Upgrade to OCP 4.5 will not be possible unless those resources are removed. Please visit https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated for further details.
+          expr: |
+            custom_resource_total > 0
+          labels:
+            severity: warning

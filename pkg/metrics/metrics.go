@@ -3,8 +3,9 @@ package metrics
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 	"net/http"
+
+	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -20,6 +21,15 @@ const (
 
 	// metricsTLSPort is the port that marketplace exposes its metrics over https.
 	metricsTLSPort = 8081
+
+	// ResourceTypeOpsrc indicates that the resource in an OperatorSource
+	ResourceTypeOpsrc = "OperatorSource"
+
+	// ResourceTypeCSC indicates that the resource is a CatalogSourceConfig
+	ResourceTypeCSC = "CatalogSourceConfig"
+
+	// ResourceTypeLabel is a label for indicating the type of the resource.
+	ResourceTypeLabel = "customResourceType"
 )
 
 var (
@@ -44,6 +54,13 @@ var (
 			Buckets: prometheus.DefBuckets,
 		},
 		[]string{opSrcLabel},
+	)
+	customResourceGaugeVec = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "custom_resource_total",
+			Help: "A gauge that stores the count of custom OperatorSource and CatalogSourceConfig resources in the cluster.",
+		},
+		[]string{ResourceTypeLabel},
 	)
 )
 
@@ -119,6 +136,11 @@ func registerMetrics() error {
 		return err
 	}
 
+	err = prometheus.Register(customResourceGaugeVec)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -126,4 +148,14 @@ func registerMetrics() error {
 // from marketplace.
 func GetRoundTripper() http.RoundTripper {
 	return roundTripper
+}
+
+// RegisterCustomResource increases the count of the custom_resource_total metric
+func RegisterCustomResource(resourceType string) {
+	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Inc()
+}
+
+// DeregisterCustomResource decreases the count of the custom_resource_total metric
+func DeregisterCustomResource(resourceType string) {
+	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Dec()
 }
