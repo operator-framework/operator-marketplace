@@ -573,16 +573,17 @@
   revision = "f2aef88446f2a736fcb18db8ae57d708c52fdad0"
 
 [[projects]]
-  digest = "1:f7ae6c03d841a86e643a619468752e9d30497c90ef2c72c196f42fe918ddb80a"
+  digest = "1:478c1def3aca5900a9831ae6a8d933c6c94efcd4dca900cbbe827690c434aa01"
   name = "github.com/operator-framework/operator-lifecycle-manager"
   packages = [
+    "pkg/api/apis/operators",
     "pkg/api/apis/operators/v1alpha1",
     "pkg/lib/signals",
     "pkg/lib/version",
   ]
   pruneopts = "NT"
-  revision = "7b2b397ad0cc161eed4409484a0bc496ec823046"
-  version = "0.10.0"
+  revision = "99643127d862c3331c6965e6ff0019bb564d2d4c"
+  version = "0.14.2"
 
 [[projects]]
   digest = "1:ce4e43d2eef4a4c40c6e8439c724e34e6fd7e48959a340038e3cd02762cdb437"
