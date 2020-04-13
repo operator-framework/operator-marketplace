@@ -66,7 +66,8 @@ func (r *succeededReconciler) Reconcile(ctx context.Context, in *v1.OperatorSour
 		return
 	}
 
-	err = defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).Ensure(r.client, in.Name)
+	opsrcDefs, catsrcDefs := defaults.GetGlobalDefinitions()
+	err = defaults.New(opsrcDefs, catsrcDefs, operatorhub.GetSingleton().Get()).Ensure(r.client, in.Name)
 
 	return
 }
