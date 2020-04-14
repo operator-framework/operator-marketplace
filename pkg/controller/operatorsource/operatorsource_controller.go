@@ -90,7 +90,8 @@ func (r *ReconcileOperatorSource) Reconcile(request reconcile.Request) (reconcil
 		if errors.IsNotFound(err) {
 			// If the object is not found but is one of the default operator sources, let's ensure it gets recreated.
 			if defaults.IsDefaultSource(request.Name) {
-				err = defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
+				opsrcDefs, catsrcDefs := defaults.GetGlobalDefinitions()
+				err = defaults.New(opsrcDefs, catsrcDefs, operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
 				if err != nil {
 					// If we run into an error when attempting to ensure the default, let's requeue and try again
 					return reconcile.Result{}, err

@@ -142,7 +142,7 @@ func main() {
 		}
 	}
 
-	stopCh := signals.SetupSignalHandler()
+	stopCh := signals.Context().Done()
 
 	var statusReporter status.Reporter = &status.NoOpReporter{}
 	if clusterOperatorName != "" {

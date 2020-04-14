@@ -73,7 +73,8 @@ func (h *operatorsourcehandler) Handle(ctx context.Context, in *v1.OperatorSourc
 		"name":      in.GetName(),
 	})
 
-	defaults.New(defaults.GetGlobalDefinitions(), operatorhub.GetSingleton().Get()).RestoreSpecIfDefault(in)
+	opsrcDefs, catsrcDefs := defaults.GetGlobalDefinitions()
+	defaults.New(opsrcDefs, catsrcDefs, operatorhub.GetSingleton().Get()).RestoreSpecIfDefault(in)
 
 	outOfSyncCacheReconciler := h.newCacheReconciler(logger, h.datastore, h.client)
 	out, status, _, err := outOfSyncCacheReconciler.Reconcile(ctx, in)
