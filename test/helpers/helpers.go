@@ -14,7 +14,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
-	"github.com/operator-framework/operator-marketplace/pkg/datastore"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,31 +50,8 @@ const (
 	// by the CreateOperatorSource function.
 	TestOperatorSourceLabelValue string = "Community"
 
-	// TestCatalogSourceConfigName is the name of the test CatalogSourceConfig.
-	TestCatalogSourceConfigName string = "test-csc"
-
-	// TestCscNameForClusterOperator is the name of a CatalogSourceConfig that is created
-	// for testing ClusterOperator status on CatalogSourceConfig creation
-	TestCscNameForClusterOperator string = "test-csc-for-co"
-
-	// TestNoHyphenCatalogSourceConfigName is the name of a non-hyphenated test CatalogSourceConfig.
-	TestNoHyphenCatalogSourceConfigName string = "testcsc"
-
-	// TestCatalogSourceConfigTargetNamespace is the target namespace used in the test
-	// CatalogSourceConfig.
-	TestCatalogSourceConfigTargetNamespace string = "default"
-
 	// DefaultsDir is the relative path to the defaults directory
 	DefaultsDir string = "./defaults"
-
-	// TestDatastoreCscName is the name of a CatalogSourceConfig that is returned by
-	// the CreateDatastoreCscDefinition function.
-	TestDatastoreCscName string = "test-operators"
-
-	// TestInstalledCscPublisherName is the publisher name part of a installed CatalogSourceConfig
-	// that is returned by the CreateDatastoreCscDefinition function. This publisher name part should be
-	// apened with a namespace to generate the full installed CatalogSourceConfig name.
-	TestInstalledCscPublisherName string = "installed-test"
 
 	// TestUISubscriptionName is the name of a Subscription that is returned by
 	// the CreateUISubscriptionDefinition function.
@@ -87,9 +63,6 @@ const (
 
 	// TestInvalidSubscriptionName is a subscription that points to a non-existent catalog source
 	TestInvalidSubscriptionName string = "invalid-subscription"
-
-	// TestInvalidCscName is a non-existent catalog source config
-	TestInvalidCscName string = "invalid-csc"
 )
 
 var (
@@ -143,34 +116,6 @@ func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment apps.De
 		}
 		return false, nil
 	})
-}
-
-// WaitForCscExpectedPhaseAndMessage checks if a CatalogSourceConfig with the given name exists in the namespace
-// and makes sure that the phase and message matches the expected values.
-// If expectedMessage is an empty string, only the expectedPhase is checked.
-func WaitForCscExpectedPhaseAndMessage(client test.FrameworkClient, cscName, namespace, expectedPhase, expectedMessage string) (*v2.CatalogSourceConfig, error) {
-	// Check that the CatalogSourceConfig exists.
-	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
-	err := wait.PollImmediate(RetryInterval, Timeout, func() (bool, error) {
-		err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
-		if err != nil {
-			return false, err
-		}
-		// log.Infof("Csc: %+v", resultCatalogSourceConfig)
-		// Check for the expected phase
-		if resultCatalogSourceConfig.Status.CurrentPhase.Name == expectedPhase {
-			// If the expected message is not empty make sure that it contains the actual message
-			if expectedMessage == "" || strings.Contains(resultCatalogSourceConfig.Status.CurrentPhase.Message, expectedMessage) {
-				return true, nil
-			}
-			return false, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return resultCatalogSourceConfig, nil
 }
 
 // WaitForOpSrcExpectedPhaseAndMessage checks if an OperatorSource with the given name exists in the namespace
@@ -277,25 +222,6 @@ func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
 	}
 }
 
-// CreateCatalogSourceConfigDefinition returns an CatalogSourceConfig definition that can
-// be turned into a runtime object for tests that rely on an CatalogSourceConfig
-func CreateCatalogSourceConfigDefinition(name, namespace, target string) *v2.CatalogSourceConfig {
-	return &v2.CatalogSourceConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind: v2.CatalogSourceConfigKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v2.CatalogSourceConfigSpec{
-			TargetNamespace: target,
-			Packages:        "camel-k-marketplace-e2e-tests",
-		},
-	}
-
-}
-
 // checkOwnerLabels verifies that the correct owner labels have been set
 func checkOwnerLabels(labels map[string]string, owner string) error {
 	switch owner {
@@ -315,13 +241,13 @@ func checkOwnerLabels(labels map[string]string, owner string) error {
 	return nil
 }
 
-// CheckChildResourcesCreated checks that a CatalogSourceConfig's
+// CheckChildResourcesCreated checks that an OperatorSource's
 // child resources were deployed.
-func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace, targetNamespace, owner string) error {
+func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespace, targetNamespace, owner string) error {
 
 	// Check that the CatalogSource was created.
 	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForResult(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForResult(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
 	}
@@ -334,7 +260,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 
 	// Check that the Service was created.
 	resultService := &corev1.Service{}
-	err = WaitForResult(client, resultService, namespace, cscName)
+	err = WaitForResult(client, resultService, namespace, opsrcName)
 	if err != nil {
 		return err
 	}
@@ -347,7 +273,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 
 	// Check that the Deployment was created.
 	resultDeployment := &apps.Deployment{}
-	err = WaitForResult(client, resultDeployment, namespace, cscName)
+	err = WaitForResult(client, resultDeployment, namespace, opsrcName)
 	if err != nil {
 		return err
 	}
@@ -366,67 +292,29 @@ func CheckChildResourcesCreated(client test.FrameworkClient, cscName, namespace,
 	return nil
 }
 
-// CheckChildResourcesDeleted checks that a CatalogSourceConfig's
+// CheckChildResourcesDeleted checks that an OperatorSource's
 // child resources were deleted.
-func CheckChildResourcesDeleted(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
+func CheckChildResourcesDeleted(client test.FrameworkClient, opsrcName, namespace, targetNamespace string) error {
 	// Check that the CatalogSource was deleted.
 	resultCatalogSource := &olm.CatalogSource{}
-	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, cscName)
+	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
 	}
 
 	// Check that the Service was deleted.
 	resultService := &corev1.Service{}
-	err = WaitForNotFound(client, resultService, namespace, cscName)
+	err = WaitForNotFound(client, resultService, namespace, opsrcName)
 	if err != nil {
 		return err
 	}
 
 	// Check that the Deployment was deleted.
 	resultDeployment := &apps.Deployment{}
-	err = WaitForNotFound(client, resultDeployment, namespace, cscName)
+	err = WaitForNotFound(client, resultDeployment, namespace, opsrcName)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// CheckCscSuccessfulCreation checks that a CatalogSourceConfig
-// and it's child resources were deployed.
-func CheckCscSuccessfulCreation(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
-	// Check that the CatalogSourceConfig was created.
-	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
-	err := WaitForResult(client, resultCatalogSourceConfig, namespace, cscName)
-	if err != nil {
-		return err
-	}
-
-	// Check that all child resources were created.
-	err = CheckChildResourcesCreated(client, cscName, namespace, targetNamespace, v2.CatalogSourceConfigKind)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CheckCscSuccessfulDeletion checks that a CatalogSourceConfig
-// and it's child resources were deleted.
-func CheckCscSuccessfulDeletion(client test.FrameworkClient, cscName, namespace, targetNamespace string) error {
-	// Check that the CatalogSourceConfig was deleted.
-	resultCatalogSourceConfig := &v2.CatalogSourceConfig{}
-	err := WaitForNotFound(client, resultCatalogSourceConfig, namespace, cscName)
-	if err != nil {
-		return err
-	}
-
-	// Check that all child resources were deleted.
-	err = CheckChildResourcesDeleted(client, cscName, namespace, targetNamespace)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -514,49 +402,6 @@ func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32
 	}
 
 	return nil
-}
-
-// CreateDatastoreCscDefinition returns a newly built CatalogSourceConfig
-func CreateDatastoreCscDefinition(name, namespace string) *v2.CatalogSourceConfig {
-	labels := make(map[string]string)
-	labels[datastore.DatastoreLabel] = "true"
-
-	return &v2.CatalogSourceConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s",
-				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
-			Kind: v2.CatalogSourceConfigKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Spec: v2.CatalogSourceConfigSpec{
-			TargetNamespace: namespace,
-			Packages:        "",
-		},
-	}
-}
-
-// CreateInstalledCscDefinition returns a newly built CatalogSourceConfig
-func CreateInstalledCscDefinition(namespace string) *v2.CatalogSourceConfig {
-	name := TestInstalledCscPublisherName + namespace
-	return &v2.CatalogSourceConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s",
-				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
-			Kind: v2.CatalogSourceConfigKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v2.CatalogSourceConfigSpec{
-			TargetNamespace: namespace,
-			Packages:        "",
-		},
-	}
 }
 
 // CreateSubscriptionDefinition returns a newly built Subscription with the labels
@@ -683,4 +528,16 @@ func InitOpSrcDefinition() error {
 		}
 	}
 	return nil
+}
+
+// GetRegistryDeployment returns the deployment object for the given OperatorSource
+func GetRegistryDeployment(client test.FrameworkClient, name, namespace string) *apps.Deployment {
+	// Get the registry deployment of the test OperatorSource
+	deployment := &apps.Deployment{}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	err := client.Get(context.TODO(), namespacedName, deployment)
+	if err != nil {
+		return nil
+	}
+	return deployment
 }

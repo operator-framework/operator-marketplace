@@ -6,7 +6,6 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -96,9 +95,6 @@ func WatchChildResourcesDeletionEvents(c controller.Controller, client cl.Client
 
 	var enqueueRequestsFromMapFunc handler.EnqueueRequestsFromMapFunc
 	switch owner {
-	case v2.CatalogSourceConfigKind:
-		pred.DeleteFunc = cscDeleteFunc
-		enqueueRequestsFromMapFunc = handler.EnqueueRequestsFromMapFunc{ToRequests: ChildResourceToCatalogSourceConfig(client)}
 	case v1.OperatorSourceKind:
 		pred.DeleteFunc = opsrcDeleteFunc
 		enqueueRequestsFromMapFunc = handler.EnqueueRequestsFromMapFunc{ToRequests: ChildResourceToOperatorSource(client)}
@@ -144,21 +140,6 @@ func WatchChildResourcesDeletionEvents(c controller.Controller, client cl.Client
 	return nil
 }
 
-// cscDeleteFunc is the predicate function for checking delete events. It returns
-// true only if the object's owner is a CatalogSourceConfig.
-func cscDeleteFunc(e event.DeleteEvent) bool {
-	// If DeleteStateUnknown is true it implies that the Delete event was missed
-	// and we can ignore it.
-	if e.DeleteStateUnknown {
-		return false
-	}
-
-	if getCscOwnerKey(e.Meta.GetLabels()) == nil {
-		return false
-	}
-	return true
-}
-
 // opsrcDeleteFunc is the predicate function for checking delete events. It returns
 // true only if the object's owner is an OperatorSource.
 func opsrcDeleteFunc(e event.DeleteEvent) bool {
@@ -172,23 +153,6 @@ func opsrcDeleteFunc(e event.DeleteEvent) bool {
 		return false
 	}
 	return true
-}
-
-// getCscOwnerKey checks for the CatalogSourceConfig owner labels within the
-// labels of the child resource and computes the key if present. It returns nil
-// if they are not present.
-func getCscOwnerKey(labels map[string]string) *client.ObjectKey {
-	ownerNamespace, present := labels[builders.CscOwnerNamespaceLabel]
-	if !present {
-		return nil
-	}
-
-	ownerName, present := labels[builders.CscOwnerNameLabel]
-	if !present {
-		return nil
-	}
-
-	return &client.ObjectKey{Namespace: ownerNamespace, Name: ownerName}
 }
 
 // getOpSrcOwnerKey checks for the OperatorSource owner labels within the labels

@@ -6,7 +6,6 @@ import (
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -25,33 +24,9 @@ const (
 // WatchTests is a test suite that ensure that the watches for child resources
 // are firing correctly and the child resources are restored upon deletion.
 func WatchTests(t *testing.T) {
-	t.Run("restore-csc-catalogsource", testRestoreCscCs)
-	t.Run("restore-csc-deployment", testRestoreCscDeployment)
-	t.Run("restore-csc-service", testRestoreCscService)
 	t.Run("restore-opsrc-catalogsource", testRestoreOpSrcCs)
 	t.Run("restore-opsrc-deployment", testRestoreOpSrcDeployment)
 	t.Run("restore-opsrc-service", testRestoreOpSrcService)
-}
-
-// testRestoreCscCs tests that when a CatalogSource that is owned by a CatalogSourceConfig
-// is restored upon deletion.
-func testRestoreCscCs(t *testing.T) {
-	err := deleteCheckRestoreChild(t, olm.CatalogSourceKind, v2.CatalogSourceConfigKind)
-	assert.NoError(t, err, cscErrMsg)
-}
-
-// testRestoreCscDeployment tests that when a Deployment that is owned by a CatalogSourceConfig
-// is restored upon deletion.
-func testRestoreCscDeployment(t *testing.T) {
-	err := deleteCheckRestoreChild(t, "Deployment", v2.CatalogSourceConfigKind)
-	assert.NoError(t, err, cscErrMsg)
-}
-
-// testRestoreCscService tests that when a Service that is owned by a CatalogSourceConfig
-// is restored upon deletion.
-func testRestoreCscService(t *testing.T) {
-	err := deleteCheckRestoreChild(t, "Service", v2.CatalogSourceConfigKind)
-	assert.NoError(t, err, cscErrMsg)
 }
 
 // testRestoreOpSrcCs tests that when a CatalogSource that is owned by an OperatorSource
@@ -90,9 +65,6 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 	var name, targetNamespace string
 
 	switch owner {
-	case v2.CatalogSourceConfigKind:
-		name = helpers.TestCatalogSourceConfigName
-		targetNamespace = helpers.TestCatalogSourceConfigTargetNamespace
 	case v1.OperatorSourceKind:
 		name = helpers.TestOperatorSourceName
 		targetNamespace = namespace

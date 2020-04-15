@@ -25,9 +25,6 @@ const (
 	// ResourceTypeOpsrc indicates that the resource in an OperatorSource
 	ResourceTypeOpsrc = "OperatorSource"
 
-	// ResourceTypeCSC indicates that the resource is a CatalogSourceConfig
-	ResourceTypeCSC = "CatalogSourceConfig"
-
 	// ResourceTypeLabel is a label for indicating the type of the resource.
 	ResourceTypeLabel = "customResourceType"
 )
@@ -58,7 +55,7 @@ var (
 	customResourceGaugeVec = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "custom_resource_total",
-			Help: "A gauge that stores the count of custom OperatorSource and CatalogSourceConfig resources in the cluster.",
+			Help: "A gauge that stores the count of custom OperatorSource resources in the cluster.",
 		},
 		[]string{ResourceTypeLabel},
 	)

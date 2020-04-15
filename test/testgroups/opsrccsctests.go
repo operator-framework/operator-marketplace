@@ -1,19 +1,18 @@
 package testgroups
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testsuites"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/require"
 )
 
-// OpSrcCscTestGroup creates an OperatorSource and a CatalogSourceConfig and then runs a series of
+// OpSrcTestGroup creates an OperatorSource and then runs a series of
 // test suites that rely on these resources.
-func OpSrcCscTestGroup(t *testing.T) {
+func OpSrcTestGroup(t *testing.T) {
 	// Create a ctx that is used to delete the OperatorSource and CatalogSouceConfig at the
 	// completion of this function.
 	ctx := test.NewTestCtx(t)
@@ -27,20 +26,9 @@ func OpSrcCscTestGroup(t *testing.T) {
 	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateOperatorSourceDefinition(helpers.TestOperatorSourceName, namespace))
 	require.NoError(t, err, "Could not create OperatorSource")
 
-	// Create the CatalogSourceConfig
-	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, helpers.CreateCatalogSourceConfigDefinition(
-		helpers.TestCatalogSourceConfigName, namespace, helpers.TestCatalogSourceConfigTargetNamespace))
-	require.NoError(t, err, "Could not create CatalogSourceConfig")
-
-	expectedPhase := "Succeeded"
-	csc, err := helpers.WaitForCscExpectedPhaseAndMessage(test.Global.Client, helpers.TestCatalogSourceConfigName, namespace, expectedPhase, "")
-	require.NoError(t, err, fmt.Sprintf("CatalogSourceConfig never reached the expected phase %s", expectedPhase))
-	require.NotNil(t, csc, "Could not retrieve CatalogSourceConfig")
-
-	// Confirm child resources were created without errors.
-	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestCatalogSourceConfigName,
-		namespace, helpers.TestCatalogSourceConfigTargetNamespace, v2.CatalogSourceConfigKind)
-	require.NoError(t, err, "CatalogSourceConfig child resources were not created")
+	err = helpers.CheckChildResourcesCreated(test.Global.Client, helpers.TestOperatorSourceName, namespace, namespace,
+		v1.OperatorSourceKind)
+	require.NoError(t, err)
 
 	// Run the test suites.
 	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
@@ -48,8 +36,5 @@ func OpSrcCscTestGroup(t *testing.T) {
 		t.Run("operatorhub-test-suite", testsuites.OperatorHubTests)
 	}
 	t.Run("opsrc-creation-test-suite", testsuites.OpSrcCreation)
-	t.Run("csc-target-namespace-test-suite", testsuites.CscTargetNamespace)
-	t.Run("packages-test-suite", testsuites.PackageTests)
-	t.Run("csc-invalid-tests", testsuites.CscInvalid)
 	t.Run("watch-tests", testsuites.WatchTests)
 }

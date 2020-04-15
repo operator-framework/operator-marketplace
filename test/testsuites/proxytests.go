@@ -19,7 +19,6 @@ import (
 // ProxyTests is a test suite that ensures that marketplace is listening to the global proxy.
 func ProxyTests(t *testing.T) {
 	t.Run("opsrc-registry-includes-proxy-variables", testOpSrcRegistryIncludesProxyVars)
-	t.Run("csc-registry-includes-proxy-variables", testCscRegistryIncludesProxyVars)
 }
 
 // testOpSrcRegistry ensures that the Operator Registry deployment
@@ -27,13 +26,6 @@ func ProxyTests(t *testing.T) {
 // variables set.
 func testOpSrcRegistryIncludesProxyVars(t *testing.T) {
 	assert.NoError(t, checkDeploymentIncludesProxyVars(t, helpers.TestOperatorSourceName))
-}
-
-// testCsdRegistry ensures that the Operator Registry deployment
-// created by an OperatorSource has the appropriate proxy environment
-// variables set.
-func testCscRegistryIncludesProxyVars(t *testing.T) {
-	assert.NoError(t, checkDeploymentIncludesProxyVars(t, helpers.TestCatalogSourceConfigName))
 }
 
 // checkDeploymentIncludesProxyVars checks if the deployment has the appropriate
