@@ -6,6 +6,8 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/datastore"
+	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 )
@@ -45,7 +47,9 @@ func (r *initialReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource
 		err = phase.ErrWrongReconcilerInvoked
 		return
 	}
-
+	if !defaults.IsDefaultSource(in.Name) {
+		metrics.RegisterCustomResource(metrics.ResourceTypeOpsrc)
+	}
 	out = in.DeepCopy()
 
 	// When an opsrc is created, make sure the opsrc finalizer is included

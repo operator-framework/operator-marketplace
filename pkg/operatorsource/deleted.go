@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
@@ -64,6 +65,9 @@ func (r *deletedReconciler) Reconcile(ctx context.Context, in *v1.OperatorSource
 	// Otherwise this phase has been requeued because the garbage collector hasn't
 	// finished its work yet.
 	if in.HasFinalizer() {
+		if !defaults.IsDefaultSource(in.Name) {
+			metrics.DeregisterCustomResource(metrics.ResourceTypeOpsrc)
+		}
 		// Delete the operator source manifests.
 		r.datastore.RemoveOperatorSource(out.UID)
 		grpcCatalog := grpccatalog.New(r.logger, nil, r.client)
