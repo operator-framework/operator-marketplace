@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apps "k8s.io/api/apps/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -69,7 +68,7 @@ func testRegistryDeploymentRetainsChanges(t *testing.T) {
 	client := test.Global.Client
 
 	// Get the registry deployment of the test OperatorSource
-	deployment := getRegistryDeployment(t, helpers.TestOperatorSourceName, namespace)
+	deployment := helpers.GetRegistryDeployment(test.Global.Client, helpers.TestOperatorSourceName, namespace)
 	require.NotNil(t, deployment)
 
 	// Add an annotation to the pod template and update the deployment
@@ -97,23 +96,11 @@ func testRegistryDeploymentRetainsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get the registry deployment again
-	deployment = getRegistryDeployment(t, helpers.TestOperatorSourceName, namespace)
+	deployment = helpers.GetRegistryDeployment(test.Global.Client, helpers.TestOperatorSourceName, namespace)
 	require.NotNil(t, deployment)
 
 	// Check that the annotation was present after the OperatorSource update
 	assert.True(t, meta.HasAnnotation(deployment.Spec.Template.ObjectMeta, annotationName),
 		"Annotation was not retained in pod template")
 
-}
-
-// getRegistryDeployment returns the deployment object for the given OperatorSource
-func getRegistryDeployment(t *testing.T, name, namespace string) *apps.Deployment {
-	// Get the registry deployment of the test OperatorSource
-	deployment := &apps.Deployment{}
-	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	err := test.Global.Client.Get(context.TODO(), namespacedName, deployment)
-	if err != nil {
-		return nil
-	}
-	return deployment
 }

@@ -8,8 +8,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,11 +67,6 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 		{
 			Group:     v1.SchemeGroupVersion.Group,
 			Resource:  v1.OperatorSourceKind,
-			Namespace: namespace,
-		},
-		{
-			Group:     v2.SchemeGroupVersion.Group,
-			Resource:  v2.CatalogSourceConfigKind,
 			Namespace: namespace,
 		},
 		{

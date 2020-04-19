@@ -7,7 +7,6 @@ import (
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -27,7 +26,7 @@ func TestMarketplace(t *testing.T) {
 	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	}
-	t.Run("opsrc-csc-test-group", testgroups.OpSrcCscTestGroup)
+	t.Run("opsrc-test-group", testgroups.OpSrcTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
 
@@ -42,20 +41,9 @@ func initTestingFramework(t *testing.T) {
 				v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version),
 		},
 	}
-	catalogSourceConfig := &v2.CatalogSourceConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind: v2.CatalogSourceConfigKind,
-			APIVersion: fmt.Sprintf("%s/%s",
-				v2.SchemeGroupVersion.Group, v2.SchemeGroupVersion.Version),
-		},
-	}
 	err := test.AddToFrameworkScheme(apis.AddToScheme, operatorSource)
 	if err != nil {
 		t.Fatalf("failed to add OperatorSource custom resource scheme to framework: %v", err)
-	}
-	err = test.AddToFrameworkScheme(apis.AddToScheme, catalogSourceConfig)
-	if err != nil {
-		t.Fatalf("failed to add CatalogsourceConfig custom resource scheme to framework: %v", err)
 	}
 	// Add (olm) CatalogSources to framework scheme.
 	catalogSource := &olm.CatalogSource{

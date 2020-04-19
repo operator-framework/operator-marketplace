@@ -48,20 +48,4 @@ func ClusterOperatorTestGroup(t *testing.T) {
 
 	// Run opsrc deletion releated test suites.
 	t.Run("cluster-operator-status-on-custom-opsrc-deletion-test-suite", testsuites.ClusterOperatorStatusOnCustomResourceDeletion)
-
-	// Create the CatalogSourceConfig
-	cscDefinition := helpers.CreateCatalogSourceConfigDefinition(
-		helpers.TestCscNameForClusterOperator, namespace, helpers.TestCatalogSourceConfigTargetNamespace)
-	err = helpers.CreateRuntimeObject(test.Global.Client, ctx, cscDefinition)
-	require.NoError(t, err, "Could not create CatalogSourceConfig")
-
-	// Run csc creation related test suites.
-	t.Run("cluster-operator-status-on-csc-creation-test-suite", testsuites.ClusterOperatorStatusOnCustomResourceCreation)
-
-	// Delete the CatalogSourceConfig.
-	err = helpers.DeleteRuntimeObject(test.Global.Client, cscDefinition)
-	require.NoError(t, err, "Could not delete CatalogSourceConfig")
-
-	// Run opsrc deletion releated test suites.
-	t.Run("cluster-operator-status-on-csc-deletion-test-suite", testsuites.ClusterOperatorStatusOnCustomResourceDeletion)
 }

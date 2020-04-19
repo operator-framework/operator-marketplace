@@ -10,18 +10,17 @@ import (
 	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
+	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
@@ -29,6 +28,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
@@ -122,9 +122,6 @@ func main() {
 
 	log.Print("Registering Components.")
 
-	catalogsourceconfig.InitializeStaticSyncer(mgr.GetClient(), initialWait)
-	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval, updateNotificationSendWait, catalogsourceconfig.Syncer, catalogsourceconfig.Syncer)
-
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		exit(err)
@@ -135,6 +132,9 @@ func main() {
 		exit(err)
 	}
 
+	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		exit(err)
+	}
 	// If the config API is available add the config resources to the scheme
 	if configv1.IsAPIAvailable() {
 		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
@@ -174,6 +174,18 @@ func main() {
 
 	log.Print("Starting the Cmd.")
 
+	// migrate away from Marketplace API
+	clientGo, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		log.Error(err, "Failed to instantiate client for migrator")
+		os.Exit(1)
+	}
+	migrator := migrator.New(clientGo)
+	err = migrator.Migrate()
+	if err != nil {
+		log.Error(err, "[migration] Error in migrating Marketplace away from CatalogSourceConfig API")
+	}
+
 	// Populate the global default OperatorSources definition and config
 	err = defaults.PopulateGlobals()
 	if err != nil {
@@ -188,9 +200,6 @@ func main() {
 
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := statusReporter.StartReporting()
-
-	go registrySyncer.Sync(stopCh)
-	go catalogsourceconfig.Syncer.Sync(stopCh)
 
 	// Start the Cmd
 	err = mgr.Start(stopCh)

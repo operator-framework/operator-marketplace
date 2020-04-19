@@ -14,7 +14,6 @@ import (
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
@@ -55,7 +54,7 @@ const (
 
 	upgradeableMessage = "Marketplace is upgradeable"
 
-	deprecatedAPIMessage = "The cluster has custom OperatorSource/CatalogSourceConfig, which are deprecated in future versions. Please visit this link for further deatils: https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated"
+	deprecatedAPIMessage = "The cluster has custom OperatorSource, which is deprecated in future versions. Please visit this link for further details: https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated"
 )
 
 type SyncSender interface {
@@ -206,11 +205,6 @@ func (r *reporter) setRelatedObjects() {
 		{
 			Group:     v1.SchemeGroupVersion.Group,
 			Resource:  v1.OperatorSourceKind,
-			Namespace: r.namespace,
-		},
-		{
-			Group:     v2.SchemeGroupVersion.Group,
-			Resource:  v2.CatalogSourceConfigKind,
 			Namespace: r.namespace,
 		},
 		{
@@ -372,7 +366,7 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config v1 client: %s", err.Error())
 	}
-	// Client for listing OperatorSources and CatalogSourceConfigs
+	// Client for listing OperatorSources
 	rawClient, err := client.New(cfg, client.Options{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create raw client: %s", err.Error())
@@ -439,35 +433,20 @@ func (NoOpReporter) StartReporting() <-chan struct{} {
 	return ch
 }
 
-// CheckOperatorUpgradeablity checks for the presence of CatalogSourceConfigs,
-// and non default OperatorSources in the cluster. Since both the APIs are
-// scheduled to be deprecated/are already deprecated, checkOperatorUpgradeablity
-// returns false if it detects the presence of any CSC or non default Opsrc in
-// the cluster to indicate that the cluster is not upgradable to future versions.
+// CheckOperatorUpgradeablity checks for the presence of non default
+// OperatorSources in the cluster. Since the API is scheduled to be deprecated/is
+// already deprecated, checkOperatorUpgradeablity returns false if detects the presence
+// of any non default Opsrc in the cluster to indicate that the cluster is not upgradable
+// to future versions.
 func CheckOperatorUpgradeablity(kubeClient client.Client) (bool, error) {
-	clusterHasCSC, err := isCSCPresent(kubeClient)
-	if err != nil {
-		return false, err
-	}
 	clusterHasOpsrc, err := isNonDefaultOpsrcPresent(kubeClient)
 	if err != nil {
 		return false, err
 	}
-	if clusterHasCSC || clusterHasOpsrc {
+	if clusterHasOpsrc {
 		return false, nil
 	}
 	return true, nil
-}
-
-func isCSCPresent(kubeClient client.Client) (bool, error) {
-	cscs := &v2.CatalogSourceConfigList{}
-	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, cscs); err != nil {
-		return false, err
-	}
-	if len(cscs.Items) > 0 {
-		return true, nil
-	}
-	return false, nil
 }
 
 func isNonDefaultOpsrcPresent(kubeClient client.Client) (bool, error) {

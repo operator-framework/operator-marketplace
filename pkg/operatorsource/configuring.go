@@ -97,18 +97,11 @@ func (r *configuringReconciler) Reconcile(ctx context.Context, in *v1.OperatorSo
 
 	r.logger.Infof("%d manifest(s) scheduled for download in the operator-registry pod", len(metadata))
 
-	isResyncNeeded, err := r.writeMetadataToDatastore(in, out, metadata)
+	_, err = r.writeMetadataToDatastore(in, out, metadata)
 	if err != nil {
 		// No operator metadata was written, move to Failed phase.
 		nextPhase = phase.GetNextWithMessage(phase.Failed, err.Error())
 		return
-	}
-
-	// Now that we have updated the datastore, let's check if the opsrc is new.
-	// If it is, let's force a resync for CatalogSourceConfig.
-	if isResyncNeeded {
-		r.logger.Info("New opsrc detected. Refreshing catalogsourceconfigs.")
-		r.refresher.SendRefresh(out.Name)
 	}
 
 	packages := r.datastore.GetPackageIDsByOperatorSource(out.GetUID())

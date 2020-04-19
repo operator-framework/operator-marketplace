@@ -79,16 +79,14 @@ spec:
                   type: string
               type: object
             displayName:
-              description: DisplayName is passed along to the CatalogSourceConfig
-                to be used by the resulting CatalogSource to be used as a pretty name.
+              description: DisplayName is passed along to the resulting CatalogSource to be used as a pretty name.
               type: string
             endpoint:
               description: Endpoint points to the remote app registry server from
                 where operator manifests can be fetched.
               type: string
             publisher:
-              description: Publisher is passed along to the CatalogSourceConfig to
-                be used by the resulting CatalogSource that defines what entity published
+              description: Publisher is passed along to the resulting CatalogSource that defines what entity published
                 the artifacts from the OperatorSource.
               type: string
             registryNamespace:
