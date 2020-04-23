@@ -44,6 +44,11 @@ spec:
           args:
           - -registryServerImage=quay.io/openshift/origin-operator-registry
           - -defaultsDir=/defaults
+          - -clusterOperatorName=marketplace
+          - -tls-cert
+          - /var/run/secrets/serving-cert/tls.crt
+          - -tls-key
+          - /var/run/secrets/serving-cert/tls.key
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -74,6 +79,8 @@ spec:
           volumeMounts:
             - name: marketplace-trusted-ca
               mountPath: /etc/pki/ca-trust/extracted/pem/
+            - name: marketplace-operator-metrics
+              mountPath: /var/run/secrets/serving-cert
       volumes:
         - name: marketplace-trusted-ca
           configMap:
@@ -82,3 +89,6 @@ spec:
             items:
             - key: ca-bundle.crt
               path: tls-ca-bundle.pem
+        - name: marketplace-operator-metrics
+          secret:
+            secretName: marketplace-operator-metrics

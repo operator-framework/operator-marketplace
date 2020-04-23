@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"net/http"
 	"os"
 	"runtime"
@@ -22,6 +23,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
+	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
@@ -43,6 +45,12 @@ const (
 	updateNotificationSendWait = time.Duration(10) * time.Minute
 )
 
+var (
+	version     = flag.Bool("version", false, "displays marketplace source commit info.")
+	tlsKeyPath  = flag.String("tls-key", "", "Path to use for private key (requires tls-cert)")
+	tlsCertPath = flag.String("tls-cert", "", "Path to use for certificate (requires tls-key)")
+)
+
 func printVersion() {
 	log.Printf("Go Version: %s", runtime.Version())
 	log.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
@@ -57,7 +65,32 @@ func main() {
 		registry.DefaultServerImage, "the image to use for creating the operator registry pod")
 	flag.StringVar(&defaults.Dir, "defaultsDir",
 		"", "the directory where the default OperatorSources are stored")
+	var clusterOperatorName string
+	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.Parse()
+
+	// Check if version flag was set
+	if *version {
+		fmt.Print(sourceCommit.String())
+		// Exit immediately
+		os.Exit(0)
+	}
+
+	// set TLS to serve metrics over a secure channel if cert is provided
+	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
+	var useTLS bool
+	if *tlsCertPath != "" && *tlsKeyPath == "" || *tlsCertPath == "" && *tlsKeyPath != "" {
+		log.Warn("both --tls-key and --tls-crt must be provided for TLS to be enabled, falling back to non-https")
+	} else if *tlsCertPath == "" && *tlsKeyPath == "" {
+		log.Info("TLS keys not set, using non-https for metrics")
+	} else {
+		log.Info("TLS keys set, using https for metrics")
+		useTLS = true
+	}
+	err := metrics.ServePrometheus(useTLS, *tlsCertPath, *tlsKeyPath)
+	if err != nil {
+		log.Fatalf("failed to serve prometheus metrics: TLS enabled %d: %s", useTLS, err)
+	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
