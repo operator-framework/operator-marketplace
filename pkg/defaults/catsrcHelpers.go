@@ -134,14 +134,24 @@ func AreCatsrcSpecsEqual(spec1 *olm.CatalogSourceSpec, spec2 *olm.CatalogSourceS
 	if spec1 == nil || spec2 == nil {
 		return false
 	}
-	if strings.EqualFold(string(spec1.SourceType), string(spec2.SourceType)) &&
-		strings.EqualFold(spec1.ConfigMap, spec2.ConfigMap) &&
-		strings.EqualFold(spec1.Address, spec2.Address) &&
-		strings.EqualFold(spec1.DisplayName, spec2.DisplayName) &&
-		strings.EqualFold(spec1.Publisher, spec2.Publisher) &&
-		strings.EqualFold(spec1.Image, spec2.Image) &&
-		spec1.UpdateStrategy.RegistryPoll == spec1.UpdateStrategy.RegistryPoll {
-		return true
+	if !strings.EqualFold(string(spec1.SourceType), string(spec2.SourceType)) ||
+		!strings.EqualFold(spec1.ConfigMap, spec2.ConfigMap) ||
+		!strings.EqualFold(spec1.Address, spec2.Address) ||
+		!strings.EqualFold(spec1.DisplayName, spec2.DisplayName) ||
+		!strings.EqualFold(spec1.Publisher, spec2.Publisher) ||
+		!strings.EqualFold(spec1.Image, spec2.Image) {
+		return false
 	}
-	return false
+	if spec1.UpdateStrategy != nil && spec2.UpdateStrategy == nil {
+		return false
+	}
+	if spec1.UpdateStrategy == nil && spec2.UpdateStrategy != nil {
+		return false
+	}
+	if spec1.UpdateStrategy != nil && spec2.UpdateStrategy != nil {
+		if spec1.UpdateStrategy.RegistryPoll != spec1.UpdateStrategy.RegistryPoll {
+			return false
+		}
+	}
+	return true
 }
