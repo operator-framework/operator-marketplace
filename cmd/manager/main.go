@@ -198,6 +198,10 @@ func main() {
 		exit(err)
 	}
 
+	err = defaults.RemoveObsoleteOpsrc(clientGo)
+	if err != nil {
+		log.Error(err, "[defaults] Could not remove obsolete default OperatorSource/s")
+	}
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := statusReporter.StartReporting()
 

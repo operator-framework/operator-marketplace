@@ -1,12 +1,15 @@
 package defaults
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -178,4 +181,24 @@ func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]ol
 		}
 	}
 	return opsrcDefinitions, catsrcDefinitions, config, nil
+}
+
+// RemoveObsoleteOpsrc removes any existing default OperatorSource
+// in the cluster that has been switched into a default CatalogSource
+func RemoveObsoleteOpsrc(kubeClient client.Client) error {
+	opsrcs := &v1.OperatorSourceList{}
+	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
+		return err
+	}
+	allErrors := []error{}
+	for _, opsrc := range opsrcs.Items {
+		_, presentInOpsrcDefs := globalOpsrcDefinitions[opsrc.Name]
+		_, presentInCatsrcDefs := globalCatsrcDefinitions[opsrc.Name]
+		if !presentInOpsrcDefs && presentInCatsrcDefs {
+			if err := kubeClient.Delete(context.TODO(), &opsrc); err != nil {
+				allErrors = append(allErrors, err)
+			}
+		}
+	}
+	return utilerrors.NewAggregate(allErrors)
 }
