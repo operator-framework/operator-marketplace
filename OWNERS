@@ -1,9 +1,18 @@
+# review == this code is good /lgtm
 reviewers:
-  - aravindhp
-  - tkashem 
+  - ecordell
+  - njhale
+  - dinhxuanvu
   - kevinrizza
-  - ecordell
+  - gallettilance
+  - anik120
+  - exdx
+  - awgreene
+  - Bowenislandsong
+  - benluddy
+# approval == this is a good idea /approve
 approvers:
-  - aravindhp
-  - kevinrizza 
   - ecordell
+  - njhale
+  - benluddy
+  - kevinrizza
