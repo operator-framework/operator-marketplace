@@ -9,7 +9,7 @@ In order to deploy the Marketplace Operator, you must:
 ## Using the Marketplace Operator
 
 ### Description
-The operator manages two CRDs: [OperatorSource](./deploy/upstream/03_operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/upstream/02_catalogsourceconfig.crd.yaml).
+The operator manages two CRDs: [OperatorSource](./deploy/upstream/03_operatorsource.crd.yaml) and CatalogSourceConfig.
 
 #### OperatorSource
 
