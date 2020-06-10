@@ -153,6 +153,9 @@ func (r *registry) ensureDeployment(appRegistries []string, needServiceAccount b
 		if len(deployment.Spec.Template.Spec.Containers) == 0 {
 			deployment.Spec.Template = r.newPodTemplateSpec(registryCommand, needServiceAccount)
 		} else {
+			// Ensure that the registry image is up to date
+			deployment.Spec.Template.Spec.Containers[0].Image = r.image
+
 			// Update the command passed to the registry to account for packages being added and removed
 			// from Quay
 			deployment.Spec.Template.Spec.Containers[0].Command = registryCommand
