@@ -5,7 +5,6 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	"github.com/sirupsen/logrus"
 )
@@ -34,7 +33,6 @@ func (r *initialReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourceC
 		return
 	}
 
-	metrics.RegisterCustomResource(metrics.ResourceTypeCSC)
 	out = in.DeepCopy()
 
 	// When a csc is created, make sure the csc finalizer is included
