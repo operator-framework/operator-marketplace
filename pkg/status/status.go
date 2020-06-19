@@ -266,7 +266,7 @@ func (r *reporter) monitorClusterStatus() {
 			if operatorUpgradeable {
 				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 			} else {
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 			}
 			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 			statusErr := r.setStatus(statusConditions)
@@ -294,7 +294,7 @@ func (r *reporter) monitorClusterStatus() {
 				if operatorUpgradeable {
 					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 				}
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
@@ -313,7 +313,7 @@ func (r *reporter) monitorClusterStatus() {
 				if operatorUpgradeable {
 					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 				}
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 				statusErr = r.setStatus(statusConditions)
@@ -334,7 +334,7 @@ func (r *reporter) monitorClusterStatus() {
 				if operatorUpgradeable {
 					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 				}
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 				statusErr = r.setStatus(statusConditions)
@@ -349,7 +349,7 @@ func (r *reporter) monitorClusterStatus() {
 				if operatorUpgradeable {
 					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
 				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DprecatedAPIsInUse")
+					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 				}
 				if isSucceeding {
 					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
