@@ -204,12 +204,12 @@ func (r *reporter) setRelatedObjects() {
 		// Add the non-core resources we care about
 		{
 			Group:     v1.SchemeGroupVersion.Group,
-			Resource:  v1.OperatorSourceKind,
+			Resource:  "operatorsources",
 			Namespace: r.namespace,
 		},
 		{
 			Group:     olm.GroupName,
-			Resource:  olm.CatalogSourceKind,
+			Resource:  "catalogsources",
 			Namespace: r.namespace,
 		},
 	}
