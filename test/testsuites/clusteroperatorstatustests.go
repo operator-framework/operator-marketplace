@@ -66,16 +66,16 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 		},
 		{
 			Group:     v1.SchemeGroupVersion.Group,
-			Resource:  v1.OperatorSourceKind,
+			Resource:  "operatorsources",
 			Namespace: namespace,
 		},
 		{
 			Group:     olm.GroupName,
-			Resource:  olm.CatalogSourceKind,
+			Resource:  "catalogsources",
 			Namespace: namespace,
 		},
 	}
-	assert.ElementsMatch(t, result.Status.RelatedObjects, expectedRelatedObjects, "ClusterOperator did not list the exepcted RelatedObjects")
+	assert.ElementsMatch(t, result.Status.RelatedObjects, expectedRelatedObjects, "ClusterOperator did not list the expected RelatedObjects")
 }
 
 // ClusterOperatorStatusOnCustomResourceCreation is a test suite that ensures the ClusterOperator
