@@ -27,7 +27,7 @@ import (
 const (
 	// minSyncsBeforeReporting is the minimum number of syncs we wish to see
 	// before reporting that the operator is available
-	minSyncsBeforeReporting = 3
+	minSyncsBeforeReporting = -1
 
 	// successRatio is the ratio of successful syncs / total syncs that we
 	// want to see in order to report that the marketplace operator is not degraded.

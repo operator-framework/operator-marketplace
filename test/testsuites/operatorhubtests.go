@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,7 @@ func OperatorHubTests(t *testing.T) {
 	t.Run("disable-some-check-cluster-status", testSomeClusterStatusDefaultsDisabled)
 }
 
-// testDisable tests disabling a default OperatorSource and ensures that it is not present on the cluster
+// testDisable tests disabling a default CatalogSource and ensures that it is not present on the cluster
 func testDisable(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
@@ -39,13 +40,13 @@ func testDisable(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	// Disable a default OperatorSource
+	// Disable a default CatalogSource
 	err = toggle(t, 1, true, false)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
-	// Check that the OperatorSource and its child resource have been deleted
+	// Check that the CatalogSource and its child resource have been deleted
 	err = checkDeleted(1, namespace)
-	assert.NoError(t, err, "Default OperatorSource or child resources still present on the cluster")
+	assert.NoError(t, err, "Default CatalogSource or child resources still present on the cluster")
 
 	// Check the cluster OperatorHub resource
 	err = checkClusterOperatorHub(t, 1)
@@ -54,7 +55,7 @@ func testDisable(t *testing.T) {
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testDisableAll tests disabling all the default OperatorSources using DisableAllDefaultSources and ensures that they
+// testDisableAll tests disabling all the default CatalogSources using DisableAllDefaultSources and ensures that they
 // are not present on the cluster
 func testDisableAll(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -68,11 +69,12 @@ func testDisableAll(t *testing.T) {
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	err = checkDeleted(4, namespace)
-	assert.NoError(t, err, "All default OperatorSource(s) have not been disabled")
+	assert.NoError(t, err, "All default CatalogSource(s) have not been disabled")
 
 	err = checkClusterOperatorHub(t, 4)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
+	resetClusterOperatorHub(t, namespace)
 }
 
 // testDisableAllEnableOne tests if disabled=true in a source present in sources overrides DisableAllDefaultSources
@@ -88,21 +90,22 @@ func testDisableAllEnableOne(t *testing.T) {
 	err = toggle(t, 1, false, true)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
-	err = checkOpSrcAndChildrenArePresent(helpers.DefaultSources[0].Name, namespace)
-	assert.NoError(t, err, "Expected default OperatorSource is not present")
+	err = checkCatsrcIsPresent(helpers.DefaultSources[0].Name, namespace)
+	assert.NoError(t, err, "Expected default CatalogSource is not present")
 
-	err = checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[1].Name, namespace)
-	assert.NoError(t, err, "Default OperatorSource has not been disabled")
+	err = checkCatsrcIsDeleted(helpers.DefaultSources[1].Name, namespace)
+	assert.NoError(t, err, "Default CatalogSource has not been disabled")
 
-	err = checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[2].Name, namespace)
-	assert.NoError(t, err, "Default OperatorSource has not been disabled")
+	err = checkCatsrcIsDeleted(helpers.DefaultSources[2].Name, namespace)
+	assert.NoError(t, err, "Default CatalogSource has not been disabled")
 
-	err = checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[3].Name, namespace)
-	assert.NoError(t, err, "Default OperatorSource has not been disabled")
+	err = checkCatsrcIsDeleted(helpers.DefaultSources[3].Name, namespace)
+	assert.NoError(t, err, "Default CatSource has not been disabled")
 
 	err = checkClusterOperatorHub(t, 3)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
+	resetClusterOperatorHub(t, namespace)
 }
 
 // testDisableTwo tests disabling two default OperatorSource and ensures that they are not present on the cluster
@@ -114,13 +117,13 @@ func testDisableTwo(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	// Disable two default OperatorSources
+	// Disable two default CatalogSources
 	err = toggle(t, 2, true, false)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	// Check that the OperatorSources and its child resource have been deleted
 	err = checkDeleted(2, namespace)
-	assert.NoError(t, err, "Default OperatorSource(s) or child resources still present on the cluster")
+	assert.NoError(t, err, "Default CatalogSource(s) still present on the cluster")
 
 	// Check the cluster OperatorHub resource
 	err = checkClusterOperatorHub(t, 2)
@@ -129,7 +132,7 @@ func testDisableTwo(t *testing.T) {
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testDisableEnable tests disabling a defaults OperatorSource and then enables it. At each step resources on the
+// testDisableEnable tests disabling a default CatalogSource and then enables it. At each step resources on the
 // cluster are checked appropriately.
 func testDisableEnable(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -139,23 +142,23 @@ func testDisableEnable(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	// Disable a default OperatorSource
+	// Disable a default CatalogSource
 	err = toggle(t, 1, true, false)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	err = checkDeleted(1, namespace)
-	assert.NoError(t, err, "Default OperatorSource(s) or child resources still present on the cluster")
+	assert.NoError(t, err, "Default CatalogSource(s) still present on the cluster")
 
 	// Check the cluster OperatorHub resource
 	err = checkClusterOperatorHub(t, 1)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
-	// Enable the default OperatorSource
+	// Enable the default CatalogSource
 	err = toggle(t, 1, false, false)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	err = checkCreated(1, namespace)
-	assert.NoError(t, err, "Default OperatorSource(s) or child resources were not recreated")
+	assert.NoError(t, err, "Default CatalogSource(s) were not recreated")
 
 	// Check the cluster OperatorHub resource
 	err = checkClusterOperatorHub(t, 0)
@@ -164,7 +167,7 @@ func testDisableEnable(t *testing.T) {
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testDisableNonDefault tests disabling a non-default OperatorSource and ensures no action was taken on it.
+// testDisableNonDefault tests disabling a non-default resource and ensures no action was taken on it.
 func testDisableNonDefault(t *testing.T) {
 	ctx := test.NewTestCtx(t)
 	defer ctx.Cleanup()
@@ -173,12 +176,12 @@ func testDisableNonDefault(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	err = helpers.InitOpSrcDefinition()
-	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
+	err = helpers.InitCatSrcDefinition()
+	require.NoError(t, err, "Could not get a default CatalogSource definition from disk")
 
 	sources := []apiconfigv1.HubSource{
 		{
-			Name:     helpers.TestOperatorSourceName,
+			Name:     "test-catalog-source",
 			Disabled: true,
 		},
 	}
@@ -198,27 +201,26 @@ func testDisableNonDefault(t *testing.T) {
 		return false, nil
 	})
 
+	assert.NoError(t, err, "Operatorhub was not updated correctly")
+
 	var testStatus apiconfigv1.HubSourceStatus
 	for _, sourceStatus := range cluster.Status.Sources {
-		if sourceStatus.Name == helpers.TestOperatorSourceName {
+		if sourceStatus.Name == "test-catalog-source" {
 			testStatus = sourceStatus
 			break
 		}
 	}
-	assert.True(t, testStatus.Name == helpers.TestOperatorSourceName,
-		"HubSourceStatus is missing for non-default OperatorSource")
+	assert.True(t, testStatus.Name == "test-catalog-source",
+		"HubSourceStatus is missing for non-default resource")
 	assert.True(t, testStatus.Status == "Error",
-		"HubSourceStatus is not in error state for non-default OperatorSource")
+		"HubSourceStatus is not in error state for non-default resource")
 	assert.True(t, testStatus.Message == "Not present in the default definitions",
-		"HubSourceStatus message is incorrect for non-default OperatorSource")
+		"HubSourceStatus message is incorrect for non-default resource")
 
-	// Check the OperatorSource and child resources
-	err = checkOpSrcAndChildrenArePresent(helpers.TestOperatorSourceName, namespace)
-	assert.NoError(t, err, "Non-default OperatorSource resources are not present")
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testClusterStatusDefaultsDisabled tests that, when all default operator sources are disabled,
+// testClusterStatusDefaultsDisabled tests that, when all CatalogSources are disabled,
 // the clusterstatus sets Available=True
 func testClusterStatusDefaultsDisabled(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -231,12 +233,12 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	namespace, err := test.NewTestCtx(t).GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
-	// First set the OperatorHub to disable all the default operator sources
+	// First set the OperatorHub to disable all the default catalogsources
 	err = toggle(t, 4, true, true)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	err = checkDeleted(4, namespace)
-	assert.NoError(t, err, "All default OperatorSource(s) have not been disabled")
+	assert.NoError(t, err, "All default CatalogSource(s) have not been disabled")
 
 	err = checkClusterOperatorHub(t, 4)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
@@ -248,7 +250,7 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
-		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
@@ -276,7 +278,7 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testSomeClusterStatusDefaultsDisabled tests that, when some default operator sources are disabled,
+// testSomeClusterStatusDefaultsDisabled tests that, when some default CatalogSources are disabled,
 // the clusterstatus sets Available=True
 func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 	ctx := test.NewTestCtx(t)
@@ -294,7 +296,7 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 	require.NoError(t, err, "Error updating cluster OperatorHub")
 
 	err = checkDeleted(2, namespace)
-	assert.NoError(t, err, "First two default OperatorSource(s) have not been disabled")
+	assert.NoError(t, err, "First two default CatalogSource(s) have not been disabled")
 
 	err = checkClusterOperatorHub(t, 2)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
@@ -306,7 +308,7 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
-		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionFalse,
+		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
@@ -349,8 +351,8 @@ func resetClusterOperatorHub(t *testing.T, namespace string) {
 	err := helpers.UpdateRuntimeObject(test.Global.Client, cluster)
 	require.NoError(t, err, "Error resetting cluster OperatorHub")
 
-	err = checkCreated(3, namespace)
-	require.NoError(t, err, "Error restoring default OperatorSources")
+	err = checkCreated(4, namespace)
+	require.NoError(t, err, "Error restoring default CatalogSources")
 
 	err = checkClusterOperatorHub(t, 0)
 	require.NoError(t, err, "Incorrect cluster OperatorHub")
@@ -362,7 +364,7 @@ func updateOperatorHub(t *testing.T, sources []apiconfigv1.HubSource, disableAll
 
 	client := test.Global.Client
 
-	// Disable / enable the default OperatorSource
+	// Disable / enable the default CatalogSource
 	if sources != nil {
 		cluster.Spec = apiconfigv1.OperatorHubSpec{Sources: sources}
 	}
@@ -374,11 +376,11 @@ func updateOperatorHub(t *testing.T, sources []apiconfigv1.HubSource, disableAll
 	return helpers.UpdateRuntimeObject(client, cluster)
 }
 
-// toggle sets the config for nr default OperatorSources based on disabled and disableAll. For example, if nr=2, then
+// toggle sets the config for nr default CatalogSources based on disabled and disableAll. For example, if nr=2, then
 // the first two defaults in helpers.DefaultSources are marked to be disabled.
 func toggle(t *testing.T, nr int, disabled, disableAll bool) error {
-	err := helpers.InitOpSrcDefinition()
-	require.NoError(t, err, "Could not get a default OperatorSource definition from disk")
+	err := helpers.InitCatSrcDefinition()
+	require.NoError(t, err, "Could not get a default CatalogSource definition from disk")
 
 	// Construct the list of HubSources
 	var sources []apiconfigv1.HubSource
@@ -400,59 +402,58 @@ func toggle(t *testing.T, nr int, disabled, disableAll bool) error {
 	return nil
 }
 
-// checkDeleted checks if nr default OperatorSources and its child resources have been removed from the cluster. For
+// checkDeleted checks if nr default CatalogSources have been removed from the cluster. For
 // example, nr=2 checks if the first 2 defaults helpers.DefaultSources have been deleted.
 func checkDeleted(nr int, namespace string) error {
-	for n := 0; n < nr; n++ {
-		err := checkOpSrcAndChildrenAreDeleted(helpers.DefaultSources[n].Name, namespace)
-		if err != nil {
-			return err
+	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		for n := 0; n < nr; n++ {
+			err := checkCatsrcIsDeleted(helpers.DefaultSources[n].Name, namespace)
+			if err != nil {
+				return false, err
+			}
 		}
-	}
-	return nil
+		return true, nil
+	})
+
+	return err
 }
 
-// checkCreated checks if nr default OperatorSources and its child resources are present on the cluster. For example,
+// checkCreated checks if nr default CatalogSources are present on the cluster. For example,
 // nr=2 checks if the first 2 defaults helpers.DefaultSources are present.
 func checkCreated(nr int, namespace string) error {
-	for n := 0; n < nr; n++ {
-		err := checkOpSrcAndChildrenArePresent(helpers.DefaultSources[n].Name, namespace)
-		if err != nil {
-			return err
+	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		for n := 0; n < nr; n++ {
+			err := checkCatsrcIsPresent(helpers.DefaultSources[n].Name, namespace)
+			if err != nil {
+				return false, err
+			}
 		}
+		return true, nil
+	})
+
+	return err
+}
+
+// checkCatsrcIsPresent checks if the OperatorSource and its child resources are present.
+func checkCatsrcIsPresent(name, namespace string) error {
+	client := test.Global.Client
+	// Check if the CatalogSource is present
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olm.CatalogSource{})
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-// checkOpSrcAndChildrenArePresent checks if the OperatorSource and its child resources are present.
-func checkOpSrcAndChildrenArePresent(name, namespace string) error {
+// checkCatsrcIsDeleted checks if the CatalogSource has been deleted.
+func checkCatsrcIsDeleted(name, namespace string) error {
 	client := test.Global.Client
-	err := helpers.CheckChildResourcesCreated(client, name, namespace, namespace, v1.OperatorSourceKind)
-	if err != nil {
-		return err
-	}
 
-	// Check if the OperatorSource is present
-	err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &v1.OperatorSource{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// checkOpSrcAndChildrenAreDeleted checks if the OperatorSource and its child resources have been deleted.
-func checkOpSrcAndChildrenAreDeleted(name, namespace string) error {
-	client := test.Global.Client
-	err := helpers.CheckChildResourcesDeleted(client, name, namespace, namespace)
-	if err != nil {
-		return err
-	}
-
-	def := &v1.OperatorSource{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace},
+	def := &olm.CatalogSource{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace},
 		def)
 	if !errors.IsNotFound(err) || def.Name != "" {
-		return fmt.Errorf("default OperatorSource still present on the cluster")
+		return fmt.Errorf("default CatalogSource still present on the cluster")
 	}
 	return nil
 }
@@ -471,7 +472,7 @@ func checkClusterOperatorHub(t *testing.T, nrExpectedDisabled int) error {
 	}
 
 	if nrDisabled != nrExpectedDisabled {
-		return fmt.Errorf("incorrect disabled default OperatorSources")
+		return fmt.Errorf("incorrect disabled default CatalogSources")
 	}
 	return nil
 }
