@@ -3,7 +3,7 @@ package testgroups
 import (
 	"testing"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testsuites"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -33,7 +33,6 @@ func OpSrcTestGroup(t *testing.T) {
 	// Run the test suites.
 	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
 		t.Run("proxy-test-suite", testsuites.ProxyTests)
-		t.Run("operatorhub-test-suite", testsuites.OperatorHubTests)
 	}
 	t.Run("opsrc-creation-test-suite", testsuites.OpSrcCreation)
 	t.Run("watch-tests", testsuites.WatchTests)

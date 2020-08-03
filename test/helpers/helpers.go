@@ -11,8 +11,8 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
@@ -75,7 +75,7 @@ var (
 
 	// DefaultSources is the in-memory copy of the default OperatorSource definitions
 	// from the defaults directory.
-	DefaultSources []*v1.OperatorSource
+	DefaultSources []*olm.CatalogSource
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -497,9 +497,9 @@ func EnsureConfigAPIIsAvailable() (bool, error) {
 	return *isConfigAPIPresent, err
 }
 
-// InitOpSrcDefinition reads a default OperatorSource definition from the default directory
+// InitCatSrcDefinition reads a default CatalogSource definition from the default directory
 // and initializes DefaultSources
-func InitOpSrcDefinition() error {
+func InitCatSrcDefinition() error {
 	if DefaultSources != nil {
 		return nil
 	}
@@ -509,7 +509,7 @@ func InitOpSrcDefinition() error {
 		return err
 	}
 
-	DefaultSources = make([]*v1.OperatorSource, len(fileInfos))
+	DefaultSources = make([]*olm.CatalogSource, len(fileInfos))
 
 	for i, fileInfo := range fileInfos {
 		fileName := fileInfo.Name()
@@ -519,7 +519,7 @@ func InitOpSrcDefinition() error {
 			return err
 		}
 
-		DefaultSources[i] = &v1.OperatorSource{}
+		DefaultSources[i] = &olm.CatalogSource{}
 		decoder := yaml.NewYAMLOrJSONDecoder(file, 1024)
 		err = decoder.Decode(DefaultSources[i])
 		if err != nil {

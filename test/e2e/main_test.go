@@ -26,8 +26,8 @@ func TestMarketplace(t *testing.T) {
 	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
 		t.Run("cluster-operator-status-test-group", testgroups.ClusterOperatorTestGroup)
 	}
-	t.Run("opsrc-test-group", testgroups.OpSrcTestGroup)
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
+	t.Run("opsrc-test-group", testgroups.OpSrcTestGroup)
 }
 
 // initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the

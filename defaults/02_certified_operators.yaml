@@ -1,13 +1,13 @@
 apiVersion: "operators.coreos.com/v1"
-kind: "OperatorSource"
+kind: "CatalogSource"
 metadata:
   name: "certified-operators"
   namespace: "openshift-marketplace"
-  labels:
-    opsrc-provider: certified
 spec:
-  type: appregistry
-  endpoint: "https://quay.io/cnr"
-  registryNamespace: "certified-operators"
+  sourceType: grpc
+  image: registry.redhat.io/redhat/certified-operator-index:v4.6
   displayName: "Certified Operators"
   publisher: "Red Hat"
+  updateStrategy:
+    registryPoll:
+      interval: 10m
