@@ -16,6 +16,7 @@ import (
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -462,40 +463,43 @@ func (NoOpReporter) ReportMigration() error {
 // returns false if it detects the presence of any CSC or non default Opsrc in
 // the cluster to indicate that the cluster is not upgradable to future versions.
 func CheckOperatorUpgradeablity(kubeClient client.Client) (bool, error) {
-	clusterHasCSC, err := isCSCPresent(kubeClient)
+	cscCount, err := cscCount(kubeClient)
 	if err != nil {
 		return false, err
 	}
-	clusterHasOpsrc, err := isNonDefaultOpsrcPresent(kubeClient)
+
+	nonDefaultOpsrcCount, err := nonDefaultMarketplaceCRCount(kubeClient)
 	if err != nil {
 		return false, err
 	}
-	if clusterHasCSC || clusterHasOpsrc {
+
+	totalCount := cscCount + nonDefaultOpsrcCount
+
+	metrics.RegisterCustomResource(metrics.ResourceTypeOpsrc, float64(totalCount))
+	if totalCount > 0 {
 		return false, nil
 	}
 	return true, nil
 }
 
-func isCSCPresent(kubeClient client.Client) (bool, error) {
+func cscCount(kubeClient client.Client) (int, error) {
 	cscs := &v2.CatalogSourceConfigList{}
 	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, cscs); err != nil {
-		return false, err
+		return 0, err
 	}
-	if len(cscs.Items) > 0 {
-		return true, nil
-	}
-	return false, nil
+	return len(cscs.Items), nil
 }
 
-func isNonDefaultOpsrcPresent(kubeClient client.Client) (bool, error) {
+func nonDefaultMarketplaceCRCount(kubeClient client.Client) (int, error) {
 	opsrcs := &v1.OperatorSourceList{}
+	nonDefaultOpsrcCount := 0
 	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
-		return false, err
+		return nonDefaultOpsrcCount, err
 	}
 	for _, opsrc := range opsrcs.Items {
 		if !defaults.IsDefaultSource(opsrc.Name) {
-			return true, nil
+			nonDefaultOpsrcCount++
 		}
 	}
-	return false, nil
+	return nonDefaultOpsrcCount, nil
 }

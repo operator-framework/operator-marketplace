@@ -4,10 +4,9 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/operator-framework/operator-marketplace/pkg/grpccatalog"
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/phase"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +57,6 @@ type deletedReconciler struct {
 func (r *deletedReconciler) Reconcile(ctx context.Context, in *v2.CatalogSourceConfig) (out *v2.CatalogSourceConfig, nextPhase *shared.Phase, err error) {
 	out = in
 
-	metrics.DeregisterCustomResource(metrics.ResourceTypeCSC)
 	// Evict the catalogsourceconfig data from the cache.
 	r.cache.Evict(out)
 
