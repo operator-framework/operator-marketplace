@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,112 +64,10 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 			Name:     namespace,
 		},
 		{
-			Group:     v1.SchemeGroupVersion.Group,
-			Resource:  "operatorsources",
-			Namespace: namespace,
-		},
-		{
 			Group:     olm.GroupName,
 			Resource:  "catalogsources",
 			Namespace: namespace,
 		},
 	}
 	assert.ElementsMatch(t, result.Status.RelatedObjects, expectedRelatedObjects, "ClusterOperator did not list the expected RelatedObjects")
-}
-
-// ClusterOperatorStatusOnCustomResourceCreation is a test suite that ensures the ClusterOperator
-// status of the marketplace operator is set to Upgradeable: False on creation of a custom
-// OperatorSource/any CatalogSourceConfig.
-func ClusterOperatorStatusOnCustomResourceCreation(t *testing.T) {
-	ctx := test.NewTestCtx(t)
-	defer ctx.Cleanup()
-
-	// Get global framework variables.
-	client := test.Global.Client
-
-	// Get namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
-	require.NoError(t, err, "Could not get namespace")
-
-	// Check that the ClusterOperator resource has the correct status
-	clusterOperatorName := "marketplace"
-	expectedTypeStatus := map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
-		configv1.OperatorUpgradeable: configv1.ConditionFalse,
-		configv1.OperatorProgressing: configv1.ConditionFalse,
-		configv1.OperatorAvailable:   configv1.ConditionTrue,
-		configv1.OperatorDegraded:    configv1.ConditionFalse}
-
-	// Poll to ensure ClusterOperator is present and has the correct status
-	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
-	namespacedName := types.NamespacedName{Name: clusterOperatorName, Namespace: namespace}
-	result := &configv1.ClusterOperator{}
-	RetryInterval := time.Second * 5
-	Timeout := time.Minute * 5
-	err = wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
-		err = client.Get(context.TODO(), namespacedName, result)
-		if err != nil {
-			return false, err
-		}
-		noOfConditionsMatching := 0
-		for _, condition := range result.Status.Conditions {
-			if expectedTypeStatus[condition.Type] != condition.Status {
-				return false, nil
-			}
-			noOfConditionsMatching = noOfConditionsMatching + 1
-		}
-		if noOfConditionsMatching == 4 {
-			return true, nil
-		}
-		return false, nil
-	})
-	assert.NoError(t, err, "ClusterOperator never reached expected status")
-
-}
-
-// ClusterOperatorStatusOnCustomResourceDeletion confirms that the ClusterOperator's status is set back to
-// Upgradeable: True once the cusom OperatorSource/a CatalogSourceConfig is deleted.
-func ClusterOperatorStatusOnCustomResourceDeletion(t *testing.T) {
-	ctx := test.NewTestCtx(t)
-	defer ctx.Cleanup()
-
-	// Get global framework variables.
-	client := test.Global.Client
-
-	// Get namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
-	require.NoError(t, err, "Could not get namespace")
-
-	// Check that the ClusterOperator resource has the correct status
-	clusterOperatorName := "marketplace"
-	expectedTypeStatus := map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
-		configv1.OperatorUpgradeable: configv1.ConditionTrue,
-		configv1.OperatorProgressing: configv1.ConditionFalse,
-		configv1.OperatorAvailable:   configv1.ConditionTrue,
-		configv1.OperatorDegraded:    configv1.ConditionFalse}
-
-	// Poll to ensure ClusterOperator is present and has the correct status
-	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
-	namespacedName := types.NamespacedName{Name: clusterOperatorName, Namespace: namespace}
-	result := &configv1.ClusterOperator{}
-	RetryInterval := time.Second * 5
-	Timeout := time.Minute * 5
-	err = wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
-		err = client.Get(context.TODO(), namespacedName, result)
-		if err != nil {
-			return false, err
-		}
-		noOfConditionsMatching := 0
-		for _, condition := range result.Status.Conditions {
-			if expectedTypeStatus[condition.Type] != condition.Status {
-				return false, nil
-			}
-			noOfConditionsMatching = noOfConditionsMatching + 1
-		}
-		if noOfConditionsMatching == 4 {
-			return true, nil
-		}
-		return false, nil
-	})
-	assert.NoError(t, err, "ClusterOperator never reached expected status")
-
 }

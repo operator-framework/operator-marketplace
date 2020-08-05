@@ -26,7 +26,6 @@ rules:
   - operators.coreos.com
   resources:
   - catalogsources
-  - catalogsourceconfigs
   - operatorsources
   verbs:
   - get

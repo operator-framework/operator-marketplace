@@ -1,7 +1,6 @@
 package status
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -13,10 +12,6 @@ import (
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	"github.com/operator-framework/operator-marketplace/pkg/defaults"
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,25 +21,6 @@ import (
 )
 
 const (
-	// minSyncsBeforeReporting is the minimum number of syncs we wish to see
-	// before reporting that the operator is available
-	minSyncsBeforeReporting = -1
-
-	// successRatio is the ratio of successful syncs / total syncs that we
-	// want to see in order to report that the marketplace operator is not degraded.
-	// This value is low right now because the failed syncs come from invalid CRs.
-	// As the status reporting evolves we can tweek this ratio to be a better
-	// representation of the operator's health.
-	successRatio = 0.3
-
-	// syncsBeforeTruncate is used to prevent the totalSyncs and
-	// failedSyncs values from overflowing in a long running operator.
-	// Once totalSyncs reaches the maxSyncsBeforeTruncate value, totalSyncs
-	// and failedSyncs will be recalculated with the following
-	// equation: updatedValue = currentValue % syncTruncateValue.
-	syncsBeforeTruncate = 10000
-	syncTruncateValue   = 100
-
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
 
@@ -54,17 +30,10 @@ const (
 	// on the presence of custom resources
 
 	upgradeableMessage = "Marketplace is upgradeable"
-
-	deprecatedAPIMessage = "The cluster has custom OperatorSource, which is deprecated in future versions. Please visit this link for further details: https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated"
 )
-
-type SyncSender interface {
-	SendSyncMessage(err error)
-}
 
 type Reporter interface {
 	StartReporting() <-chan struct{}
-	SyncSender
 }
 
 type reporter struct {
@@ -73,9 +42,6 @@ type reporter struct {
 	namespace       string
 	clusterOperator *configv1.ClusterOperator
 	version         string
-	syncRatio       SyncRatio
-	// syncCh is used to report sync events
-	syncCh chan error
 	// stopCh is used to signal that threads should stop reporting ClusterOperator status
 	stopCh <-chan struct{}
 	// monitorDoneCh is used to signal that threads are done reporting ClusterOperator status
@@ -204,37 +170,12 @@ func (r *reporter) setRelatedObjects() {
 		},
 		// Add the non-core resources we care about
 		{
-			Group:     v1.SchemeGroupVersion.Group,
-			Resource:  "operatorsources",
-			Namespace: r.namespace,
-		},
-		{
 			Group:     olm.GroupName,
 			Resource:  "catalogsources",
 			Namespace: r.namespace,
 		},
 	}
 	r.clusterOperator.Status.RelatedObjects = objectReferences
-}
-
-// syncChannelReceiver will listen on the sync channel and update the status
-// syncsRatio filed until the stopCh is closed.
-func (r *reporter) syncChannelReceiver() {
-	log.Info("[status] Starting sync consumer")
-	for {
-		select {
-		case <-r.stopCh:
-			return
-		case err := <-r.syncCh:
-			if err == nil {
-				r.syncRatio.ReportSyncEvent()
-			} else {
-				r.syncRatio.ReportFailedSync()
-			}
-			failedSyncs, syncs := r.syncRatio.GetSyncs()
-			log.Debugf("[status] Faild Syncs / Total Syncs : %d/%d", failedSyncs, syncs)
-		}
-	}
 }
 
 // monitorClusterStatus updates the ClusterOperator's status based on
@@ -245,10 +186,6 @@ func (r *reporter) monitorClusterStatus() {
 		close(r.monitorDoneCh)
 	}()
 	for {
-		operatorUpgradeable, err := CheckOperatorUpgradeablity(r.rawClient)
-		if err != nil {
-			log.Errorf("Could not determine operator upgradeablity. Error: %s", err.Error())
-		}
 		select {
 		case <-r.stopCh:
 			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
@@ -257,11 +194,6 @@ func (r *reporter) monitorClusterStatus() {
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
 			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
-			if operatorUpgradeable {
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-			} else {
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-			}
 			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 			statusErr := r.setStatus(statusConditions)
 			if statusErr != nil {
@@ -285,11 +217,6 @@ func (r *reporter) monitorClusterStatus() {
 				reason := "OperatorStarting"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", r.version), reason)
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
@@ -297,59 +224,12 @@ func (r *reporter) monitorClusterStatus() {
 				break
 			}
 
-			_, syncEvents := r.syncRatio.GetSyncs()
-
-			// no default operator sources are present, so assume we are in a good state
-			if operatorhub.GetSingleton().Disabled() && syncEvents == 0 {
-				reason := "NoDefaultOpSrcEnabled"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
-
-			// Wait until the operator has reconciled the minimum number of syncs.
-			if syncEvents < minSyncsBeforeReporting {
-				log.Debugf("[status] Waiting to observe %d additional sync(s)", minSyncsBeforeReporting-syncEvents)
-				break
-			}
-
-			// Report that marketplace is available after meeting minimal syncs.
+			// Report that marketplace is available
 			if cohelpers.IsStatusConditionFalse(r.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
 				reason := "OperatorAvailable"
 				conditionListBuilder := clusterStatusListBuilder()
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
 				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
-
-			// Update the status with the appropriate state.
-			isSucceeding, ratio := r.syncRatio.IsSucceeding()
-			if ratio != nil {
-				var statusConditions []configv1.ClusterOperatorStatusCondition
-				conditionListBuilder := clusterStatusListBuilder()
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
-				if isSucceeding {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
-				} else {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Current CR sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsFailing")
-				}
 				statusErr = r.setStatus(statusConditions)
 				break
 			}
@@ -372,10 +252,6 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 	if err != nil {
 		return nil, fmt.Errorf("failed to create raw client: %s", err.Error())
 	}
-	syncRatio, err := NewSyncRatio(successRatio, syncsBeforeTruncate, syncTruncateValue)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create status sync ratio: %s", err.Error())
-	}
 
 	// If version is an empty string, warn that the operator is not a part of the OpenShift release payload.
 	if version == "" {
@@ -383,13 +259,10 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 	}
 
 	return &reporter{
-		configClient: configClient,
-		rawClient:    rawClient,
-		namespace:    namespace,
-		version:      version,
-		syncRatio:    syncRatio,
-		// Add a buffer to prevent dropping syncs
-		syncCh:              make(chan error, 25),
+		configClient:        configClient,
+		rawClient:           rawClient,
+		namespace:           namespace,
+		version:             version,
 		stopCh:              stopCh,
 		monitorDoneCh:       make(chan struct{}),
 		clusterOperatorName: name,
@@ -401,26 +274,10 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 func (r *reporter) StartReporting() <-chan struct{} {
 	// ensure each goroutine is only started once.
 	r.once.Do(func() {
-		// start consuming messages on the sync channel
-		go r.syncChannelReceiver()
-
 		// start reporting ClusterOperator status
 		go r.monitorClusterStatus()
 	})
 	return r.monitorDoneCh
-}
-
-// SendSyncMessage is used to send messages to the syncCh. If the channel is
-// busy, the sync will be dropped to prevent the controller from stalling.
-func (r *reporter) SendSyncMessage(err error) {
-	// A missing sync status is better than stalling the controller
-	select {
-	case r.syncCh <- err:
-		log.Debugf("[status] Sent message to the sync channel")
-		break
-	default:
-		log.Debugf("[status] Sync channel is busy, not reporting sync")
-	}
 }
 
 type NoOpReporter struct{}
@@ -432,35 +289,4 @@ func (NoOpReporter) StartReporting() <-chan struct{} {
 	ch := make(chan struct{})
 	close(ch)
 	return ch
-}
-
-// CheckOperatorUpgradeablity checks for the presence of non default
-// OperatorSources in the cluster. Since the API is scheduled to be deprecated/is
-// already deprecated, checkOperatorUpgradeablity returns false if detects the presence
-// of any non default Opsrc in the cluster to indicate that the cluster is not upgradable
-// to future versions.
-func CheckOperatorUpgradeablity(kubeClient client.Client) (bool, error) {
-	count, err := nonDefaultMarketplaceCRCount(kubeClient)
-	if err != nil {
-		return false, err
-	}
-	metrics.RegisterCustomResource(metrics.ResourceTypeOpsrc, float64(count))
-	if count > 0 {
-		return false, nil
-	}
-	return true, nil
-}
-
-func nonDefaultMarketplaceCRCount(kubeClient client.Client) (int, error) {
-	opsrcs := &v1.OperatorSourceList{}
-	nonDefaultOpsrcCount := 0
-	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
-		return nonDefaultOpsrcCount, err
-	}
-	for _, opsrc := range opsrcs.Items {
-		if !defaults.IsDefaultSource(opsrc.Name) {
-			nonDefaultOpsrcCount++
-		}
-	}
-	return nonDefaultOpsrcCount, nil
 }

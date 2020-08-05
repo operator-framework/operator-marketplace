@@ -7,7 +7,6 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,44 +20,11 @@ const (
 
 	// metricsTLSPort is the port that marketplace exposes its metrics over https.
 	metricsTLSPort = 8081
-
-	// ResourceTypeOpsrc indicates that the resource in an OperatorSource
-	ResourceTypeOpsrc = "OperatorSource"
-
-	// ResourceTypeLabel is a label for indicating the type of the resource.
-	ResourceTypeLabel = "customResourceType"
 )
 
 var (
 	// Wraps the default RoundTripperFunc with functions that record prometheus metrics.
 	roundTripper = http.DefaultTransport
-
-	// appRegistryRequestCounter is a prometheus counter vector that stores
-	// information about requests to an AppRegistry.
-	appRegistryRequestCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "app_registry_request_total",
-			Help: "A counter that stores the results of reaching out to an AppRegistry.",
-		}, []string{codeLabel, methodLabel, opSrcLabel},
-	)
-
-	// appRegistryHistVec is a prometheus HistogramVec that stores latency
-	// information about requests to an AppRegistry.
-	appRegistryHistVec = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "app_registry_request_duration_seconds",
-			Help:    "A histogram of AppRegistry request latencies.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{opSrcLabel},
-	)
-	customResourceGaugeVec = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "custom_resource_total",
-			Help: "A gauge that stores the count of custom OperatorSource resources in the cluster.",
-		},
-		[]string{ResourceTypeLabel},
-	)
 )
 
 // ServePrometheus enables marketplace to serve prometheus metrics.
@@ -70,12 +36,6 @@ func ServePrometheus(useTLS bool, cert, key string) error {
 		log.Infof("[metrics] Unable to register marketplace metrics: %v", err)
 		return err
 	}
-
-	// Wrap the default RoundTripper with middleware.
-	log.Info("[metrics] Creating marketplace metrics RoundTripperFunc")
-	roundTripper = appRegistryRoundTripperCounter(appRegistryRequestCounter,
-		appRegistryRoundTripperDuration(appRegistryHistVec, http.DefaultTransport),
-	)
 
 	// Start the server and expose the registered metrics.
 	log.Info("[metrics] Serving marketplace metrics")
@@ -123,31 +83,6 @@ func ServePrometheus(useTLS bool, cert, key string) error {
 // registerMetrics registers marketplace prometheus metrics.
 func registerMetrics() error {
 	// Register all of the metrics in the standard registry.
-	err := prometheus.Register(appRegistryRequestCounter)
-	if err != nil {
-		return err
-	}
-
-	err = prometheus.Register(appRegistryHistVec)
-	if err != nil {
-		return err
-	}
-
-	err = prometheus.Register(customResourceGaugeVec)
-	if err != nil {
-		return err
-	}
 
 	return nil
-}
-
-// GetRoundTripper returns the RoundTripper used to collect metrics
-// from marketplace.
-func GetRoundTripper() http.RoundTripper {
-	return roundTripper
-}
-
-// RegisterCustomResource sets the count of the custom_resource_total metric to the provided value.
-func RegisterCustomResource(resourceType string, count float64) {
-	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Set(count)
 }

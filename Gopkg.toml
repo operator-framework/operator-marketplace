@@ -79,14 +79,6 @@ required = [
   version = "v0.14.1"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/operator-framework/go-appr"
-
-[[constraint]]
-  name = "github.com/golang/mock"
-  version = "v1.2.0"
-
-[[constraint]]
   branch = "release-4.2"
   name = "github.com/openshift/api"
 

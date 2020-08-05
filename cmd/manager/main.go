@@ -21,7 +21,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
-	"github.com/operator-framework/operator-marketplace/pkg/registry"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -29,6 +28,7 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
@@ -62,10 +62,8 @@ func main() {
 	printVersion()
 
 	// Parse the command line arguments
-	flag.StringVar(&registry.ServerImage, "registryServerImage",
-		registry.DefaultServerImage, "the image to use for creating the operator registry pod")
 	flag.StringVar(&defaults.Dir, "defaultsDir",
-		"", "the directory where the default OperatorSources are stored")
+		"", "the directory where the default CatalogSources are stored")
 	var clusterOperatorName string
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.Parse()
@@ -153,7 +151,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr, options.ControllerOptions{SyncSender: statusReporter}); err != nil {
+	if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
 		exit(err)
 	}
 
@@ -176,14 +174,14 @@ func main() {
 
 	// migrate away from Marketplace API
 	clientGo, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
-	if err != nil {
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		log.Error(err, "Failed to instantiate client for migrator")
 		os.Exit(1)
 	}
 	migrator := migrator.New(clientGo)
 	err = migrator.Migrate()
 	if err != nil {
-		log.Error(err, "[migration] Error in migrating Marketplace away from CatalogSourceConfig API")
+		log.Error(err, "[migration] Error in migrating Marketplace away from OperatorSource API")
 	}
 
 	// Populate the global default OperatorSources definition and config
