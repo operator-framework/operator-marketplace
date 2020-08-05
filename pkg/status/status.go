@@ -15,6 +15,7 @@ import (
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -439,25 +440,27 @@ func (NoOpReporter) StartReporting() <-chan struct{} {
 // of any non default Opsrc in the cluster to indicate that the cluster is not upgradable
 // to future versions.
 func CheckOperatorUpgradeablity(kubeClient client.Client) (bool, error) {
-	clusterHasOpsrc, err := isNonDefaultOpsrcPresent(kubeClient)
+	count, err := nonDefaultMarketplaceCRCount(kubeClient)
 	if err != nil {
 		return false, err
 	}
-	if clusterHasOpsrc {
+	metrics.RegisterCustomResource(metrics.ResourceTypeOpsrc, float64(count))
+	if count > 0 {
 		return false, nil
 	}
 	return true, nil
 }
 
-func isNonDefaultOpsrcPresent(kubeClient client.Client) (bool, error) {
+func nonDefaultMarketplaceCRCount(kubeClient client.Client) (int, error) {
 	opsrcs := &v1.OperatorSourceList{}
+	nonDefaultOpsrcCount := 0
 	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
-		return false, err
+		return nonDefaultOpsrcCount, err
 	}
 	for _, opsrc := range opsrcs.Items {
 		if !defaults.IsDefaultSource(opsrc.Name) {
-			return true, nil
+			nonDefaultOpsrcCount++
 		}
 	}
-	return false, nil
+	return nonDefaultOpsrcCount, nil
 }

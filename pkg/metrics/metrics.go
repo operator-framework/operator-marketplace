@@ -147,12 +147,7 @@ func GetRoundTripper() http.RoundTripper {
 	return roundTripper
 }
 
-// RegisterCustomResource increases the count of the custom_resource_total metric
-func RegisterCustomResource(resourceType string) {
-	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Inc()
-}
-
-// DeregisterCustomResource decreases the count of the custom_resource_total metric
-func DeregisterCustomResource(resourceType string) {
-	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Dec()
+// RegisterCustomResource sets the count of the custom_resource_total metric to the provided value.
+func RegisterCustomResource(resourceType string, count float64) {
+	customResourceGaugeVec.With(prometheus.Labels{ResourceTypeLabel: resourceType}).Set(count)
 }
