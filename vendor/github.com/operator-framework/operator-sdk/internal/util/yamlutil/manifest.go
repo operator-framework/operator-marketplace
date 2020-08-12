@@ -20,11 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/util/fileutil"
+	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 
+	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -80,16 +81,16 @@ func GenerateCombinedNamespacedManifest(deployDir string) (*os.File, error) {
 	}
 	operator, err := ioutil.ReadFile(filepath.Join(deployDir, scaffold.OperatorYamlFile))
 	if err != nil {
-		return nil, fmt.Errorf("could not find operator manifest: (%v)", err)
+		return nil, fmt.Errorf("could not find operator manifest: %v", err)
 	}
 	combined := []byte{}
 	combined = CombineManifests(combined, sa, role, roleBinding, operator)
 
 	if err := file.Chmod(os.FileMode(fileutil.DefaultFileMode)); err != nil {
-		return nil, fmt.Errorf("could not chown temporary namespaced manifest file: (%v)", err)
+		return nil, fmt.Errorf("could not chown temporary namespaced manifest file: %v", err)
 	}
 	if _, err := file.Write(combined); err != nil {
-		return nil, fmt.Errorf("could not create temporary namespaced manifest file: (%v)", err)
+		return nil, fmt.Errorf("could not create temporary namespaced manifest file: %v", err)
 	}
 	if err := file.Close(); err != nil {
 		return nil, err
@@ -110,26 +111,24 @@ func GenerateCombinedGlobalManifest(crdsDir string) (*os.File, error) {
 		}
 	}()
 
-	files, err := ioutil.ReadDir(crdsDir)
+	crds, err := k8sutil.GetCRDs(crdsDir)
 	if err != nil {
-		return nil, fmt.Errorf("could not read deploy directory: (%v)", err)
+		return nil, fmt.Errorf("error getting CRD's from %s: %v", crdsDir, err)
 	}
 	combined := []byte{}
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), "crd.yaml") {
-			fileBytes, err := ioutil.ReadFile(filepath.Join(crdsDir, file.Name()))
-			if err != nil {
-				return nil, fmt.Errorf("could not read file %s: (%v)", filepath.Join(crdsDir, file.Name()), err)
-			}
-			combined = CombineManifests(combined, fileBytes)
+	for _, crd := range crds {
+		b, err := yaml.Marshal(crd)
+		if err != nil {
+			return nil, fmt.Errorf("error marshalling CRD %s bytes: %v", crd.GetName(), err)
 		}
+		combined = CombineManifests(combined, b)
 	}
 
 	if err := file.Chmod(os.FileMode(fileutil.DefaultFileMode)); err != nil {
-		return nil, fmt.Errorf("could not chown temporary global manifest file: (%v)", err)
+		return nil, fmt.Errorf("could not chown temporary global manifest file: %v", err)
 	}
 	if _, err := file.Write(combined); err != nil {
-		return nil, fmt.Errorf("could not create temporary global manifest file: (%v)", err)
+		return nil, fmt.Errorf("could not create temporary global manifest file: %v", err)
 	}
 	if err := file.Close(); err != nil {
 		return nil, err

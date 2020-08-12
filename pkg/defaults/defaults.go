@@ -6,7 +6,7 @@ import (
 	"os"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -187,7 +187,7 @@ func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]ol
 // in the cluster that has been switched into a default CatalogSource
 func RemoveObsoleteOpsrc(kubeClient client.Client) error {
 	opsrcs := &v1.OperatorSourceList{}
-	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
+	if err := kubeClient.List(context.TODO(), opsrcs, &client.ListOptions{}); err != nil {
 		return err
 	}
 	allErrors := []error{}

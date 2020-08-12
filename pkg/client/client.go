@@ -15,11 +15,11 @@ type ObjectKey = types.NamespacedName
 // by operator-sdk. Using the wrapper facilitates mocking of client
 // interactions with the cluster, while using fakeclient during unit testing.
 type Client interface {
-	Create(ctx context.Context, obj runtime.Object) error
+	Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
 	Get(ctx context.Context, key ObjectKey, objExisting runtime.Object) error
-	Update(ctx context.Context, obj runtime.Object) error
-	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error
-	List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error
+	Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
+	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error
+	List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
 }
 
 // kubeClient is an implementation of the Client interface
@@ -36,8 +36,8 @@ func NewClient(client client.Client) Client {
 }
 
 // Create creates a new runtime object in the cluster
-func (h *kubeClient) Create(ctx context.Context, obj runtime.Object) error {
-	return h.client.Create(ctx, obj)
+func (h *kubeClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	return h.client.Create(ctx, obj, opts...)
 }
 
 // Get gets an existing runtime object from the cluster
@@ -46,16 +46,16 @@ func (h *kubeClient) Get(ctx context.Context, key ObjectKey, objExisting runtime
 }
 
 // Update updates an existing runtime object in the cluster
-func (h *kubeClient) Update(ctx context.Context, obj runtime.Object) error {
-	return h.client.Update(ctx, obj)
+func (h *kubeClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	return h.client.Update(ctx, obj, opts...)
 }
 
 // Delete deletes a new runtime object in the cluster
-func (h *kubeClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
+func (h *kubeClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 	return h.client.Delete(ctx, obj, opts...)
 }
 
 // List lists runtime objects in the cluster
-func (h *kubeClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
-	return h.client.List(ctx, opts, list)
+func (h *kubeClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	return h.client.List(ctx, list, opts...)
 }
