@@ -8,6 +8,7 @@ spec:
   image: quay.io/openshift-community-operators/catalog:latest
   displayName: "Community Operators"
   publisher: "Red Hat"
+  priority: -400
   updateStrategy:
     registryPoll:
       interval: 10m

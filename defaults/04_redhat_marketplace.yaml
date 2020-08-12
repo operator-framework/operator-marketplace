@@ -8,6 +8,7 @@ spec:
   image: registry.redhat.io/redhat/redhat-marketplace-index:v4.6
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
+  priority: -300
   updateStrategy:
     registryPoll:
       interval: 10m
