@@ -3,7 +3,7 @@ package migrator
 import (
 	"context"
 
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	//CscCRDName is the CatalogSourceConfig CRD name
-	CscCRDName = "catalogsourceconfigs.operators.coreos.com"
+	//OpsrcCRDName is the OperatorSource CRD name
+	OpsrcCRDName = "operatorsources.operators.coreos.com"
 
 	//Context is left blank for the default context in kube config.
 	Context = ""
@@ -40,39 +40,39 @@ func New(client client.Client) Migrator {
 }
 func (m *migrator) Migrate() error {
 
-	cscs := &v2.CatalogSourceConfigList{}
-	err := m.client.List(context.TODO(), &client.ListOptions{}, cscs)
+	opsrcs := &v1.OperatorSourceList{}
+	err := m.client.List(context.TODO(), &client.ListOptions{}, opsrcs)
 	if err != nil {
 		return err
 	}
 	allErrors := []error{}
-	for _, csc := range cscs.Items {
-		err = removeCSCOwnerRefFromCatalogSource(&csc, m.client)
+	for _, opsrc := range opsrcs.Items {
+		err = removeOpsrcOwnerRefFromCatalogSource(&opsrc, m.client)
 		if err != nil {
 			allErrors = append(allErrors, err)
 		}
-		err = deleteCSC(&csc, m.client)
+		err = deleteOpsrc(&opsrc, m.client)
 		if err != nil {
 			allErrors = append(allErrors, err)
 		}
 	}
-	err = deleteCRD(CscCRDName, m.client)
+	err = deleteCRD(OpsrcCRDName, m.client)
 	allErrors = append(allErrors, err)
 	return utilerrors.NewAggregate(allErrors)
 }
 
-func removeCSCOwnerRefFromCatalogSource(csc *v2.CatalogSourceConfig, kubeClient client.Client) error {
+func removeOpsrcOwnerRefFromCatalogSource(opsrc *v1.OperatorSource, kubeClient client.Client) error {
 	catsrc := olm.CatalogSource{}
 	err := kubeClient.Get(context.TODO(), client.ObjectKey{
-		Name:      csc.Name,
-		Namespace: csc.Spec.TargetNamespace},
+		Name:      opsrc.Name,
+		Namespace: opsrc.Namespace},
 		&catsrc)
 	if err != nil {
 		return err
 	}
 	labels := catsrc.Labels
-	delete(labels, builders.CscOwnerNameLabel)
-	delete(labels, builders.CscOwnerNamespaceLabel)
+	delete(labels, builders.OpsrcOwnerNameLabel)
+	delete(labels, builders.OpsrcOwnerNamespaceLabel)
 	catsrc.Labels = labels
 	err = kubeClient.Update(context.TODO(), &catsrc)
 	if err != nil {
@@ -81,13 +81,13 @@ func removeCSCOwnerRefFromCatalogSource(csc *v2.CatalogSourceConfig, kubeClient 
 	return nil
 }
 
-func deleteCSC(csc *v2.CatalogSourceConfig, client client.Client) error {
-	csc.ObjectMeta.Finalizers = []string{}
-	err := client.Update(context.TODO(), csc)
+func deleteOpsrc(opsrc *v1.OperatorSource, client client.Client) error {
+	opsrc.ObjectMeta.Finalizers = []string{}
+	err := client.Update(context.TODO(), opsrc)
 	if err != nil {
 		return err
 	}
-	err = client.Delete(context.TODO(), csc)
+	err = client.Delete(context.TODO(), opsrc)
 	if err != nil {
 		return err
 	}

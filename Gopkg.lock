@@ -65,14 +65,6 @@
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:5a23cd3a5496a0b2da7e3b348d14e77b11a210738c398200d7d6f04ea8cf3bd8"
-  name = "github.com/asaskevich/govalidator"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
-  version = "v9"
-
-[[projects]]
   digest = "1:c819830f4f5ef85874a90ac3cbcc96cd322c715f5c96fbe4722eacd3dafbaa07"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -131,14 +123,6 @@
   version = "v2.9.5"
 
 [[projects]]
-  digest = "1:4322fcb2f4d508898c3d9b0390a2e58211b53e6d9c25230b225df9a032fe26d6"
-  name = "github.com/evanphx/json-patch"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "5858425f75500d40c52783dce87d085a483ce135"
-  version = "v4.2.0"
-
-[[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -153,17 +137,6 @@
   pruneopts = "NT"
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
   version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:18fe516424f3e7cbcca07e108a4ade802bd70f76df56ad15dea7e737ad4de1b3"
-  name = "github.com/globalsign/mgo"
-  packages = [
-    "bson",
-    "internal/json",
-  ]
-  pruneopts = "NT"
-  revision = "eeefdecb41b842af6dc652aaea4026e8403e62df"
 
 [[projects]]
   digest = "1:d421af4c4fe51d399667d573982d663fe1fa67020a88d3ae43466ebfe8e2b5c9"
@@ -182,25 +155,6 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:e101aa2e25fac7e82ba4d2f66807eedd4bcf11abc5afcb4a4629a88f9a652b84"
-  name = "github.com/go-openapi/analysis"
-  packages = [
-    ".",
-    "internal",
-  ]
-  pruneopts = "NT"
-  revision = "e2f3fdbb7ed0e56e070ccbfb6fc75b288a33c014"
-  version = "v0.19.0"
-
-[[projects]]
-  digest = "1:2c25c65f6928a43066d02607fbedd6a1b21322db5f8d1ab92ac77ac3bcc72776"
-  name = "github.com/go-openapi/errors"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "7a7ff1b7b8020f22574411a32f28b4d168d69237"
-  version = "v0.19.0"
-
-[[projects]]
   digest = "1:260f7ebefc63024c8dfe2c9f1a2935a89fa4213637a1f522f592f80c001cc441"
   name = "github.com/go-openapi/jsonpointer"
   packages = ["."]
@@ -217,31 +171,6 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:b285019f106a2c0cf85ec7e67a242dc93a319104c8556eae2d458f711592328a"
-  name = "github.com/go-openapi/loads"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "74628589c3b94e3526a842d24f46589980f5ab22"
-  version = "v0.19.0"
-
-[[projects]]
-  digest = "1:6c75bf4f9f31ccec451c002f315426275b0f462fd72c640cafdbd346333b446f"
-  name = "github.com/go-openapi/runtime"
-  packages = [
-    ".",
-    "client",
-    "logger",
-    "middleware",
-    "middleware/denco",
-    "middleware/header",
-    "middleware/untyped",
-    "security",
-  ]
-  pruneopts = "NT"
-  revision = "109737172424d8a656fd1199e28c9f5cc89b0cca"
-  version = "v0.19.0"
-
-[[projects]]
   branch = "master"
   digest = "1:f04cb7797917efbe9d9efd509a311f28930a9ee7ef1e047d01808d64ded53554"
   name = "github.com/go-openapi/spec"
@@ -250,27 +179,11 @@
   revision = "b2056d62a953adee01fed8ee65a046bd8f0419d5"
 
 [[projects]]
-  digest = "1:fe3594f7f3dfc0319553e1e3f63378339423507339cbeceda515ff3b94fa6118"
-  name = "github.com/go-openapi/strfmt"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "29177d4b5db488583bb97ebc05d3842ebeda91a8"
-  version = "v0.19.0"
-
-[[projects]]
   digest = "1:076ebf43e6e70f18ef9d079a685ede59a0f4dc9247256c209cf57407f959cef9"
   name = "github.com/go-openapi/swag"
   packages = ["."]
   pruneopts = "NT"
   revision = "b3e2804c8535ee0d1b89320afd98474d5b8e9e3b"
-  version = "v0.19.0"
-
-[[projects]]
-  digest = "1:92d3e004b941fb231ade6fff09a4591d3c0f363c6bc2c5228cd511c8a958efa8"
-  name = "github.com/go-openapi/validate"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "5b1623be7460f5a3967a82c00d518048fb190f5e"
   version = "v0.19.0"
 
 [[projects]]
@@ -307,14 +220,6 @@
   packages = ["lru"]
   pruneopts = "NT"
   revision = "5b532d6fd5efaf7fa130d4e859a2fde0fc3a9e1b"
-
-[[projects]]
-  digest = "1:e6eb1dec8cf5be2ac3fad30e00ce80c9f0e61239478d0ef6b5616f068590d8e8"
-  name = "github.com/golang/mock"
-  packages = ["gomock"]
-  pruneopts = "NT"
-  revision = "9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa"
-  version = "1.3.1"
 
 [[projects]]
   digest = "1:d7212166c4b7f30a20fb3de70ab7e36564900b2e36360ffd31958b5af8fed025"
@@ -500,14 +405,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:a45ae66dea4c899d79fceb116accfa1892105c251f0dcd9a217ddc276b42ec68"
-  name = "github.com/mitchellh/mapstructure"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
-  version = "v1.1.2"
-
-[[projects]]
   digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -555,22 +452,6 @@
   ]
   pruneopts = "NT"
   revision = "1eb1131507bff6d494f05b23c8ecf850836d7328"
-
-[[projects]]
-  branch = "master"
-  digest = "1:bddbc343d6afd47fc7637249e0510d795404854259691fe28703e4a0e9050dc3"
-  name = "github.com/operator-framework/go-appr"
-  packages = [
-    "appregistry",
-    "appregistry/appr",
-    "appregistry/blobs",
-    "appregistry/channel",
-    "appregistry/info",
-    "appregistry/package_appr",
-    "models",
-  ]
-  pruneopts = "NT"
-  revision = "f2aef88446f2a736fcb18db8ae57d708c52fdad0"
 
 [[projects]]
   digest = "1:478c1def3aca5900a9831ae6a8d933c6c94efcd4dca900cbbe827690c434aa01"
@@ -1245,7 +1126,6 @@
     "rest",
     "rest/watch",
     "restmapper",
-    "testing",
     "third_party/forked/golang/template",
     "tools/auth",
     "tools/cache",
@@ -1349,7 +1229,6 @@
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/config",
-    "pkg/client/fake",
     "pkg/controller",
     "pkg/event",
     "pkg/handler",
@@ -1404,19 +1283,11 @@
   analyzer-version = 1
   input-imports = [
     "github.com/fsnotify/fsnotify",
-    "github.com/go-openapi/runtime",
-    "github.com/go-openapi/runtime/client",
     "github.com/go-openapi/spec",
-    "github.com/go-openapi/strfmt",
-    "github.com/golang/mock/gomock",
     "github.com/openshift/api/config/v1",
     "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1",
     "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers",
     "github.com/openshift/library-go/pkg/operator/v1helpers",
-    "github.com/operator-framework/go-appr/appregistry",
-    "github.com/operator-framework/go-appr/appregistry/blobs",
-    "github.com/operator-framework/go-appr/appregistry/package_appr",
-    "github.com/operator-framework/go-appr/models",
     "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1",
     "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
@@ -1431,16 +1302,13 @@
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
-    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/labels",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
-    "k8s.io/apimachinery/pkg/util/clock",
     "k8s.io/apimachinery/pkg/util/errors",
-    "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/client-go/discovery",
@@ -1457,7 +1325,6 @@
     "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
-    "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
