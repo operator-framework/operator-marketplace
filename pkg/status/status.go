@@ -10,7 +10,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	cohelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -170,7 +170,7 @@ func (r *reporter) setRelatedObjects() {
 		},
 		// Add the non-core resources we care about
 		{
-			Group:     olm.GroupName,
+			Group:     operatorsv1alpha1.GroupName,
 			Resource:  "catalogsources",
 			Namespace: r.namespace,
 		},

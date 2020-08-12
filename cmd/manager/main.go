@@ -13,7 +13,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
@@ -126,7 +126,7 @@ func main() {
 	}
 
 	// Add external resource to scheme
-	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := operatorsv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		exit(err)
 	}
 

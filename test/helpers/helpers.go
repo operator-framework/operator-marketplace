@@ -10,7 +10,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
@@ -75,7 +75,7 @@ var (
 
 	// DefaultSources is the in-memory copy of the default OperatorSource definitions
 	// from the defaults directory.
-	DefaultSources []*olm.CatalogSource
+	DefaultSources []*operatorsv1alpha1.CatalogSource
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -246,7 +246,7 @@ func checkOwnerLabels(labels map[string]string, owner string) error {
 func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespace, targetNamespace, owner string) error {
 
 	// Check that the CatalogSource was created.
-	resultCatalogSource := &olm.CatalogSource{}
+	resultCatalogSource := &operatorsv1alpha1.CatalogSource{}
 	err := WaitForResult(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
@@ -296,7 +296,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespac
 // child resources were deleted.
 func CheckChildResourcesDeleted(client test.FrameworkClient, opsrcName, namespace, targetNamespace string) error {
 	// Check that the CatalogSource was deleted.
-	resultCatalogSource := &olm.CatalogSource{}
+	resultCatalogSource := &operatorsv1alpha1.CatalogSource{}
 	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
@@ -406,7 +406,7 @@ func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32
 
 // CreateSubscriptionDefinition returns a newly built Subscription with the labels
 // `csc-owner-name` and `csc-owner-namespace` based on the catalogsourceconfig and the expected name
-func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *olm.Subscription {
+func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *operatorsv1alpha1.Subscription {
 	labels := make(map[string]string)
 	specSource := fmt.Sprintf("%s-%s", cscName, namespace)
 
@@ -415,18 +415,18 @@ func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI
 		labels[builders.CscOwnerNamespaceLabel] = namespace
 	}
 
-	return &olm.Subscription{
+	return &operatorsv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: fmt.Sprintf("%s/%s",
-				olm.SchemeGroupVersion.Group, olm.SchemeGroupVersion.Version),
-			Kind: olm.SubscriptionKind,
+				operatorsv1alpha1.SchemeGroupVersion.Group, operatorsv1alpha1.SchemeGroupVersion.Version),
+			Kind: operatorsv1alpha1.SubscriptionKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: &olm.SubscriptionSpec{
+		Spec: &operatorsv1alpha1.SubscriptionSpec{
 			CatalogSource:          specSource,
 			CatalogSourceNamespace: namespace,
 			Channel:                "alpha",
@@ -437,7 +437,7 @@ func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI
 // CheckSubscriptionNotUpdated checks that a user created subscription
 // was not updated during migration.
 func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscriptionName, installedCscName string) error {
-	subscription := &olm.Subscription{}
+	subscription := &operatorsv1alpha1.Subscription{}
 	specSource := fmt.Sprintf("%s-%s", installedCscName, namespace)
 	err := client.Get(context.TODO(), types.NamespacedName{Name: subscriptionName, Namespace: namespace}, subscription)
 	if err != nil {
@@ -509,7 +509,7 @@ func InitCatSrcDefinition() error {
 		return err
 	}
 
-	DefaultSources = make([]*olm.CatalogSource, len(fileInfos))
+	DefaultSources = make([]*operatorsv1alpha1.CatalogSource, len(fileInfos))
 
 	for i, fileInfo := range fileInfos {
 		fileName := fileInfo.Name()
@@ -519,7 +519,7 @@ func InitCatSrcDefinition() error {
 			return err
 		}
 
-		DefaultSources[i] = &olm.CatalogSource{}
+		DefaultSources[i] = &operatorsv1alpha1.CatalogSource{}
 		decoder := yaml.NewYAMLOrJSONDecoder(file, 1024)
 		err = decoder.Decode(DefaultSources[i])
 		if err != nil {

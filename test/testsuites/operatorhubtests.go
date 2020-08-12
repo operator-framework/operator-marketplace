@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
@@ -438,7 +438,7 @@ func checkCreated(nr int, namespace string) error {
 func checkCatsrcIsPresent(name, namespace string) error {
 	client := test.Global.Client
 	// Check if the CatalogSource is present
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olm.CatalogSource{})
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &operatorsv1alpha1.CatalogSource{})
 	if err != nil {
 		return err
 	}
@@ -449,7 +449,7 @@ func checkCatsrcIsPresent(name, namespace string) error {
 func checkCatsrcIsDeleted(name, namespace string) error {
 	client := test.Global.Client
 
-	def := &olm.CatalogSource{}
+	def := &operatorsv1alpha1.CatalogSource{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace},
 		def)
 	if !errors.IsNotFound(err) || def.Name != "" {

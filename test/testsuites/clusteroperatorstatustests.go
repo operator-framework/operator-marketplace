@@ -7,7 +7,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +64,7 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 			Name:     namespace,
 		},
 		{
-			Group:     olm.GroupName,
+			Group:     operatorsv1alpha1.GroupName,
 			Resource:  "catalogsources",
 			Namespace: namespace,
 		},

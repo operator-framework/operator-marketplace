@@ -6,7 +6,7 @@ import (
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +62,7 @@ func (m *migrator) Migrate() error {
 }
 
 func removeOpsrcOwnerRefFromCatalogSource(opsrc *v1.OperatorSource, kubeClient client.Client) error {
-	catsrc := olm.CatalogSource{}
+	catsrc := operatorsv1alpha1.CatalogSource{}
 	err := kubeClient.Get(context.TODO(), client.ObjectKey{
 		Name:      opsrc.Name,
 		Namespace: opsrc.Namespace},

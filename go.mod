@@ -3,19 +3,22 @@ module github.com/operator-framework/operator-marketplace
 go 1.13
 
 require (
-	contrib.go.opencensus.io/exporter/ocagent v0.7.0 // indirect
-	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
+	cloud.google.com/go v0.56.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-openapi/spec v0.19.4
+	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/client-go v0.0.0-20190923180330-3b6373338c9b
 	github.com/openshift/library-go v0.0.0-20190813153448-1eb1131507bf
-	github.com/operator-framework/api v0.3.12 // indirect
+	github.com/operator-framework/api v0.3.12
 	github.com/operator-framework/operator-lifecycle-manager v0.0.0-20200213132121-99643127d862
 	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
+	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
+	golang.org/x/sys v0.0.0-20200523222454-059865788121 // indirect
+	google.golang.org/protobuf v1.24.0 // indirect
 	k8s.io/api v0.18.2
 	k8s.io/apiextensions-apiserver v0.18.2
 	k8s.io/apimachinery v0.18.2

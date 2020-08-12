@@ -2,10 +2,11 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
 )
 
 const (
@@ -29,13 +30,26 @@ const (
 )
 
 const (
-	CatalogSourceConfigMapError      ConditionReason = "ConfigMapError"
+	// CatalogSourceSpecInvalidError denotes when fields on the spec of the CatalogSource are not valid.
+	CatalogSourceSpecInvalidError ConditionReason = "SpecInvalidError"
+	// CatalogSourceConfigMapError denotes when there is an issue extracting manifests from the specified ConfigMap.
+	CatalogSourceConfigMapError ConditionReason = "ConfigMapError"
+	// CatalogSourceRegistryServerError denotes when there is an issue querying the specified registry server.
 	CatalogSourceRegistryServerError ConditionReason = "RegistryServerError"
 )
 
 type CatalogSourceSpec struct {
 	// SourceType is the type of source
 	SourceType SourceType `json:"sourceType"`
+
+	// Priority field assigns a weight to the catalog source to prioritize them so that it can be consumed by the dependency resolver.
+	// Usage:
+	// Higher weight indicates that this catalog source is preferred over lower weighted catalog sources during dependency resolution.
+	// The range of the priority value can go from positive to negative in the range of int32.
+	// The default value to a catalog source with unassigned priority would be 0.
+	// The catalog source with the same priority values will be ranked lexicographically based on its name.
+	// +Optional
+	Priority int `json:"priority,omitempty"`
 
 	// ConfigMap is the name of the ConfigMap to be used to back a configmap-server registry.
 	// Only used when SourceType = SourceTypeConfigmap or SourceTypeInternal.
@@ -104,10 +118,10 @@ type GRPCConnectionState struct {
 }
 
 type CatalogSourceStatus struct {
-	// A human readable message indicating details about why the ClusterServiceVersion is in this condition.
+	// A human readable message indicating details about why the CatalogSource is in this condition.
 	// +optional
 	Message string `json:"message,omitempty"`
-	// Reason is the reason the Subscription was transitioned to its current state.
+	// Reason is the reason the CatalogSource was transitioned to its current state.
 	// +optional
 	Reason ConditionReason `json:"reason,omitempty"`
 
@@ -133,6 +147,12 @@ func (r *ConfigMapResourceReference) IsAMatch(object *metav1.ObjectMeta) bool {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +genclient
+// +kubebuilder:resource:shortName=catsrc,categories=olm
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Display",type=string,JSONPath=`.spec.displayName`,description="The pretty name of the catalog"
+// +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.sourceType`,description="The type of the catalog"
+// +kubebuilder:printcolumn:name="Publisher",type=string,JSONPath=`.spec.publisher`,description="The publisher of the catalog"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // CatalogSource is a repository of CSVs, CRDs, and operator packages.
 type CatalogSource struct {
@@ -176,7 +196,6 @@ func (c *CatalogSource) Update() bool {
 	} else {
 		logrus.WithField("CatalogSource", c.Name).Debugf("latest poll %v", *c.Status.LatestImageRegistryPoll)
 	}
-
 
 	if c.Status.LatestImageRegistryPoll.IsZero() {
 		logrus.WithField("CatalogSource", c.Name).Debugf("creation timestamp plus interval before now %t", c.CreationTimestamp.Add(interval).Before(time.Now()))

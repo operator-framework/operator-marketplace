@@ -115,11 +115,12 @@ github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 # github.com/openshift/library-go v0.0.0-20190813153448-1eb1131507bf
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 github.com/openshift/library-go/pkg/operator/v1helpers
+# github.com/operator-framework/api v0.3.12
+github.com/operator-framework/api/pkg/lib/version
+github.com/operator-framework/api/pkg/operators
+github.com/operator-framework/api/pkg/operators/v1alpha1
 # github.com/operator-framework/operator-lifecycle-manager v0.0.0-20200213132121-99643127d862
-github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators
-github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1
 github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals
-github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version
 # github.com/operator-framework/operator-sdk v0.16.0
 github.com/operator-framework/operator-sdk/internal/scaffold
 github.com/operator-framework/operator-sdk/internal/scaffold/input

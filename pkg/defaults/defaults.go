@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -29,7 +29,7 @@ var (
 	// to the CatalogSource definition in the defaults directory. It is
 	// populated just once during runtime to prevent new defaults from being
 	// injected into the operator image.
-	globalCatsrcDefinitions = make(map[string]olm.CatalogSource)
+	globalCatsrcDefinitions = make(map[string]operatorsv1alpha1.CatalogSource)
 
 	// defaultConfig is the default configuration for the cluster in the absence
 	// of a an OperatorHub config object or if there is one with an empty spec.
@@ -48,12 +48,12 @@ type Defaults interface {
 
 type defaults struct {
 	opsrcDefinitions  map[string]v1.OperatorSource
-	catsrcDefinitions map[string]olm.CatalogSource
+	catsrcDefinitions map[string]operatorsv1alpha1.CatalogSource
 	config            map[string]bool
 }
 
 // New returns an instance of defaults
-func New(opsrcDefinitions map[string]v1.OperatorSource, catsrcDefinitions map[string]olm.CatalogSource, config map[string]bool) Defaults {
+func New(opsrcDefinitions map[string]v1.OperatorSource, catsrcDefinitions map[string]operatorsv1alpha1.CatalogSource, config map[string]bool) Defaults {
 	// Doing this to remove the need for checking at calls sites. This can be
 	// made to return an error if error checking at calls sites is preferable.
 	if opsrcDefinitions == nil || catsrcDefinitions == nil || config == nil {
@@ -109,12 +109,12 @@ func (d *defaults) EnsureAll(client wrapper.Client) map[string]error {
 
 // GetGlobals returns the global OperatorSource and CatalogSource definitions and the
 // default config
-func GetGlobals() (map[string]v1.OperatorSource, map[string]olm.CatalogSource, map[string]bool) {
+func GetGlobals() (map[string]v1.OperatorSource, map[string]operatorsv1alpha1.CatalogSource, map[string]bool) {
 	return globalOpsrcDefinitions, globalCatsrcDefinitions, defaultConfig
 }
 
 // GetGlobalDefinitions returns the global OperatorSource and CatalogSource definitions
-func GetGlobalDefinitions() (map[string]v1.OperatorSource, map[string]olm.CatalogSource) {
+func GetGlobalDefinitions() (map[string]v1.OperatorSource, map[string]operatorsv1alpha1.CatalogSource) {
 	return globalOpsrcDefinitions, globalCatsrcDefinitions
 }
 
@@ -142,9 +142,9 @@ func PopulateGlobals() error {
 // populateDefsConfig returns populated OperatorSource and CatalogSource definitions
 // from files present in dir and an enabled config. It returns error on the first
 // issue it runs into. The function also guarantees to return an empty map on error.
-func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]olm.CatalogSource, map[string]bool, error) {
+func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]operatorsv1alpha1.CatalogSource, map[string]bool, error) {
 	opsrcDefinitions := make(map[string]v1.OperatorSource)
-	catsrcDefinitions := make(map[string]olm.CatalogSource)
+	catsrcDefinitions := make(map[string]operatorsv1alpha1.CatalogSource)
 	config := make(map[string]bool)
 	// Default directory has not been specified
 	if dir == "" {
@@ -169,7 +169,7 @@ func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]ol
 			if err != nil {
 				// Reinitialize the definitions as we hard error on even one failure
 				opsrcDefinitions = make(map[string]v1.OperatorSource)
-				catsrcDefinitions = make(map[string]olm.CatalogSource)
+				catsrcDefinitions = make(map[string]operatorsv1alpha1.CatalogSource)
 				config = make(map[string]bool)
 				return opsrcDefinitions, catsrcDefinitions, config, err
 			}
