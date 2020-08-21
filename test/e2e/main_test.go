@@ -3,7 +3,7 @@ package e2e
 import (
 	"testing"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
