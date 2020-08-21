@@ -1,4 +1,4 @@
-apiVersion: "operators.coreos.com/v1"
+apiVersion: "operators.coreos.com/v1alpha1"
 kind: "CatalogSource"
 metadata:
   name: "community-operators"
@@ -8,6 +8,7 @@ spec:
   image: registry.redhat.io/redhat/community-operator-index:latest
   displayName: "Community Operators"
   publisher: "Red Hat"
+  priority: -400
   updateStrategy:
     registryPoll:
       interval: 10m
