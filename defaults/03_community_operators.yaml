@@ -5,7 +5,7 @@ metadata:
   namespace: "openshift-marketplace"
 spec:
   sourceType: grpc
-  image: quay.io/openshift-community-operators/catalog:latest
+  image: registry.redhat.io/redhat/community-operator-index:latest
   displayName: "Community Operators"
   publisher: "Red Hat"
   updateStrategy:
