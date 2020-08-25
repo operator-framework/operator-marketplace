@@ -13,10 +13,10 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"

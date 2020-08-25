@@ -10,7 +10,8 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
@@ -406,7 +407,7 @@ func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32
 
 // CreateSubscriptionDefinition returns a newly built Subscription with the labels
 // `csc-owner-name` and `csc-owner-namespace` based on the catalogsourceconfig and the expected name
-func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *olm.Subscription {
+func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *v1alpha1.Subscription {
 	labels := make(map[string]string)
 	specSource := fmt.Sprintf("%s-%s", cscName, namespace)
 
@@ -415,18 +416,18 @@ func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI
 		labels[builders.CscOwnerNamespaceLabel] = namespace
 	}
 
-	return &olm.Subscription{
+	return &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: fmt.Sprintf("%s/%s",
-				olm.SchemeGroupVersion.Group, olm.SchemeGroupVersion.Version),
-			Kind: olm.SubscriptionKind,
+				v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version),
+			Kind: v1alpha1.SubscriptionKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: &olm.SubscriptionSpec{
+		Spec: &v1alpha1.SubscriptionSpec{
 			CatalogSource:          specSource,
 			CatalogSourceNamespace: namespace,
 			Channel:                "alpha",
@@ -437,7 +438,7 @@ func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI
 // CheckSubscriptionNotUpdated checks that a user created subscription
 // was not updated during migration.
 func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscriptionName, installedCscName string) error {
-	subscription := &olm.Subscription{}
+	subscription := &v1alpha1.Subscription{}
 	specSource := fmt.Sprintf("%s-%s", installedCscName, namespace)
 	err := client.Get(context.TODO(), types.NamespacedName{Name: subscriptionName, Namespace: namespace}, subscription)
 	if err != nil {

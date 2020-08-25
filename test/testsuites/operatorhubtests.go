@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"

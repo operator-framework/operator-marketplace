@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/sirupsen/logrus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"

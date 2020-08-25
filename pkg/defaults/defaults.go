@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
