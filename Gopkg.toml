@@ -16,6 +16,10 @@ required = [
   revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
 
 [[override]]
+  name = "golang.org/x/text"
+  version = ">=0.3.3"
+
+[[override]]
   name = "k8s.io/kube-openapi"
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
 

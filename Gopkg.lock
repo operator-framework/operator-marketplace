@@ -222,6 +222,14 @@
   revision = "5b532d6fd5efaf7fa130d4e859a2fde0fc3a9e1b"
 
 [[projects]]
+  digest = "1:45611cdb8f7f77d830ba4b0c01b413af7eb1c91af3c993a698ec5825512b88f2"
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  pruneopts = "NT"
+  revision = "f7b1909c82a8958747e5c87c6a5c3b2eaed8a33d"
+  version = "v1.4.4"
+
+[[projects]]
   digest = "1:d7212166c4b7f30a20fb3de70ab7e36564900b2e36360ffd31958b5af8fed025"
   name = "github.com/golang/protobuf"
   packages = [
@@ -744,7 +752,7 @@
   revision = "8097e1b27ff5e40620836729a9584e91b094b062"
 
 [[projects]]
-  digest = "1:348fa8283a7c60b5b71ce04d27b37f7c0fce552d4d0b463b5b3ebbd1840d3f1a"
+  digest = "1:3749907bee1c66f311a1d48104d7cbc43de9a766f519f83c6fbdb5cec60c9ca9"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -766,8 +774,8 @@
     "width",
   ]
   pruneopts = "NT"
-  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
-  version = "v0.3.2"
+  revision = "23ae387dee1f90d29a23c0e87ee0b46038fbed0e"
+  version = "v0.3.3"
 
 [[projects]]
   branch = "master"
@@ -1284,6 +1292,7 @@
   input-imports = [
     "github.com/fsnotify/fsnotify",
     "github.com/go-openapi/spec",
+    "github.com/golang/mock/gomock",
     "github.com/openshift/api/config/v1",
     "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1",
     "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers",
