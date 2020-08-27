@@ -13,5 +13,6 @@ func NoSetupTestGroup(t *testing.T) {
 	// Run the test suites.
 	if isConfigAPIPresent, _ := helpers.EnsureConfigAPIIsAvailable(); isConfigAPIPresent == true {
 		t.Run("operatorhub-test-suite", testsuites.OperatorHubTests)
+		t.Run("default-catalogsource-test-suite", testsuites.DefaultCatsrc)
 	}
 }

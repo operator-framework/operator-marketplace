@@ -15,6 +15,7 @@ import (
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -138,6 +139,24 @@ func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName 
 		return nil, err
 	}
 	return resultOperatorSource, nil
+}
+
+// WaitForExpectedSpec compares two CatalogSources and return true if their Specs are equal.
+func WaitForExpectedSpec(client test.FrameworkClient, name string, namespace string, expected *olm.CatalogSource) error {
+	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
+		actual := &olm.CatalogSource{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, actual); err != nil {
+			return false, err
+		}
+		if defaults.AreCatsrcSpecsEqual(&expected.Spec, &actual.Spec) {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // WaitForNotFound polls the cluster for a particular resource name and namespace
@@ -335,6 +354,19 @@ func WaitForOpsrcMarkedForDeletionWithFinalizer(client test.FrameworkClient, nam
 			return true, nil
 		}
 		return false, nil
+	})
+}
+
+// WaitForCatsrcMarkedForDeletion waits until a CatalogSource is either deleted or is marked for deletion
+func WaitForCatsrcMarkedForDeletion(client test.FrameworkClient, name, namespace string) error {
+	resultCatalogSource := &olm.CatalogSource{}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
+		err = client.Get(context.TODO(), namespacedName, resultCatalogSource)
+		if resultCatalogSource.DeletionTimestamp != nil || errors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
 	})
 }
 
