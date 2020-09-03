@@ -150,6 +150,12 @@ func main() {
 		}
 	}
 
+	// Populate the global default OperatorSources definition and config
+	err = defaults.PopulateGlobals()
+	if err != nil {
+		exit(err)
+	}
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
 		exit(err)
@@ -182,12 +188,6 @@ func main() {
 	err = migrator.Migrate()
 	if err != nil {
 		log.Error(err, "[migration] Error in migrating Marketplace away from OperatorSource API")
-	}
-
-	// Populate the global default OperatorSources definition and config
-	err = defaults.PopulateGlobals()
-	if err != nil {
-		exit(err)
 	}
 
 	// Handle the defaults
