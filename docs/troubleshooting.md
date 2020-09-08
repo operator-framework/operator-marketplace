@@ -1,6 +1,6 @@
 # Troubleshooting Marketplace Operator
 
-This document lists out some common failures related to the Marketplace Operator a user might encounter, along with ways to troubleshoot the failures. If you encouter a failure related to the Marketplace Operator that is not listed in this document, but should be, please open an issue or a PR to have the failure appended to this document. 
+This document lists out some common failures related to the Marketplace Operator a user might encounter, along with ways to troubleshoot the failures. If you encounter a failure related to the Marketplace Operator that is not listed in this document, but should be, please open an issue or a PR to have the failure appended to this document. 
 
 The troubleshooting steps listed here are for Marketplace resources like OperatorSource and CatalogSourceConfig. To troubleshoot [Operator-lifecycle-manager(OLM)](https://github.com/operator-framework/operator-lifecycle-manager) defined resources like ClusterServiceVersion, InstallPlan, Subscription etc, refer to the [OLM troubleshooting guide](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/design/debugging.md).
 
@@ -10,10 +10,9 @@ Table of contents
 ===================
 
 1. [No packages show up in the UI (No OperatorHub Items Found)](#no-packages-show-up-in-the-ui-no-operatorhub-items-found)
-2. [OperatorSource failing to connect to the datastore](#operatorSource-failing-to-connect-to-the-datastore)
-3. [Operators(s) in an OperatorSource fail to show up in the UI](#operators-in-an-operatorsource-fail-to-show-up-in-the-ui) 
-4. [Conflicting Package Names](#conflicting-package-names)
-
+2. [Operators(s) in an OperatorSource fail to show up in the UI](#operators-in-an-operatorsource-fail-to-show-up-in-the-ui) 
+3. [Conflicting Package Names](#conflicting-package-names)
+4. [Changes get overwritten on default CatalogSources](#changes-get-overwritten-on-default-catalogsources)
 
 ## No packages show up in the UI (No OperatorHub Items Found)
 
@@ -22,36 +21,7 @@ When you install an OpenShift cluster, OperatorHub comes with a default list of 
 ![Operator Hub Error Image](images/OperatorHubError.png)
 
 
-First, investigate the OperatorSources. 
-
-```
-$ oc get opsrc -n openshift-marketplace
-
-NAME                  TYPE          ENDPOINT              REGISTRY              DISPLAYNAME           PUBLISHER   STATUS      MESSAGE                                       AGE
-certified-operators   appregistry   https://quay.io/cnr   certified-operators   Certified Operators   Red Hat     Succeeded   The object has been successfully reconciled   22h
-community-operators   appregistry   https://quay.io/cnr   community-operators   Community Operators   Red Hat     Succeeded   The object has been successfully reconciled   22h
-redhat-operators      appregistry   https://quay.io/cnr   redhat-operators      Red Hat Operators     Red Hat     Succeeded   The object has been successfully reconciled   22h
-```
-
-If the status of any of the OperatorSource is anything other than `Succeeded`, you can investigate the OperatorSource with 
-`oc describe opsrc <Name-of-OperatorSource> -n openshift-marketplace`. [This section](#operatorSource-failing-to-connect-to-the-datastore) and [the following section](#operators-in-an-operatorsource-fail-to-show-up-in-the-ui) of the doc also contains helpful information about debugging an OperatorSource. 
-
-If the OperatorSources look healthy, make sure that there's a pod corresponding to each OperatorSource and that they are in the `Running` state.
-
-```
-$ oc get pods -n openshift-marketplace
-
-NAME                                    READY     STATUS    RESTARTS   AGE
-certified-operators-79f876c76d-mbtjg    1/1       Running   0          86m
-community-operators-854c564f5f-9vk2x    1/1       Running   0          86m
-marketplace-operator-6dcd66cb8c-2wmkz   1/1       Running   0          86m
-redhat-operators-647fd668fc-9ff5d       1/1       Running   0          86m
-
-```
-
-If any pod is in a state other than `Running` inspect the logs of the pod with `oc logs <Name-of-Pod>`.
-
-If all pods look healthy, make sure that there's a CatalogSource for each corresponding CatalogSourceConfigs.
+First, ensure the CatalogSources are present:
 
 ```
 $ oc get catalogsource -n openshift-marketplace 
@@ -100,16 +70,6 @@ The logs for the `package-server` pods should contain information about why it m
 
 If everything seems healthy, and still no packages show up in the UI, it could be a browser issue. Check the the browser console to see the logs for possible errors. At any point in the steps above if the error looks too complicated to debug, see [Where to go for help](#where-to-go-for-help). 
 
-
-
-## OperatorSource failing to connect to the datastore
-
-If an OperatorSource fails to reconcile for any reason, first inspect the `STATUS` and the `MESSAGE` of the OperatorSource with `oc get opsrc -n openshift-marketplace`. You can also inspect the log messages of the marketplace-operator with `oc logs <name-of-marketplace-operator> -n openshift-marketplace` for detailed information about the OperatorSource. 
-
-A common reason for an OperatorSource to not reconcile correctly is the use of the wrong [endpoint](https://github.com/operator-framework/operator-marketplace/blob/master/deploy/examples/community.operatorsource.cr.yaml#L8). Please make sure that the endpoint is specified as `https://quay.io/cnr`.
-
-If quay.io is unavailable, the `MESSAGE` will usually read `unknown error (status 404)`. If the steps listed in this section do not help debug the problem, please reach out to one of the forums listed in [Where to go for help](#where-to-go-for-help).   
-
 ## Operator(s) in an OperatorSource fail to show up in the UI
 
 If operators in a particular OperatorSource fail to show up in the UI, it could be because those operators had parsing errors and were ignored by the registry pod. To inspect the corresponding registry pod logs, first identify the name of the registry pod for the OperatorSource with `oc get pods -n openshift-marketplace` (the name of the pod should be of the format `<operator-source-name>-<random-characters>`). Get the logs for the pod with `oc logs <identified-pod-name> -n openshift-marketplace`.
@@ -118,13 +78,21 @@ If there are private app-registry repositories in your namespace, not specifying
 
 ## Conflicting Package Names
 
-Package names are global across OperatorSources. To avoid unexpected behavior users should avoid adding any OperatorSources that contain existing packages.
-
-Users can view existing package names with the following command:
+Package names are global within a CatalogSource. If two CatalogSources contain a package with the same name, the CatalogSource priority determines which one gets installed. A higher priority CatalogSource will be used before ones with lower priority. Users can view existing package names with the following command:
 
 ```bash
 $ oc get packagemanifests -n openshift-marketplace
 ```
+
+## Changes get overwritten on default CatalogSources
+
+By default, Marketplace restores the [default CatalogSources](./defaults) if deleted or changed, including edits like adjusting priorities. To ensure these changes persist, you can use the `OperatorHub` API. This involves creating an `OperatorHub` object, similar to [the example OperatorHub](deploy/example/operatorhub.yaml).
+
+Here is a description of the `OperatorHub` spec fields:
+
+- `disableAllDefaultSources` is a boolean that can be used to disable all the default hub sources. If this is true, the `sources` field can be used to enable any default sources required. Otherwise, `sources` can be used to enable or disable a deault source.
+
+- `sources` specifies a list of default hub sources and their configuration. If empty, then the value of `disableAllDefaultSources` determines whether the default sources are disabled. If `disableAllDefaultSources` is true, then `sources` can override the configuration to enable specific default sources.
 
 # Where to go for help
 

@@ -31,10 +31,14 @@ func genericTestSuite(t *testing.T) {
 
     // Code that creates a runtime object using the context above...
     // Get global framework variables.
-    f := test.Global
+	client := test.Global.Client
 
-    // Create the operatorsource.
-    err = helpers.CreateRuntimeObject(f, ctx, helpers.CreateOperatorSource(namespace))
+    // Get the namespace to use with the test
+    namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
+
+    // Create any required runtime objects
+    err = helpers.CreateRuntimeObject(f, ctx, helpers.CreateOperatorSourceDefinition(name, namespace))
     require.NoError(t, err, "Could not create OperatorSource")
 
     // Run the tests that rely on the runtime objects created earlier.

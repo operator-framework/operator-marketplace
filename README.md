@@ -9,51 +9,37 @@ In order to deploy the Marketplace Operator, you must:
 ## Using the Marketplace Operator
 
 ### Description
-The operator manages two CRDs: [OperatorSource](./deploy/upstream/03_operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/upstream/02_catalogsourceconfig.crd.yaml).
+The operator manages a set of [default CatalogSources](./defaults). If these CatalogSources are modified or deleted, the operator recreates them.
 
-#### OperatorSource
+#### CatalogSource
 
-`OperatorSource` is used to define the external datastore we are using to store operator bundles.
-
-Here is a description of the spec fields:
-
-- `type` is the type of external datastore being described. At the moment we only support Quay's app-registry as our external datastore, so this value should be set to `appregistry`
-
-- `endpoint` is typically set to `https:/quay.io/cnr` if you are using Quay's app-registry.
-
-- `registryNamespace` is the name of your app-registry namespace.
-
-- `displayName` and `publisher` are optional and only needed for UI purposes.
-
-Please see [here][community-operators] for an example `OperatorSource`.
-
-If you want an `OperatorSource` to work with private app-registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
-
-On adding an `OperatorSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/operator-hub) in the OKD console. There is no equivalent UI in the Kubernetes console.
-
-The creation of an `OperatorSource` results in the creation of an OLM `CatalogSource` in the same namespace the marketplace operator is running in. This `CatalogSource` will be populated with operators from the `OperatorSource` ready to be managed by OLM.
-
-#### CatalogSourceConfig
-
-`CatalogSourceConfig` is used to create OLM `CatalogSources` consisting of operators from one `OperatorSource` so that these operators can then be managed by OLM.
+A `CatalogSource` acts as a repository of operator bundles, which are collections of operator metadata including CSVs, CRDs, package definitions etc. New operators can be made available either by adding their bundles to the [community-operators](https://github.com/operator-framework/community-operators) repository or by creating a custom registry image with a `CatalogSource` referencing it.
 
 Here is a description of the spec fields:
 
-- `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated.
+- `priority` determines the order in which `CatalogSources` are queried for package resolution. A higher priority `CatalogSource` is preferred over a lower priority one during dependency resolution. If two `CatalogSources` have the same priority, then they will be ordered lexicographically based on their names. By default, a new `CatalogSource` has priority set to 0, and all default `CatalogSources` have negative priorities.
 
-- `source` is the name of the `OperatorSource` that the packages originate from.
+- `updateStrategy` is used to determine the frequency at which the source image is polled for `grpc` type `CatalogSources`. The update takes some time to complete, so the `interval` should not be too short. An interval of `10m` - `15m` should be sufficient for this.
 
-- `packages` is a comma separated list of operators.
+- `secrets` are a list of secrets used to access contents of the catalog. These are tried for every catalog entry, so this list should be kept short.
 
-- `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays.
+- `sourceType` specifies the data source type that the catalog source references. Supported `sourceTypes` include `"grpc"` and `"configmap"`. The recommended source type is `"grpc"`.
 
-To learn more about how the Marketplace Operator resolves source and package combinations, please review [this doc](docs/csc-source-resolution.md).
+- `image` is the registry image that is queried for `grpc` type `CatalogSources`.
 
-Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
+- `address` is specified as \<host or ip>:\<port> and can be used to connect to a pre-existing registry for `grpc` type `CatalogSources`. This field is ignored if the `image` field is non-empty.
 
-Once a `CatalogSourceConfig` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
+- `configMap` is used in `configmap` type `CatalogSources` to refer to the `ConfigMap` that backs the registry.
 
-Please note that the Marketplace operator uses `CatalogSourceConfigs` and `CatalogSources` internally and you will find them present in the namespace where the Marketplace operator is running. These resources can be ignored and should not be modified or used.
+- `displayName`, `description`, `icon` and `publisher` are optional and only needed for UI purposes.
+
+Please see [here][community-operators] for an example `CatalogSource`.
+
+If you want an `CatalogSource` to work with private registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
+
+On adding a `CatalogSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/operator-hub) in the OKD console. There is no equivalent UI in the Kubernetes console.
+
+Once a `CatalogSource` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
 
 ### Deploying the Marketplace Operator with OKD
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
@@ -68,19 +54,20 @@ $ kubectl apply -f deploy/upstream
 
 #### Installing an operator using Marketplace
 
-The following section assumes that Marketplace was installed in the `marketplace` namespace. For Marketplace to function you need to have at least one `OperatorSource` CR present on the cluster. To get started you can use the `OperatorSource` for [upstream-community-operators]. If you are on an OKD cluster, you can skip this step as the `OperatorSource` for [community-operators] is installed by default instead.
+The following section assumes that Marketplace was installed in the `marketplace` namespace. To discover operators, you need at least one `CatalogSource` CR present on the cluster. To get started, you can use the [community-operators] `CatalogSource`. An OKD cluster will have the [default `CatalogSources`](./defaults) installed, so you can skip this step.
+
 ```bash
-$ kubectl apply -f deploy/upstream/07_upstream_operatorsource.cr.yaml
+$ kubectl apply -f deploy/examples/community.catalogsource.cr.yaml
 ```
-Once the `OperatorSource` has been successfully deployed, you can discover the operators available using the following command:
+
+Once the `CatalogSource` has been successfully deployed, you can discover the operators available using the following command:
 ```bash
-$ kubectl get opsrc upstream-community-operators -o=custom-columns=NAME:.metadata.name,PACKAGES:.status.packages -n marketplace
+$ kubectl get packagemanifests
 NAME                           PACKAGES
 upstream-community-operators   federationv2,svcat,metering,etcd,prometheus,automationbroker,templateservicebroker,cluster-logging,jaeger,descheduler
 ```
-**_Note_**: Please do not install [upstream-community-operators] and [community-operators] `OperatorSources` on the same cluster. The rule of thumb is to install [community-operators] on OpenShift clusters and [upstream-community-operators] on upstream Kubernetes clusters.
 
-Now if you want to install the `descheduler` and `jaeger` operators, create OLM [`Subscriptions`](https://github.com/operator-framework/operator-lifecycle-manager/tree/274df58592c2ffd1d8ea56156c73c7746f57efc0#discovery-catalogs-and-automated-upgrades) for `desheduler` and `jaeger` in the appropriate namespace. For upstream Kubernetes, this will be `marketplace` (i.e. the same namespace the `CatalogSource` created by the `OperatorSource` is in). This is because `marketplace` is not a global catalog namespace in upstream Kubernetes.
+Now if you want to install the `descheduler` and `jaeger` operators, create OLM [`Subscriptions`](https://github.com/operator-framework/operator-lifecycle-manager/tree/274df58592c2ffd1d8ea56156c73c7746f57efc0#discovery-catalogs-and-automated-upgrades) for `desheduler` and `jaeger` in the appropriate namespace. Depending on the `InstallModes` allowed on the operator CSVs, this may be one or more namespaces watched by OLM.
 
 ```
 apiVersion: operators.coreos.com/v1alpha1
@@ -93,9 +80,11 @@ spec:
   name: jaeger
   source: upstream-community-operators
   sourceNamespace: marketplace
+  installPlanApproval: Automatic
 ```
 
-For OLM to act on your subscription please note that an [`OperatorGroup`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/architecture.md#operator-group-design) that matches the [`InstallMode(s)`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#operator-metadata) in your [`CSV`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#what-is-a-cluster-service-version-csv) needs to be present in the subscription namespace (which is `marketplace` in this example).
+For OLM to act on your subscription please note that the `InstallMode(s)` present on your `CSV` must be compatible with the 
+an [`OperatorGroup`] that matches the [`InstallMode(s)`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#operator-metadata) in your [`CSV`](https://github.com/operator-framework/operator-lifecycle-manager/blob/274df58592c2ffd1d8ea56156c73c7746f57efc0/Documentation/design/building-your-csv.md#what-is-a-cluster-service-version-csv) needs to be present in the subscription namespace (which is `marketplace` in this example).
 
 For OKD, the `openshift-marketplace` namespace is the global catalog namespace, so a subscription to an operator from a `CatalogSource` in the `openshift-marketplace` namespace can be created in any namespace.
 
@@ -117,27 +106,27 @@ Delete the `ClusterServiceVersion` in the namespace that the operator was instal
 $ kubectl delete clusterserviceversion jaeger-operator.v1.8.2 -n marketplace
 ```
 
-## Populating your own App Registry OperatorSource
+## Populating your own CatalogSource Image
 
 Follow the steps [here](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md#push-to-quayio) to upload operator artifacts to `quay.io`.
 
-Once your operator artifact is pushed to `quay.io` you can use an `OperatorSource` to add your operator offering to Marketplace. An example `OperatorSource` is provided [here][upstream-community-operators].
+Once your operator artifact is pushed to `quay.io` you can create an index image using [`opm`](https://github.com/operator-framework/operator-registry#building-an-index-of-operators-using-opm). Then, this registry index image can be used in the `CatalogSource`.
 
-An `OperatorSource` must specify the `registryNamespace` the operator artifact was pushed to, and set the `name` and `namespace` for creating the `OperatorSource` on your cluster.
+The `CatalogSource` priority decides how operator dependencies get resolved, so ensure that your `CatalogSources` have a high enough priority to be used first. The default priority of 0 is higher than any of the ones provided by default, so any custom `CatalogSource` will have precedence over the [default CatalogSources](./defaults) without any additional configuration.
 
-Add your `OperatorSource` to your cluster:
+Add your `CatalogSource` to your cluster:
 
 ```bash
 $ oc create -f your-operator-source.yaml
 ```
 
-Once created, the Marketplace operator will use the `OperatorSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
+Once created, the Marketplace operator will use the `CatalogSource` to download your operator artifact from the app registry and display your operator offering in the Marketplace UI.
 
-You can also access private AppRegistry repositories via an authenticated `OperatorSource`, which you can learn more about [here](docs/how-to-authenticate-private-repositories.md).
+You can also access private AppRegistry repositories via an authenticated `CatalogSource`, which you can learn more about [here](docs/how-to-authenticate-private-repositories.md).
 
 ## Marketplace End to End (e2e) Tests
 
 A full writeup on Marketplace e2e testing can be found [here](docs/e2e-testing.md)
 
 [upstream-community-operators]: deploy/upstream/07_upstream_operatorsource.cr.yaml
-[community-operators]: deploy/examples/community.operatorsource.cr.yaml
+[community-operators]: deploy/examples/community.catalogsource.cr.yaml

@@ -1,6 +1,6 @@
-# How To Authenticate Private App-Registry Repositories
+# How To Authenticate Private registry Repositories
 
-If you have an app-registry repository that is backed by authentication, you can specify an authentication token in a Secret. To do this, create a Secret in the same namespace as your Operator Source:
+If you have an registry repository that is backed by authentication, you can specify an authentication token in a Secret. To do this, create a Secret in the same namespace as your Catalog Source:
 
 ```yaml
 apiVersion: v1
@@ -13,24 +13,25 @@ stringData:
     token: "basic yourtokenhere=="
 ```
 
-Then, to associate that secret with a registry, simply add a reference to the secret in the OperatorSource spec:
+Then, to associate that secret with a `CatalogSource`, simply add a reference to the secret in the spec:
 
 ```yaml
-apiVersion: "operators.coreos.com/v1"
-kind: "OperatorSource"
+apiVersion: "operators.coreos.com/v1alpha1"
+kind: "CatalogSource"
 metadata:
   name: "certified-operators"
   namespace: "openshift-marketplace"
-  labels:
-    opsrc-provider: certified
 spec:
-  type: appregistry
-  endpoint: "https://quay.io/cnr"
-  registryNamespace: "certified-operators"
+  sourceType: grpc
+  image: registry.redhat.io/redhat/certified-operator-index:v4.6
   displayName: "Certified Operators"
   publisher: "Red Hat"
-  authorizationToken:
-    secretName: marketplacesecret
+  priority: -200
+  updateStrategy:
+    registryPoll:
+      interval: 10m
+  secrets:
+    - marketplacesecret
 ```
 
-That's it! When downloading the repository from the app-registry, Marketplace will pass along the authentication token.
+That's it! While accessing catalog entries, each secret in the list will be tried sequentially. The secret list should be kept short to avoid too many secrets being tried for each time the catalog gets accessed.
