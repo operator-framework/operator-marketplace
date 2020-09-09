@@ -41,7 +41,6 @@ generate-mocks:
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_client.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=Client=Client $(PKG)/client Client
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_phase_reconciler_strategy.go -package=$(OPERATORSOURCE_MOCK_PKG) $(PKG)/operatorsource PhaseReconcilerFactory
 	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_appregistry.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=ClientFactory=AppRegistryClientFactory,Client=AppRegistryClient $(PKG)/appregistry ClientFactory,Client
-	$(mockgen) -destination=$(MOCKS_DIR)/$(OPERATORSOURCE_MOCK_PKG)/mock_syncer.go -package=$(OPERATORSOURCE_MOCK_PKG) -mock_names=PackageRefreshNotificationSender=SyncerPackageRefreshNotificationSender $(PKG)/operatorsource PackageRefreshNotificationSender
 
 clean-mocks:
 	@echo cleaning mock folder

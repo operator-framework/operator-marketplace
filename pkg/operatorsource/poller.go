@@ -2,7 +2,6 @@ package operatorsource
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/appregistry"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
@@ -11,16 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	cscRefresher PackageRefreshNotificationSender
-)
-
-// NewPoller returns a new instance of Poller interface.
-func NewPoller(client wrapper.Client, updateNotificationSendWait time.Duration, sender PackageUpdateNotificationSender, refresher PackageRefreshNotificationSender) Poller {
+// NewPoller returns a new instance of poller.
+func NewPoller(client wrapper.Client) Poller {
 	poller := &poller{
 		datastore: datastore.Cache,
-		sender:    sender,
-		refresher: refresher,
 		helper: &pollHelper{
 			factory:      appregistry.NewClientFactory(),
 			datastore:    datastore.Cache,
@@ -28,9 +21,6 @@ func NewPoller(client wrapper.Client, updateNotificationSendWait time.Duration, 
 			transitioner: phase.NewTransitioner(),
 		},
 	}
-
-	cscRefresher = refresher
-
 	return poller
 }
 
@@ -48,28 +38,12 @@ func NewPoller(client wrapper.Client, updateNotificationSendWait time.Duration, 
 // on to the next OperatorSource object.
 type Poller interface {
 	Poll()
-
-	// Initialize is the method that is called on the poller when the poller
-	// is first started. It sends a package refresh notification to the
-	// catalogsourceconfig syncer to force a comparison with the datastore
-	// to refresh invalid state.
-	Initialize()
 }
 
 // poller implements the Poller interface.
 type poller struct {
-	helper                     PollHelper
-	datastore                  datastore.Writer
-	sender                     PackageUpdateNotificationSender
-	refresher                  PackageRefreshNotificationSender
-	updateNotificationSendWait time.Duration
-}
-
-func (p *poller) Initialize() {
-	log.Info("[sync] sending initial package update notification on start.")
-	for _, opSrcKey := range p.datastore.GetAllOperatorSources() {
-		p.refresher.SendRefresh(opSrcKey.Name.Name)
-	}
+	helper    PollHelper
+	datastore datastore.Writer
 }
 
 func (p *poller) Poll() {
@@ -101,14 +75,6 @@ func (p *poller) Poll() {
 		if aggregator.IsUpdatedOrRemoved() {
 			aggregators = append(aggregators, aggregator)
 		}
-	}
-
-	// TODO: This is a stop gap measure. We should not need this any longer when
-	// CatalogSourceConfig has the version stored.
-	<-time.After(p.updateNotificationSendWait)
-	for _, aggregator := range aggregators {
-		log.Infof("[sync] sending package update notification - %s", aggregator)
-		p.sender.Send(aggregator)
 	}
 }
 

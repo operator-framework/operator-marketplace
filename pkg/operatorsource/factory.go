@@ -39,7 +39,6 @@ type phaseReconcilerFactory struct {
 	registryClientFactory appregistry.ClientFactory
 	datastore             datastore.Writer
 	client                client.Client
-	refresher             PackageRefreshNotificationSender
 }
 
 func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1.OperatorSource) (Reconciler, error) {
@@ -73,7 +72,7 @@ func (s *phaseReconcilerFactory) GetPhaseReconciler(logger *log.Entry, opsrc *v1
 		return NewValidatingReconciler(logger, s.datastore), nil
 
 	case phase.Configuring:
-		return NewConfiguringReconciler(logger, s.registryClientFactory, s.datastore, datastore.Cache, s.client, s.refresher), nil
+		return NewConfiguringReconciler(logger, s.registryClientFactory, s.datastore, datastore.Cache, s.client), nil
 
 	case phase.OperatorSourcePurging:
 		return NewPurgingReconciler(logger, s.datastore, s.client), nil
