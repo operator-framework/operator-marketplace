@@ -17,8 +17,8 @@ import (
 
 // NewConfiguringReconciler returns a Reconciler that reconciles
 // an OperatorSource object in "Configuring" phase.
-func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client client.Client, refresher PackageRefreshNotificationSender) Reconciler {
-	return NewConfiguringReconcilerWithClientInterface(logger, factory, datastore, reader, interface_client.NewClient(client), refresher)
+func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client client.Client) Reconciler {
+	return NewConfiguringReconcilerWithClientInterface(logger, factory, datastore, reader, interface_client.NewClient(client))
 }
 
 // NewConfiguringReconcilerWithClientInterface returns a configuring
@@ -27,13 +27,12 @@ func NewConfiguringReconciler(logger *log.Entry, factory appregistry.ClientFacto
 // client provided by the operator-sdk, instead of the raw client itself.
 // Using this interface facilitates mocking of kube client interaction
 // with the cluster, while using fakeclient during unit testing.
-func NewConfiguringReconcilerWithClientInterface(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client interface_client.Client, refresher PackageRefreshNotificationSender) Reconciler {
+func NewConfiguringReconcilerWithClientInterface(logger *log.Entry, factory appregistry.ClientFactory, datastore datastore.Writer, reader datastore.Reader, client interface_client.Client) Reconciler {
 	return &configuringReconciler{
 		logger:    logger,
 		factory:   factory,
 		datastore: datastore,
 		client:    client,
-		refresher: refresher,
 		reader:    reader,
 	}
 }
@@ -45,7 +44,6 @@ type configuringReconciler struct {
 	factory   appregistry.ClientFactory
 	datastore datastore.Writer
 	client    interface_client.Client
-	refresher PackageRefreshNotificationSender
 	reader    datastore.Reader
 }
 

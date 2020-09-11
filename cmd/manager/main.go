@@ -11,6 +11,7 @@ import (
 
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
+	"github.com/operator-framework/operator-marketplace/pkg/operatorsource"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -122,6 +123,8 @@ func main() {
 
 	log.Print("Registering Components.")
 
+	registrySyncer := operatorsource.NewRegistrySyncer(mgr.GetClient(), initialWait, resyncInterval)
+
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		exit(err)
@@ -204,6 +207,8 @@ func main() {
 	}
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := statusReporter.StartReporting()
+
+	go registrySyncer.Sync(stopCh)
 
 	// Start the Cmd
 	err = mgr.Start(stopCh)

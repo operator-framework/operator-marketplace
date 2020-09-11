@@ -36,9 +36,8 @@ func TestReconcile_ScheduledForConfiguring_Succeeded(t *testing.T) {
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	fakeclient := NewFakeClientWithChildResources(&appsv1.Deployment{}, &corev1.Service{}, &corev1.Namespace{}, &v1alpha1.CatalogSource{})
-	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconcilerWithClientInterface(helperGetContextLogger(), factory, writer, reader, fakeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
@@ -100,9 +99,8 @@ func TestReconcile_OperatorSourceReturnsEmptyManifestList_Failed(t *testing.T) {
 	reader := mocks.NewDatastoreReader(controller)
 	factory := mocks.NewAppRegistryClientFactory(controller)
 	fakeclient := NewFakeClient()
-	refresher := mocks.NewSyncerPackageRefreshNotificationSender(controller)
 
-	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient, refresher)
+	reconciler := operatorsource.NewConfiguringReconciler(helperGetContextLogger(), factory, writer, reader, fakeclient)
 
 	ctx := context.TODO()
 	opsrcIn := helperNewOperatorSourceWithPhase("marketplace", "foo", phase.Configuring)
