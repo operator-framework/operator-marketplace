@@ -24,8 +24,6 @@ spec:
             name: healthz
           command:
           - marketplace-operator
-          args:
-          - -registryServerImage=quay.io/openshift/origin-operator-registry
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
