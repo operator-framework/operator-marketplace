@@ -35,11 +35,9 @@ Here is a description of the spec fields:
 
 Please see [here][community-operators] for an example `CatalogSource`.
 
-If you want an `CatalogSource` to work with private registry repositories, please take a look at the [Private Repo Authentication](docs/how-to-authenticate-private-repositories.md) documentation.
-
 On adding a `CatalogSource` to an OKD cluster, operators will be visible in the [OperatorHub UI](https://github.com/openshift/console/tree/master/frontend/public/components/operator-hub) in the OKD console. There is no equivalent UI in the Kubernetes console.
 
-Once a `CatalogSource` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
+Once a `CatalogSource` is created successfully you can create a [`Subscription`](https://olm.operatorframework.io/docs/tasks/install-operator-with-olm/) for your operator referencing the newly created or updated `CatalogSource`.
 
 ### Deploying the Marketplace Operator with OKD
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
@@ -59,6 +57,8 @@ The following section assumes that Marketplace was installed in the `marketplace
 ```bash
 $ kubectl apply -f deploy/examples/community.catalogsource.cr.yaml
 ```
+
+You can also [create a registry image with custom operators](https://olm.operatorframework.io/docs/tasks/make-operator-part-of-catalog/) for your `CatalogSource` to reference.
 
 Once the `CatalogSource` has been successfully deployed, you can discover the operators available using the following command:
 ```bash
@@ -130,3 +130,36 @@ A full writeup on Marketplace e2e testing can be found [here](docs/e2e-testing.m
 
 [upstream-community-operators]: deploy/upstream/07_upstream_operatorsource.cr.yaml
 [community-operators]: deploy/examples/community.catalogsource.cr.yaml
+
+## Enabling/Disabling default CatalogSources on OpenShift and OKD
+
+By default, the `marketplace-operator` manages a set of [`default CatalogSources`](../defaults). This means that unlike user defined `CatalogSources`, these get recreated if they are deleted or modified. In order to remove one or more of these `CatalogSources` from the cluster, you can make use of the `OperatorHub` resource present on OpenShift.
+
+By default, OpenShift has a cluster level `OperatorHub` resource with the name `cluster` which the `marketplace-operator` uses to manage its default `CatalogSources`. Modifying this custom resource will allow you selectively delete some or all of these default `CatalogSources`
+
+The `OperatorHub` spec has the following fields of interest
+- `sources`: This is a list of CatalogSources specifying `name` and whether they are `disabled`, you can apply 
+- `disableAllDefaultSources`: This indicates the default action for the managed `CatlogSources` not present in the `sources` list.
+
+For instance, to enable only Red Hat operators to be discovered on the `OperatorHub` UI, you can update the `OperatorHub` CR as follows:
+```
+(
+cat <<EOF
+apiVersion: config.openshift.io/v1
+kind: OperatorHub
+metadata:
+  name: cluster
+spec:
+  disableAllDefaultSources: true
+  sources:
+    - name: "redhat-operators"
+      disabled: false
+    - name: "redhat-marketplace"
+      disabled: false
+EOF
+ ) | oc apply -f -
+```
+
+This will delete both the `certified-operators` and `community-operators` `CatalogSources` from the cluster.
+
+If you have the pull-secret for `registry.redhat.io`, [you can also enable Red Hat operators on OKD](https://github.com/openshift/okd/blob/0975f9bc5f472e33a62cdfafac8cb664848eb7ce/FAQ.md#how-can-i-enable-the-non-community-red-hat-operators)

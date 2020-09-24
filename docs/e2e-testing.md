@@ -37,9 +37,27 @@ func genericTestSuite(t *testing.T) {
     namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
+    // Populate helpers.DefaultSources with the catalog sources present in defaults directory
+    err = helpers.InitCatSrcDefinition()
+    require.NoError(t, err, "Could not get a default CatalogSource definitions from disk")
+
     // Create any required runtime objects
-    err = helpers.CreateRuntimeObject(f, ctx, helpers.CreateOperatorSourceDefinition(name, namespace))
-    require.NoError(t, err, "Could not create OperatorSource")
+    obj := &olm.CatalogSource{
+        TypeMeta: meta.TypeMeta{
+            Kind: olm.CatalogSourceKind,
+        },
+        ObjectMeta: meta.ObjectMeta{
+            Name:      name,
+            Namespace: namespace,
+        },
+    }
+    err = helpers.CreateRuntimeObject(f, ctx, obj)
+    require.NoError(t, err, "Could not create CatalogSource")
+
+    // ensure required objects reach their desired states
+	result := &olm.CatalogSource{}
+	err = helpers.WaitForResult(client, result, namespace, name)
+	assert.NoError(t, err, fmt.Sprintf("CatalogSource %s/%s was never created", namespace, name))
 
     // Run the tests that rely on the runtime objects created earlier.
     t.Run("test1", testsuites.Test1)
@@ -53,7 +71,6 @@ Adhere to the following practices when implementing your test suites:
 * Avoid altering runtime objects that multiple tests rely on - if there is no work around revert any changes at the end of the test or move the test out of the suite.
 * If a test doesn't create any new runtime object, don't call `test.NewTestCtx(t)`.
 * If a test creates new runtime objects, make sure that the ctx is created in a method with the `func(t testting.T) error` signature and pass the context into a method that implements the test.
-* In version 0.3.0 of the Operator-SDK, the `TestCtx.Cleanup()` method does not wait for runtime objects to be deleted before exiting. Until we can upgrade to the latest version of the Operator-SDK tests must cleanup after themselves.
 
 ### Test Groups
 
