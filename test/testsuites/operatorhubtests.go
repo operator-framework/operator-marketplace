@@ -405,57 +405,54 @@ func toggle(t *testing.T, nr int, disabled, disableAll bool) error {
 // checkDeleted checks if nr default CatalogSources have been removed from the cluster. For
 // example, nr=2 checks if the first 2 defaults helpers.DefaultSources have been deleted.
 func checkDeleted(nr int, namespace string) error {
-	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		for n := 0; n < nr; n++ {
-			err := checkCatsrcIsDeleted(helpers.DefaultSources[n].Name, namespace)
-			if err != nil {
-				return false, err
-			}
+	for n := 0; n < nr; n++ {
+		err := checkCatsrcIsDeleted(helpers.DefaultSources[n].Name, namespace)
+		if err != nil {
+			return err
 		}
-		return true, nil
-	})
-
-	return err
+	}
+	return nil
 }
 
 // checkCreated checks if nr default CatalogSources are present on the cluster. For example,
 // nr=2 checks if the first 2 defaults helpers.DefaultSources are present.
 func checkCreated(nr int, namespace string) error {
-	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		for n := 0; n < nr; n++ {
-			err := checkCatsrcIsPresent(helpers.DefaultSources[n].Name, namespace)
-			if err != nil {
-				return false, err
-			}
+	for n := 0; n < nr; n++ {
+		err := checkCatsrcIsPresent(helpers.DefaultSources[n].Name, namespace)
+		if err != nil {
+			return err
 		}
-		return true, nil
-	})
-
-	return err
+	}
+	return nil
 }
 
 // checkCatsrcIsPresent checks if the OperatorSource and its child resources are present.
 func checkCatsrcIsPresent(name, namespace string) error {
 	client := test.Global.Client
 	// Check if the CatalogSource is present
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olm.CatalogSource{})
-	if err != nil {
-		return err
-	}
-	return nil
+	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olm.CatalogSource{})
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	})
+	return err
 }
 
 // checkCatsrcIsDeleted checks if the CatalogSource has been deleted.
 func checkCatsrcIsDeleted(name, namespace string) error {
 	client := test.Global.Client
-
-	def := &olm.CatalogSource{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace},
-		def)
-	if !errors.IsNotFound(err) || def.Name != "" {
-		return fmt.Errorf("default CatalogSource still present on the cluster")
-	}
-	return nil
+	// Check if the CatalogSource is deleted
+	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		def := &olm.CatalogSource{}
+		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, def)
+		if !errors.IsNotFound(err) || def.Name != "" {
+			return false, fmt.Errorf("default CatalogSource still present on the cluster")
+		}
+		return true, nil
+	})
+	return err
 }
 
 // checkClusterOperatorHub checks if the cluster OperatorHub resource is in the expected state
