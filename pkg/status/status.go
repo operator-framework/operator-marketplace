@@ -225,14 +225,12 @@ func (r *reporter) monitorClusterStatus() {
 			}
 
 			// Report that marketplace is available
-			if cohelpers.IsStatusConditionFalse(r.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
-				reason := "OperatorAvailable"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
+
+			reason := "OperatorAvailable"
+			conditionListBuilder := clusterStatusListBuilder()
+			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
+			statusErr = r.setStatus(statusConditions)
 		}
 	}
 }
