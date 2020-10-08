@@ -125,7 +125,7 @@ func (r *reporter) setStatusCondition(statusCondition configv1.ClusterOperatorSt
 func (r *reporter) updateStatus(previousStatus *configv1.ClusterOperatorStatus) error {
 	var err error
 	if compareClusterOperatorStatusConditionArrays(previousStatus.Conditions, r.clusterOperator.Status.Conditions) {
-		log.Debugf("[status] Previous and current ClusterOperator Status are the same, the ClusterOperator Status will not be updated.")
+		log.Infof("[status] Previous and current ClusterOperator Status are the same, the ClusterOperator Status will not be updated.")
 	} else {
 		log.Debugf("[status] Previous and current ClusterOperator Status are different, attempting to update the ClusterOperator Status.")
 
@@ -225,14 +225,11 @@ func (r *reporter) monitorClusterStatus() {
 			}
 
 			// Report that marketplace is available
-			if cohelpers.IsStatusConditionFalse(r.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
-				reason := "OperatorAvailable"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
+			reason := "OperatorAvailable"
+			conditionListBuilder := clusterStatusListBuilder()
+			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
+			statusErr = r.setStatus(statusConditions)
 		}
 	}
 }
