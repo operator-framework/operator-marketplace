@@ -18,3 +18,5 @@ approvers:
   - njhale
   - benluddy
   - kevinrizza
+# Bugzilla component
+component: "OLM"
