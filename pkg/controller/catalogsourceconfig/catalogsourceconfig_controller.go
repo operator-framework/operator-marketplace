@@ -6,7 +6,6 @@ import (
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	catalogsourceconfighandler "github.com/operator-framework/operator-marketplace/pkg/catalogsourceconfig"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	"github.com/operator-framework/operator-marketplace/pkg/watches"
 	log "github.com/sirupsen/logrus"
@@ -93,7 +92,6 @@ type ReconcileCatalogSourceConfig struct {
 func (r *ReconcileCatalogSourceConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling CatalogSourceConfig %s/%s\n", request.Namespace, request.Name)
 	log.Warning("DEPRECATION NOTICE: The CatalogSourceConfig API is deprecated in future versions. Please visit this link for futher details: https://docs.openshift.com/container-platform/4.4/release_notes/ocp-4-4-release-notes.html#ocp-4-4-marketplace-apis-deprecated")
-	metrics.RegisterCustomResource(metrics.ResourceTypeCSC)
 	// Reconcile kicked off, message Sync Channel
 	r.syncSender.SendSyncMessage(nil)
 
