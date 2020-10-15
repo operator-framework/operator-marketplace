@@ -38,10 +38,6 @@ import (
 )
 
 const (
-	// TODO: resyncInterval is hardcoded to 1 hour now, it would have to be
-	// configurable on a per OperatorSource level.
-	resyncInterval = time.Duration(60) * time.Minute
-
 	initialWait                = time.Duration(1) * time.Minute
 	updateNotificationSendWait = time.Duration(10) * time.Minute
 )
