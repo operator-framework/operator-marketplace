@@ -23,13 +23,6 @@ import (
 const (
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
-
-	// Since Openshift 4.4, Marketplace is only upgradeable if there are no custom (non-default)
-	// OperatorSources or CatalogSourceConifgs, and includes either a upgradeable message
-	// or a deprecatedAPIMessage in the Upgradeable ClusterOperatorStatus condition, conditioned
-	// on the presence of custom resources
-
-	upgradeableMessage = "Marketplace is upgradeable"
 )
 
 type Reporter interface {
@@ -188,17 +181,7 @@ func (r *reporter) monitorClusterStatus() {
 	for {
 		select {
 		case <-r.stopCh:
-			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
-			reason := "OperatorExited"
-			msg := "The operator has exited"
-			conditionListBuilder := clusterStatusListBuilder()
-			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
-			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
-			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
-			statusErr := r.setStatus(statusConditions)
-			if statusErr != nil {
-				log.Error("[status] " + statusErr.Error())
-			}
+			log.Info("[status] Operator no longer reporting status")
 			return
 		// Attempt to update the ClusterOperator status whenever the seconds
 		// number of seconds defined by coStatusReportInterval passes.
@@ -219,6 +202,7 @@ func (r *reporter) monitorClusterStatus() {
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", r.version), reason)
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 				statusErr = r.setStatus(statusConditions)
 				break
@@ -228,6 +212,8 @@ func (r *reporter) monitorClusterStatus() {
 			reason := "OperatorAvailable"
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
 			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 			statusErr = r.setStatus(statusConditions)
 		}
