@@ -188,17 +188,7 @@ func (r *reporter) monitorClusterStatus() {
 	for {
 		select {
 		case <-r.stopCh:
-			// If the stopCh is closed, set all ClusterOperatorStatus conditions to false.
-			reason := "OperatorExited"
-			msg := "The operator has exited"
-			conditionListBuilder := clusterStatusListBuilder()
-			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, msg, reason)
-			conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
-			statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
-			statusErr := r.setStatus(statusConditions)
-			if statusErr != nil {
-				log.Error("[status] " + statusErr.Error())
-			}
+			log.Info("[status] Operator no longer reporting status")
 			return
 		// Attempt to update the ClusterOperator status whenever the seconds
 		// number of seconds defined by coStatusReportInterval passes.
