@@ -7,3 +7,5 @@ metadata:
     config.openshift.io/inject-trusted-cabundle: "true"
   name: marketplace-trusted-ca
   namespace: openshift-marketplace
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"

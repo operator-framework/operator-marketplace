@@ -2,6 +2,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: marketplace-operator
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
 rules:
 - apiGroups:
   - ""
@@ -88,6 +90,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: marketplace-operator
   namespace: openshift-marketplace
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
 rules:
 - apiGroups:
   - ""
@@ -144,6 +148,8 @@ metadata:
   name: operatorhub-config-reader
   labels:
     rbac.authorization.k8s.io/aggregate-to-cluster-reader: "true"
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
 rules:
 - apiGroups:
   - config.openshift.io

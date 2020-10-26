@@ -5,6 +5,7 @@ metadata:
   namespace: openshift-marketplace
   annotations:
     config.openshift.io/inject-proxy: "marketplace-operator"
+    include.release.openshift.io/self-managed-high-availability: "true"
 spec:
   replicas: 1
   selector:
