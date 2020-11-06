@@ -4,9 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	v1 "k8s.io/api/apps/v1"
+	v12 "k8s.io/api/core/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
@@ -190,6 +195,11 @@ func main() {
 		log.Error(err, "[migration] Error in migrating Marketplace away from OperatorSource API")
 	}
 
+	err = cleanUpOldOpsrcResources(clientGo)
+	if err != nil {
+		log.Error(err, "OperatorSource child resource cleanup failed")
+	}
+
 	// Handle the defaults
 	err = ensureDefaults(cfg, mgr.GetScheme())
 	if err != nil {
@@ -255,4 +265,35 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	}
 
 	return nil
+}
+
+// cleanUpOldOpsrcResources cleans up old deployments and services associated with OperatorSources
+func cleanUpOldOpsrcResources(kubeClient client.Client) error {
+	ctx := context.TODO()
+	deploy := &v1.DeploymentList{}
+	svc := &v12.ServiceList{}
+	o := &client.ListOptions{}
+	if err := o.SetLabelSelector(strings.Join([]string{builders.OpsrcOwnerNameLabel, builders.OpsrcOwnerNamespaceLabel}, ",")); err != nil {
+		return err
+	}
+	allErrors := []error{}
+	if err := kubeClient.List(ctx, o, deploy); err == nil {
+		for _, d := range deploy.Items {
+			if err := kubeClient.Delete(ctx, &d); err != nil {
+				allErrors = append(allErrors, err)
+			}
+		}
+	} else {
+		allErrors = append(allErrors, err)
+	}
+	if err := kubeClient.List(ctx, o, svc); err == nil {
+		for _, s := range svc.Items {
+			if err := kubeClient.Delete(ctx, &s); err != nil {
+				allErrors = append(allErrors, err)
+			}
+		}
+	} else {
+		allErrors = append(allErrors, err)
+	}
+	return utilerrors.NewAggregate(allErrors)
 }
