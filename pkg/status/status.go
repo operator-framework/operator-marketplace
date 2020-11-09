@@ -219,6 +219,7 @@ func (r *reporter) monitorClusterStatus() {
 				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", r.version), reason)
 				msg := fmt.Sprintf("Determining status")
 				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
+				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, reason)
 				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
 				statusErr = r.setStatus(statusConditions)
 				break
@@ -228,6 +229,8 @@ func (r *reporter) monitorClusterStatus() {
 			reason := "OperatorAvailable"
 			conditionListBuilder := clusterStatusListBuilder()
 			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
+			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
 			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
 			statusErr = r.setStatus(statusConditions)
 		}
