@@ -94,7 +94,7 @@ func (r *ReconcileCatalogSource) Reconcile(request reconcile.Request) (reconcile
 	defaultCatsrcDef := defaultCatalogsources[request.Name]
 
 	if operatorhub.GetSingleton().Get()[defaultCatsrcDef.Name] {
-		log.Info("%s disabled. Not taking any action", defaultCatsrcDef.Name)
+		log.Infof("%s disabled. Not taking any action", defaultCatsrcDef.Name)
 		return reconcile.Result{}, nil
 	}
 	log.Infof("Reconciling default CatalogSource %s", request.Name)
