@@ -320,35 +320,23 @@ func (r *reporter) monitorClusterStatus() {
 				break
 			}
 
-			// Report that marketplace is available after meeting minimal syncs.
-			if cohelpers.IsStatusConditionFalse(r.clusterOperator.Status.Conditions, configv1.OperatorAvailable) {
-				reason := "OperatorAvailable"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
-				statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
-
-			// Update the status with the appropriate state.
+			// Report marketplace ClusterOperator conditions after meeting minimal syncs.
 			isSucceeding, ratio := r.syncRatio.IsSucceeding()
 			if ratio != nil {
 				var statusConditions []configv1.ClusterOperatorStatusCondition
 				conditionListBuilder := clusterStatusListBuilder()
-				if operatorUpgradeable {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
-				} else {
-					conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
-				}
+				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), "OperatorAvailable")
 				if isSucceeding {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Current CR sync ratio (%g) meets the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsSucceeding")
+					conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Operator and Operands(OperatorSources) are available"), "OperandTransitionsSucceeding")
+					conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), "OperatorAvailable")
 				} else {
-					statusConditions = conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("Current CR sync ratio (%g) does not meet the expected success ratio (%g)", *ratio, successRatio), "OperandTransitionsFailing")
+					conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionTrue, fmt.Sprintf("One or more OperatorSources are unavailable. Please inspect the openshift-marketplace namespace for more information"), "OperandTransitionsFailing")
+					conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, fmt.Sprintf("Operator/Operands(OperatorSources) are in the degraded state"), "OperandTransitionsFailing")
+				}
+				if operatorUpgradeable {
+					statusConditions = conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, "OperatorAvailable")
+				} else {
+					statusConditions = conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, deprecatedAPIMessage, "DeprecatedAPIsInUse")
 				}
 				statusErr = r.setStatus(statusConditions)
 				break
