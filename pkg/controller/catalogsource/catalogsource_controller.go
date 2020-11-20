@@ -89,18 +89,22 @@ type ReconcileCatalogSource struct {
 }
 
 func (r *ReconcileCatalogSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	log.Infof("Reconciling default CatalogSource %s", request.Name)
 
 	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
 	defaultCatsrcDef := defaultCatalogsources[request.Name]
+
+	if operatorhub.GetSingleton().Get()[defaultCatsrcDef.Name] {
+		log.Info("%s disabled. Not taking any action", defaultCatsrcDef.Name)
+		return reconcile.Result{}, nil
+	}
+	log.Infof("Reconciling default CatalogSource %s", request.Name)
+
 	// Fetch the CatalogSource instance
 	instance := &olm.CatalogSource{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if !operatorhub.GetSingleton().Get()[defaultCatsrcDef.Name] {
-				createNewCatsrcInstance(r.client, defaultCatsrcDef)
-			}
+			createNewCatsrcInstance(r.client, defaultCatsrcDef)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
