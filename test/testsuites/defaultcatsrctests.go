@@ -171,6 +171,12 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 	})
 	require.NoError(t, err, "The update on the custom CatalogSource was reverted back")
 
+	err = helpers.RestartMarketplace(test.Global.Client, namespace)
+	require.NoError(t, err, "Could not restart marketplace operator")
+
+	customCatsrc, err = checkForCatsrc("redhat-operators", namespace)
+	require.NoError(t, err, "Custom CatalogSource redhat-operators was removed from the cluster after marketplace was restarted")
+
 	err = toggle(t, 4, false, false) //Re-enable all default CatalogSources
 	require.NoError(t, err, "Could not enable default CatalogSources")
 

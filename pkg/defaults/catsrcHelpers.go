@@ -64,7 +64,9 @@ func processCatsrc(client wrapper.Client, def olm.CatalogSource, disable bool) e
 	}
 
 	if disable {
-		err = ensureCatsrcAbsent(client, def, cluster)
+		if cluster.Annotations[defaultCatsrcAnnotationKey] == defaultCatsrcAnnotationValue {
+			err = ensureCatsrcAbsent(client, def, cluster)
+		}
 	} else {
 		err = ensureCatsrcPresent(client, def, cluster)
 	}
@@ -98,6 +100,8 @@ func ensureCatsrcAbsent(client wrapper.Client, def olm.CatalogSource, cluster *o
 func ensureCatsrcPresent(client wrapper.Client, def olm.CatalogSource, cluster *olm.CatalogSource) error {
 	// Create if not present or is deleted
 	if cluster.Name == "" || (!cluster.ObjectMeta.DeletionTimestamp.IsZero() && len(cluster.Finalizers) == 0) {
+		def.Annotations = make(map[string]string)
+		def.Annotations[defaultCatsrcAnnotationKey] = defaultCatsrcAnnotationValue
 		err := client.Create(context.TODO(), &def)
 		if err != nil {
 			return err

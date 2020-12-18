@@ -6,7 +6,7 @@ import (
 	"os"
 
 	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +36,11 @@ var (
 	// The default is for all the OperatorSources in the globalDefinitions to be
 	// enabled.
 	defaultConfig = make(map[string]bool)
+)
+
+const (
+	defaultCatsrcAnnotationKey   string = "source"
+	defaultCatsrcAnnotationValue string = "marketplace-defaults"
 )
 
 // Defaults is the interface that can be used to ensure default OperatorSources
