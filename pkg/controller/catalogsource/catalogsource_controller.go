@@ -2,14 +2,13 @@ package catalogsource
 
 import (
 	"context"
-	"time"
 
 	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -89,39 +88,8 @@ type ReconcileCatalogSource struct {
 }
 
 func (r *ReconcileCatalogSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-
 	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
-	defaultCatsrcDef := defaultCatalogsources[request.Name]
-
-	if operatorhub.GetSingleton().Get()[defaultCatsrcDef.Name] {
-		log.Infof("%s disabled. Not taking any action", defaultCatsrcDef.Name)
-		return reconcile.Result{}, nil
-	}
-	log.Infof("Reconciling default CatalogSource %s", request.Name)
-
-	// Fetch the CatalogSource instance
-	instance := &olm.CatalogSource{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			createNewCatsrcInstance(r.client, defaultCatsrcDef)
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}, err
-	}
-
-	if instance.DeletionTimestamp != nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}, nil
-	}
-
-	if !defaults.AreCatsrcSpecsEqual(&defaultCatsrcDef.Spec, &instance.Spec) {
-		if err := r.client.Delete(context.TODO(), instance); err != nil {
-			log.Warnf("Could not set default CatalogSource %s's spec back to desired default state. Error in deleting updated CatalogSource: %s", defaultCatsrcDef.GetName(), err.Error())
-		}
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}, nil
-	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
 }
 
 func createNewCatsrcInstance(client client.Client, catsrc olm.CatalogSource) error {
