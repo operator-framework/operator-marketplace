@@ -243,10 +243,6 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 	err = checkClusterOperatorHub(t, 4)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
 
-	// Restart marketplace operator
-	err = helpers.RestartMarketplace(test.Global.Client, namespace)
-	require.NoError(t, err, "Could not restart marketplace operator")
-
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"
 	expectedTypeStatus := map[apiconfigv1.ClusterStatusConditionType]apiconfigv1.ConditionStatus{
@@ -300,10 +296,6 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 
 	err = checkClusterOperatorHub(t, 2)
 	assert.NoError(t, err, "Incorrect cluster OperatorHub")
-
-	// Restart marketplace operator
-	err = helpers.RestartMarketplace(test.Global.Client, namespace)
-	require.NoError(t, err, "Could not restart marketplace operator")
 
 	// Check that the ClusterOperator resource has the correct status
 	clusterOperatorName := "marketplace"

@@ -64,7 +64,9 @@ func processCatsrc(client wrapper.Client, def olm.CatalogSource, disable bool) e
 	}
 
 	if disable {
-		err = ensureCatsrcAbsent(client, def, cluster)
+		if cluster.Annotations[defaultCatsrcAnnotationKey] == defaultCatsrcAnnotationValue {
+			err = ensureCatsrcAbsent(client, def, cluster)
+		}
 	} else {
 		err = ensureCatsrcPresent(client, def, cluster)
 	}
@@ -96,6 +98,12 @@ func ensureCatsrcAbsent(client wrapper.Client, def olm.CatalogSource, cluster *o
 
 // ensureCatsrcPresent ensure that that the default CatalogSource is present on the cluster
 func ensureCatsrcPresent(client wrapper.Client, def olm.CatalogSource, cluster *olm.CatalogSource) error {
+	def = *def.DeepCopy()
+	if def.Annotations == nil {
+		def.Annotations = make(map[string]string)
+	}
+	def.Annotations[defaultCatsrcAnnotationKey] = defaultCatsrcAnnotationValue
+
 	// Create if not present or is deleted
 	if cluster.Name == "" || (!cluster.ObjectMeta.DeletionTimestamp.IsZero() && len(cluster.Finalizers) == 0) {
 		err := client.Create(context.TODO(), &def)
@@ -106,13 +114,17 @@ func ensureCatsrcPresent(client wrapper.Client, def olm.CatalogSource, cluster *
 		return nil
 	}
 
-	if AreCatsrcSpecsEqual(&def.Spec, &cluster.Spec) {
-		logrus.Infof("[defaults] CatalogSource %s default and on cluster specs are same", def.Name)
+	if cluster.Annotations[defaultCatsrcAnnotationKey] == defaultCatsrcAnnotationValue && AreCatsrcSpecsEqual(&def.Spec, &cluster.Spec) {
+		logrus.Infof("[defaults] CatalogSource %s is annotated and its spec is the same as the default spec", def.Name)
 		return nil
 	}
 
 	// Update if the spec has changed
 	cluster.Spec = def.Spec
+	if cluster.Annotations == nil {
+		cluster.Annotations = make(map[string]string)
+	}
+	cluster.Annotations[defaultCatsrcAnnotationKey] = defaultCatsrcAnnotationValue
 	err := client.Update(context.TODO(), cluster)
 	if err != nil {
 		return err
