@@ -391,31 +391,6 @@ func WaitForDeploymentScaled(client test.FrameworkClient, name, namespace string
 	return nil
 }
 
-// RestartMarketplace scales the marketplace deployment down to zero and then scales
-// it back up to it's original number of replicas, and waits for a successful deployment.
-func RestartMarketplace(client test.FrameworkClient, namespace string) error {
-	marketplace := &apps.Deployment{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
-	if err != nil {
-		return err
-	}
-	initialReplicas := marketplace.Spec.Replicas
-
-	// Scale down deployment
-	err = ScaleMarketplace(client, namespace, int32(0))
-	if err != nil {
-		return err
-	}
-
-	// Now scale it back up
-	ScaleMarketplace(client, namespace, *initialReplicas)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ScaleMarketplace scales the marketplace deployment to the specified replica scale size
 func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32) error {
 	marketplace := &apps.Deployment{}
