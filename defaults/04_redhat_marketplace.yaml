@@ -5,7 +5,7 @@ metadata:
   namespace: "openshift-marketplace"
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.6
+  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.7
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
   priority: -300
