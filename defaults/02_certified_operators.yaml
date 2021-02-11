@@ -5,7 +5,7 @@ metadata:
   namespace: "openshift-marketplace"
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/certified-operator-index:v4.6
+  image: registry.redhat.io/redhat/certified-operator-index:v4.7
   displayName: "Certified Operators"
   publisher: "Red Hat"
   priority: -200
