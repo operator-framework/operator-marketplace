@@ -141,3 +141,5 @@ A full writeup on Marketplace e2e testing can be found [here](docs/e2e-testing.m
 
 [upstream-community-operators]: deploy/upstream/07_upstream_operatorsource.cr.yaml
 [community-operators]: deploy/examples/community.operatorsource.cr.yaml
+
+Testing pr
