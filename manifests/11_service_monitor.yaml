@@ -6,6 +6,7 @@ metadata:
   labels:
     name: marketplace-operator
   annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
 spec:
@@ -35,6 +36,7 @@ metadata:
   name: openshift-marketplace-metrics
   namespace: openshift-marketplace
   annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
 roleRef:
@@ -52,6 +54,7 @@ metadata:
   name: openshift-marketplace-metrics
   namespace: openshift-marketplace
   annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
 rules:
