@@ -24,7 +24,7 @@ osbs-build:
 unit: unit-test
 
 unit-test:
-	go test -v ./pkg/...
+	GO111MODULE=off go test -v ./pkg/...
 
 e2e-test:
 	./scripts/e2e-tests.sh

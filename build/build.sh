@@ -17,4 +17,4 @@ PROJECT_NAME="marketplace-operator"
 REPO_PATH="github.com/operator-framework/operator-marketplace/"
 BUILD_PATH="${REPO_PATH}/cmd/manager"
 echo "building "${PROJECT_NAME}"..."
-CGO_ENABLED=1 CGO_DEBUG=1 go build -ldflags "-X '${REPO_PATH}pkg/version.GitCommit=${GIT_COMMIT}'" -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
+CGO_ENABLED=1 CGO_DEBUG=1 GO111MODULE=off go build -ldflags "-X '${REPO_PATH}pkg/version.GitCommit=${GIT_COMMIT}'" -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
