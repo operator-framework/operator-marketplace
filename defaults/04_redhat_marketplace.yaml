@@ -3,6 +3,8 @@ kind: "CatalogSource"
 metadata:
   name: "redhat-marketplace"
   namespace: "openshift-marketplace"
+  annotations:
+    workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
 spec:
   sourceType: grpc
   image: registry.redhat.io/redhat/redhat-marketplace-index:v4.7
