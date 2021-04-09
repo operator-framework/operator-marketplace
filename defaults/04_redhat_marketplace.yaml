@@ -7,7 +7,7 @@ metadata:
     workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.7
+  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.8
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
   priority: -300
