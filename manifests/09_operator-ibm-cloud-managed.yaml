@@ -5,8 +5,7 @@ metadata:
   namespace: openshift-marketplace
   annotations:
     config.openshift.io/inject-proxy: "marketplace-operator"
-    include.release.openshift.io/self-managed-high-availability: "true"
-    include.release.openshift.io/single-node-developer: "true"
+    include.release.openshift.io/ibm-cloud-managed: "true"
 spec:
   replicas: 1
   selector:
@@ -20,38 +19,37 @@ spec:
         name: marketplace-operator
     spec:
       serviceAccountName: marketplace-operator
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
+      nodeSelector: {}
       priorityClassName: "system-cluster-critical"
       tolerations:
-      - key: "node-role.kubernetes.io/master"
-        operator: Exists
-        effect: "NoSchedule"
-      - key: "node.kubernetes.io/unreachable"
-        operator: "Exists"
-        effect: "NoExecute"
-        tolerationSeconds: 120
-      - key: "node.kubernetes.io/not-ready"
-        operator: "Exists"
-        effect: "NoExecute"
-        tolerationSeconds: 120
+        - key: "node-role.kubernetes.io/master"
+          operator: Exists
+          effect: "NoSchedule"
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
       containers:
         - name: marketplace-operator
           image: quay.io/openshift/origin-operator-marketplace:latest
           ports:
-          - containerPort: 60000
-            name: metrics
-          - containerPort: 8080
-            name: healthz
+            - containerPort: 60000
+              name: metrics
+            - containerPort: 8080
+              name: healthz
           command:
-          - marketplace-operator
+            - marketplace-operator
           args:
-          - -defaultsDir=/defaults
-          - -clusterOperatorName=marketplace
-          - -tls-cert
-          - /var/run/secrets/serving-cert/tls.crt
-          - -tls-key
-          - /var/run/secrets/serving-cert/tls.key
+            - -defaultsDir=/defaults
+            - -clusterOperatorName=marketplace
+            - -tls-cert
+            - /var/run/secrets/serving-cert/tls.crt
+            - -tls-key
+            - /var/run/secrets/serving-cert/tls.key
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -90,8 +88,8 @@ spec:
             optional: true
             name: marketplace-trusted-ca
             items:
-            - key: ca-bundle.crt
-              path: tls-ca-bundle.pem
+              - key: ca-bundle.crt
+                path: tls-ca-bundle.pem
         - name: marketplace-operator-metrics
           secret:
             secretName: marketplace-operator-metrics
