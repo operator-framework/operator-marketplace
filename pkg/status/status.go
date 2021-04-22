@@ -24,12 +24,9 @@ const (
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
 	coStatusReportInterval = 20 * time.Second
 
-	// Since Openshift 4.4, Marketplace is only upgradeable if there are no custom (non-default)
-	// OperatorSources or CatalogSourceConifgs, and includes either a upgradeable message
-	// or a deprecatedAPIMessage in the Upgradeable ClusterOperatorStatus condition, conditioned
-	// on the presence of custom resources
+	upgradeable = "Marketplace is upgradeable"
 
-	upgradeableMessage = "Marketplace is upgradeable"
+	operatorAvailable = "OperatorAvailable"
 )
 
 type Reporter interface {
@@ -181,10 +178,24 @@ func (r *reporter) setRelatedObjects() {
 // monitorClusterStatus updates the ClusterOperator's status based on
 // the number of successful syncs / total syncs
 func (r *reporter) monitorClusterStatus() {
+	msg := fmt.Sprintf("Available release version: %s", r.version)
 	// Signal to the main channel that we have stopped reporting status.
 	defer func() {
 		close(r.monitorDoneCh)
 	}()
+	// Create the ClusterOperator in the available state if it does not exist
+	// and it is the first report.
+	if r.clusterOperator == nil {
+		conditionListBuilder := clusterStatusListBuilder()
+		conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), operatorAvailable)
+		conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, msg, operatorAvailable)
+		conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeable, operatorAvailable)
+		statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, operatorAvailable)
+		statusErr := r.setStatus(statusConditions)
+		if statusErr != nil {
+			log.Error("[status] " + statusErr.Error())
+		}
+	}
 	for {
 		select {
 		case <-r.stopCh:
@@ -200,28 +211,12 @@ func (r *reporter) monitorClusterStatus() {
 					log.Error("[status] " + statusErr.Error())
 				}
 			}()
-
-			// Create the ClusterOperator in the progressing state if it does not exist
-			// or if it is the first report.
-			if r.clusterOperator == nil {
-				reason := "OperatorStarting"
-				conditionListBuilder := clusterStatusListBuilder()
-				conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionTrue, fmt.Sprintf("Progressing towards release version: %s", r.version), reason)
-				msg := fmt.Sprintf("Determining status")
-				conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionFalse, msg, reason)
-				conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionFalse, msg, reason)
-				statusConditions := conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, reason)
-				statusErr = r.setStatus(statusConditions)
-				break
-			}
-
 			// Report that marketplace is available
-			reason := "OperatorAvailable"
 			conditionListBuilder := clusterStatusListBuilder()
-			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-			conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), reason)
-			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeableMessage, reason)
-			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, fmt.Sprintf("Available release version: %s", r.version), reason)
+			conditionListBuilder(configv1.OperatorProgressing, configv1.ConditionFalse, fmt.Sprintf("Successfully progressed to release version: %s", r.version), operatorAvailable)
+			conditionListBuilder(configv1.OperatorDegraded, configv1.ConditionFalse, msg, operatorAvailable)
+			conditionListBuilder(configv1.OperatorUpgradeable, configv1.ConditionTrue, upgradeable, operatorAvailable)
+			statusConditions := conditionListBuilder(configv1.OperatorAvailable, configv1.ConditionTrue, msg, operatorAvailable)
 			statusErr = r.setStatus(statusConditions)
 		}
 	}
