@@ -267,14 +267,15 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 // cleanUpOldOpsrcResources cleans up old deployments and services associated with OperatorSources
 func cleanUpOldOpsrcResources(kubeClient client.Client) error {
 	ctx := context.TODO()
-	deploy := &v1.DeploymentList{}
-	svc := &v12.ServiceList{}
-	o := &client.ListOptions{}
-	if err := o.SetLabelSelector(strings.Join([]string{builders.OpsrcOwnerNameLabel, builders.OpsrcOwnerNamespaceLabel}, ",")); err != nil {
-		return err
+
+	deploy := &appsv1.DeploymentList{}
+	svc := &corev1.ServiceList{}
+	o := []client.ListOption{
+		client.MatchingLabels{builders.OpsrcOwnerNameLabel: builders.OpsrcOwnerNamespaceLabel},
 	}
-	allErrors := []error{}
-	if err := kubeClient.List(ctx, o, deploy); err == nil {
+
+	var allErrors []error
+	if err := kubeClient.List(ctx, deploy, o...); err == nil {
 		for _, d := range deploy.Items {
 			if err := kubeClient.Delete(ctx, &d); err != nil {
 				allErrors = append(allErrors, err)
@@ -283,7 +284,7 @@ func cleanUpOldOpsrcResources(kubeClient client.Client) error {
 	} else {
 		allErrors = append(allErrors, err)
 	}
-	if err := kubeClient.List(ctx, o, svc); err == nil {
+	if err := kubeClient.List(ctx, svc, o...); err == nil {
 		for _, s := range svc.Items {
 			if err := kubeClient.Delete(ctx, &s); err != nil {
 				allErrors = append(allErrors, err)

@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -51,7 +52,7 @@ type reporter struct {
 // cluster
 func (r *reporter) ensureClusterOperator() error {
 	var err error
-	r.clusterOperator, err = r.configClient.ClusterOperators().Get(r.clusterOperatorName, metav1.GetOptions{})
+	r.clusterOperator, err = r.configClient.ClusterOperators().Get(context.TODO(), r.clusterOperatorName, metav1.GetOptions{})
 
 	if err == nil {
 		log.Debug("[status] Found existing ClusterOperator")
@@ -70,7 +71,7 @@ func (r *reporter) ensureClusterOperator() error {
 	}
 	r.setRelatedObjects()
 
-	r.clusterOperator, err = r.configClient.ClusterOperators().Create(clusterOperator)
+	r.clusterOperator, err = r.configClient.ClusterOperators().Create(context.TODO(), clusterOperator, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Error %v creating ClusterOperator", err)
 	}
@@ -146,7 +147,7 @@ func (r *reporter) updateStatus(previousStatus *configv1.ClusterOperatorStatus) 
 		// Always update RelatedObjects to account for the upgrade case.
 		r.setRelatedObjects()
 
-		_, err := r.configClient.ClusterOperators().UpdateStatus(r.clusterOperator)
+		_, err := r.configClient.ClusterOperators().UpdateStatus(context.TODO(), r.clusterOperator, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("Error %v updating ClusterOperator", err)
 		}

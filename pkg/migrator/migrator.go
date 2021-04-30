@@ -39,9 +39,9 @@ func New(client client.Client) Migrator {
 	}
 }
 func (m *migrator) Migrate() error {
-
 	opsrcs := &v1.OperatorSourceList{}
-	err := m.client.List(context.TODO(), &client.ListOptions{}, opsrcs)
+	selector := []client.ListOption{}
+	err := m.client.List(context.TODO(), opsrcs, selector...)
 	if err != nil {
 		return err
 	}
