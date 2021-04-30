@@ -76,18 +76,10 @@ func main() {
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	var useTLS bool
-	if *tlsCertPath != "" && *tlsKeyPath == "" || *tlsCertPath == "" && *tlsKeyPath != "" {
-		log.Warn("both --tls-key and --tls-crt must be provided for TLS to be enabled, falling back to non-https")
-	} else if *tlsCertPath == "" && *tlsKeyPath == "" {
-		log.Info("TLS keys not set, using non-https for metrics")
-	} else {
-		log.Info("TLS keys set, using https for metrics")
-		useTLS = true
-	}
-	err := metrics.ServePrometheus(useTLS, *tlsCertPath, *tlsKeyPath)
+	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
-		log.Fatalf("failed to serve prometheus metrics: TLS enabled %d: %s", useTLS, err)
+		logrus.Errorf("failed to serve prometheus metrics: %s", err)
+		os.Exit(1)
 	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
