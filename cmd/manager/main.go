@@ -18,7 +18,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
@@ -26,6 +26,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
+	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
