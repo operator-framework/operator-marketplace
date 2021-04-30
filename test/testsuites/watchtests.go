@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
+	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +53,7 @@ func testRestoreOpSrcService(t *testing.T) {
 // deleteCheckRestoreChild constructs the child resource based on the object and
 // deletes it. It then checks if the child resources were recreated.
 func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	namespace, err := ctx.GetNamespace()
@@ -61,15 +61,17 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 
 	client := test.Global.Client
 
-	var obj runtime.Object
-	var name, targetNamespace string
-
+	var (
+		obj             runtime.Object
+		name            string
+		targetNamespace string
+	)
 	switch owner {
 	case v1.OperatorSourceKind:
 		name = helpers.TestOperatorSourceName
 		targetNamespace = namespace
 	default:
-		return fmt.Errorf("Unknown owner %s", owner)
+		return fmt.Errorf("unknown owner %s", owner)
 	}
 
 	objMeta := meta.ObjectMeta{
@@ -105,7 +107,7 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 			ObjectMeta: objMeta,
 		}
 	default:
-		return fmt.Errorf("Unknown child %s", child)
+		return fmt.Errorf("unknown child %s", child)
 	}
 
 	// Delete the object

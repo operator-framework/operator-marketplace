@@ -29,16 +29,18 @@ func DefaultCatsrc(t *testing.T) {
 
 	t.Run("delete-default-catalogsource", testDeleteDefaultCatsrc)
 	t.Run("update-default-catalogsource", testUpdateDefaultCatsrc)
+	// TODO(tflannag): It would be nice if we could skip this test when the operator
+	// is being run locally: `if test.Framework.LocalOperator { t.Skip(...) }``
 	t.Run("delete-default-catsrc-while-stopped", testDeleteDefaultCatsrcWhileStopped)
 	t.Run("catsrc-behavior-when-disabled", testDefaultCatsrcWhileDisabled)
 }
 
 func testDeleteDefaultCatsrc(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	client := test.Global.Client
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	err = helpers.InitCatSrcDefinition()
@@ -58,20 +60,22 @@ func testDeleteDefaultCatsrc(t *testing.T) {
 // testUpdateDefaultCatsrc changes a default CatalogSource and checks if it has
 // been restored correctly.
 func testUpdateDefaultCatsrc(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
-
-	client := test.Global.Client
 
 	err := helpers.InitCatSrcDefinition()
 	require.NoError(t, err, "Could not get a default CatalogSource definition from disk")
+	require.NotEmpty(t, helpers.DefaultSources)
 
+	client := test.Global.Client
 	testCatsrc := helpers.DefaultSources[0]
 	updateCatsrc := &olm.CatalogSource{}
+
 	err = client.Get(context.TODO(), types.NamespacedName{Name: testCatsrc.Name, Namespace: testCatsrc.Namespace}, updateCatsrc)
+	require.NoError(t, err, "failed to query for the %s CatalogSource in the %s namespace", testCatsrc.Name, testCatsrc.Namespace)
 
 	updateCatsrc.Spec.Publisher = "Random"
-	err = helpers.UpdateRuntimeObject(client, updateCatsrc)
+	err = helpers.UpdateCatalogSourceWithRetries(client, updateCatsrc)
 	require.NoError(t, err, "Default CatalogSource could not be updated successfully")
 
 	err = helpers.WaitForExpectedSpec(client, testCatsrc.Name, testCatsrc.Namespace, testCatsrc)
@@ -82,38 +86,37 @@ func testUpdateDefaultCatsrc(t *testing.T) {
 // for deletion, then starts the operator back up. When it does it expects that the
 // CatalogSource is correctly recreated.
 func testDeleteDefaultCatsrcWhileStopped(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
-	client := test.Global.Client
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
-	err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, &apps.Deployment{})
-	if err != nil {
-		t.Logf("Failed to find deployment operator-marketplace")
-		return
-	}
+	const marketplaceName = "marketplace-operator"
+
+	client := test.Global.Client
+	err = test.Global.Client.Get(context.TODO(), types.NamespacedName{Name: marketplaceName, Namespace: namespace}, &apps.Deployment{})
+	require.NoError(t, err, "Failed to find deployment %s", marketplaceName)
 
 	err = helpers.ScaleMarketplace(test.Global.Client, namespace, int32(0))
-	require.NoError(t, err, "Could not scale down marketplace operator")
+	require.NoError(t, err, "Could not scale down the %s deployment to zero replicas", marketplaceName)
 
 	err = helpers.InitCatSrcDefinition()
 	require.NoError(t, err, "Could not get default CatalogSource definitions from disk")
 
 	deleteCatsrc := *helpers.DefaultSources[0]
 	err = helpers.DeleteRuntimeObject(client, &deleteCatsrc)
-	require.NoError(t, err, "Default CatalogSource could not be deleted successfully")
+	require.NoError(t, err, "Default %s CatalogSource could not be deleted successfully", deleteCatsrc.Name)
 
 	err = helpers.WaitForCatsrcMarkedForDeletion(client, deleteCatsrc.Name, deleteCatsrc.Namespace)
-	require.NoError(t, err, "Default CatalogSource was not successfully deleted")
+	require.NoError(t, err, "Default %s CatalogSource was not successfully deleted", deleteCatsrc.Name)
 
 	err = helpers.ScaleMarketplace(test.Global.Client, namespace, int32(1))
-	require.NoError(t, err, "Could not scale marketplace back up")
+	require.NoError(t, err, "Could not scale the %s deployment back up", marketplaceName)
 
 	clusterCatSrc := &olm.CatalogSource{}
 	err = helpers.WaitForResult(client, clusterCatSrc, namespace, helpers.DefaultSources[0].Name)
-	assert.NoError(t, err, "Default CatalogSource was never created")
+	assert.NoError(t, err, "Default %s CatalogSource was never created", clusterCatSrc.Name)
 
 	assert.ObjectsAreEqualValues(helpers.DefaultSources[0].Spec, clusterCatSrc.Spec)
 }
@@ -124,17 +127,22 @@ func testDeleteDefaultCatsrcWhileStopped(t *testing.T) {
 // the default CatalogSources are re-enabled, the default specs are restored for the CatalogSources which
 // have been re-enabled.
 func testDefaultCatsrcWhileDisabled(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
-	client := test.Global.Client
-	namespace, err := test.NewTestCtx(t).GetNamespace()
-	require.NoError(t, err, "Could not get namespace.")
+	const (
+		catSrcName      = "redhat-operators"
+		disableAllIndex = 4
+	)
 
-	err = toggle(t, 4, true, false) //Disable all default CatalogSources
+	client := test.Global.Client
+	namespace, err := ctx.GetOperatorNamespace()
+	require.NoError(t, err, "Could not get the marketplace namespace")
+
+	err = toggle(t, disableAllIndex, true, false) //Disable all default CatalogSources
 	require.NoError(t, err, "Could not disable default CatalogSources")
 
-	err = checkDeleted(4, namespace)
+	err = checkDeleted(disableAllIndex, namespace)
 	require.NoError(t, err, "Default CatalogSource was not removed from the cluster")
 
 	customCatsrc := olm.CatalogSource{
@@ -143,7 +151,7 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 			APIVersion: "operators.coreos.com/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "redhat-operators",
+			Name:      catSrcName,
 			Namespace: namespace,
 		},
 		Spec: olm.CatalogSourceSpec{
@@ -154,16 +162,17 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 		},
 	}
 	err = helpers.CreateRuntimeObjectNoCleanup(client, &customCatsrc)
-	require.NoError(t, err, "Could not create custom CatalogSource redhat-operators")
+	require.NoError(t, err, "Could not create custom CatalogSource %s", catSrcName)
 
-	customCatsrc, err = checkForCatsrc("redhat-operators", namespace)
-	require.NoError(t, err, "Custom CatalogSource redhat-operators was removed from the cluster")
+	customCatsrc, err = checkForCatsrc(catSrcName, namespace)
+	require.NoError(t, err, "Custom CatalogSource %s was removed from the cluster", catSrcName)
 
 	customCatsrc.Spec.Image = "my-cool-registry/my-namespace/my-other-cool-index"
-	err = helpers.UpdateRuntimeObject(client, &customCatsrc)
+	err = helpers.UpdateCatalogSourceWithRetries(client, &customCatsrc)
+	require.NoError(t, err, "failed to update the CatalogSource custom resource")
 
 	err = wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		updatedCatsrc, nil := checkForCatsrc("redhat-operators", namespace)
+		updatedCatsrc, err := checkForCatsrc(catSrcName, namespace)
 		if err != nil || !defaults.AreCatsrcSpecsEqual(&customCatsrc.Spec, &updatedCatsrc.Spec) {
 			return false, err
 		}
@@ -171,41 +180,38 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 	})
 	require.NoError(t, err, "The update on the custom CatalogSource was reverted back")
 
-	customCatsrc, err = checkForCatsrc("redhat-operators", namespace)
-	require.NoError(t, err, "Custom CatalogSource redhat-operators was removed from the cluster after marketplace was restarted")
+	customCatsrc, err = checkForCatsrc(catSrcName, namespace)
+	require.NoError(t, err, "Custom CatalogSource %s was removed from the cluster after marketplace was restarted", catSrcName)
 
-	err = toggle(t, 4, false, false) //Re-enable all default CatalogSources
+	err = toggle(t, disableAllIndex, false, false) //Re-enable all default CatalogSources
 	require.NoError(t, err, "Could not enable default CatalogSources")
 
-	err = checkCreated(4, namespace)
+	err = checkCreated(disableAllIndex, namespace)
 	require.NoError(t, err, "Default CatalogSources were not created properly")
 
 	err = helpers.InitCatSrcDefinition()
 	require.NoError(t, err, "Could not get a default CatalogSource definitions from disk")
 
 	for _, catsrcDef := range helpers.DefaultSources {
-		if catsrcDef.Name == "redhat-operators" {
-			err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-				clusterCatsrc := &olm.CatalogSource{}
-				err = client.Get(context.TODO(), types.NamespacedName{Name: "redhat-operators", Namespace: namespace}, clusterCatsrc)
-				if err != nil || !defaults.AreCatsrcSpecsEqual(&clusterCatsrc.Spec, &catsrcDef.Spec) {
-					return false, err
-				}
-				return true, nil
-			})
-			require.NoError(t, err, "Default CatalogSource was not restored properly")
-			break
+		if catsrcDef.Name != catSrcName {
+			continue
 		}
+		err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+			clusterCatsrc := &olm.CatalogSource{}
+			err = client.Get(context.TODO(), types.NamespacedName{Name: catSrcName, Namespace: namespace}, clusterCatsrc)
+			if err != nil || !defaults.AreCatsrcSpecsEqual(&clusterCatsrc.Spec, &catsrcDef.Spec) {
+				return false, err
+			}
+			return true, nil
+		})
+		require.NoError(t, err, "Default CatalogSource was not restored properly")
 	}
 }
 
 // checkForCatsrc checks if CatalogSource is present, and is not being removed after some time has passed
 func checkForCatsrc(name, namespace string) (olm.CatalogSource, error) {
 	client := test.Global.Client
-	// Wait for a minute
-	wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		return false, nil
-	})
+	time.Sleep(60 * time.Second)
 
 	//Check CatalogSource is present in the cluster
 	catsrc := olm.CatalogSource{}

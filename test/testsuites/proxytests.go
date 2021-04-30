@@ -31,19 +31,19 @@ func testOpSrcRegistryIncludesProxyVars(t *testing.T) {
 // checkDeploymentIncludesProxyVars checks if the deployment has the appropriate
 // proxy variables set.
 func checkDeploymentIncludesProxyVars(t *testing.T, name string) error {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
-
-	// Get global framework variables.
-	client := test.Global.Client
 
 	// Get test namespace
 	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
+	// Get global framework variables.
+	client := test.Global.Client
 	// Get the cluster proxy
 	clusterProxy := &apiconfigv1.Proxy{}
 	clusterProxyKey := types.NamespacedName{Name: "cluster"}
+
 	err = client.Get(context.TODO(), clusterProxyKey, clusterProxy)
 	if err != nil && !errors.IsNotFound(err) {
 		require.NoError(t, err, "Unexpected error while retrieving cluster proxy")
@@ -51,18 +51,19 @@ func checkDeploymentIncludesProxyVars(t *testing.T, name string) error {
 
 	// Create the expected proxy EnvVar array.
 	expected := []corev1.EnvVar{
-		corev1.EnvVar{Name: "HTTP_PROXY", Value: clusterProxy.Status.HTTPProxy},
-		corev1.EnvVar{Name: "HTTPS_PROXY", Value: clusterProxy.Status.HTTPSProxy},
-		corev1.EnvVar{Name: "NO_PROXY", Value: clusterProxy.Status.NoProxy},
+		{Name: "HTTP_PROXY", Value: clusterProxy.Status.HTTPProxy},
+		{Name: "HTTPS_PROXY", Value: clusterProxy.Status.HTTPSProxy},
+		{Name: "NO_PROXY", Value: clusterProxy.Status.NoProxy},
 	}
 
 	// Get the Deployment with the given namespacedname.
 	deployment := &apps.Deployment{}
 	key := types.NamespacedName{Namespace: namespace, Name: name}
+
 	err = client.Get(context.TODO(), key, deployment)
 	require.NoError(t, err, fmt.Sprintf("Unexpected error while retrieving the %s/%s deployment", namespace, name))
-	actual := deployment.Spec.Template.Spec.Containers[0].Env
 
+	actual := deployment.Spec.Template.Spec.Containers[0].Env
 	// Check that the the lists match.
 	for i := range expected {
 		if !contains(actual, expected[i]) {

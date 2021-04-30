@@ -7,6 +7,7 @@ import (
 	"time"
 
 	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
@@ -33,11 +34,11 @@ func OperatorHubTests(t *testing.T) {
 
 // testDisable tests disabling a default CatalogSource and ensures that it is not present on the cluster
 func testDisable(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	// Disable a default CatalogSource
@@ -55,15 +56,15 @@ func testDisable(t *testing.T) {
 	resetClusterOperatorHub(t, namespace)
 }
 
-// testDisableAll tests disabling all the default CatalogSources using DisableAllDefaultSources and ensures that they
-// are not present on the cluster
+// testDisableAll tests disabling all the default CatalogSources using DisableAllDefaultSources
+// and ensures that they are not present on the cluster.
 func testDisableAll(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
-	require.NoError(t, err, "Could not get namespace.")
+	namespace, err := ctx.GetNamespace()
+	require.NoError(t, err, "Could not get namespace")
 
 	err = toggle(t, 0, true, true)
 	require.NoError(t, err, "Error updating cluster OperatorHub")
@@ -80,11 +81,11 @@ func testDisableAll(t *testing.T) {
 // testDisableAllEnableOne tests if disabled=true in a source present in sources overrides DisableAllDefaultSources
 // and ensures the correct number of default OperatorSources are present on the cluster.
 func testDisableAllEnableOne(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	err = toggle(t, 1, false, true)
@@ -110,11 +111,11 @@ func testDisableAllEnableOne(t *testing.T) {
 
 // testDisableTwo tests disabling two default OperatorSource and ensures that they are not present on the cluster
 func testDisableTwo(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	// Disable two default CatalogSources
@@ -135,11 +136,11 @@ func testDisableTwo(t *testing.T) {
 // testDisableEnable tests disabling a default CatalogSource and then enables it. At each step resources on the
 // cluster are checked appropriately.
 func testDisableEnable(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	// Disable a default CatalogSource
@@ -169,11 +170,11 @@ func testDisableEnable(t *testing.T) {
 
 // testDisableNonDefault tests disabling a non-default resource and ensures no action was taken on it.
 func testDisableNonDefault(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get test namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace.")
 
 	err = helpers.InitCatSrcDefinition()
@@ -200,7 +201,6 @@ func testDisableNonDefault(t *testing.T) {
 		}
 		return false, nil
 	})
-
 	assert.NoError(t, err, "Operatorhub was not updated correctly")
 
 	var testStatus apiconfigv1.HubSourceStatus
@@ -223,14 +223,14 @@ func testDisableNonDefault(t *testing.T) {
 // testClusterStatusDefaultsDisabled tests that, when all CatalogSources are disabled,
 // the clusterstatus sets Available=True
 func testClusterStatusDefaultsDisabled(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get global framework variables.
 	client := test.Global.Client
 
 	// Get namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
 	// First set the OperatorHub to disable all the default catalogsources
@@ -277,14 +277,14 @@ func testClusterStatusDefaultsDisabled(t *testing.T) {
 // testSomeClusterStatusDefaultsDisabled tests that, when some default CatalogSources are disabled,
 // the clusterstatus sets Available=True
 func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
 	// Get global framework variables.
 	client := test.Global.Client
 
 	// Get namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
 	// First set the OperatorHub to disable first two default operator sources
@@ -303,7 +303,8 @@ func testSomeClusterStatusDefaultsDisabled(t *testing.T) {
 		apiconfigv1.OperatorUpgradeable: apiconfigv1.ConditionTrue,
 		apiconfigv1.OperatorProgressing: apiconfigv1.ConditionFalse,
 		apiconfigv1.OperatorAvailable:   apiconfigv1.ConditionTrue,
-		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse}
+		apiconfigv1.OperatorDegraded:    apiconfigv1.ConditionFalse,
+	}
 
 	// Poll to ensure ClusterOperator is present and has the correct status
 	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
@@ -353,7 +354,6 @@ func resetClusterOperatorHub(t *testing.T, namespace string) {
 // updateOperatorHub updates the "cluster" OperatorHub resource
 func updateOperatorHub(t *testing.T, sources []apiconfigv1.HubSource, disableAll bool) error {
 	cluster := getClusterOperatorHub(t)
-
 	client := test.Global.Client
 
 	// Disable / enable the default CatalogSource
@@ -397,13 +397,14 @@ func toggle(t *testing.T, nr int, disabled, disableAll bool) error {
 // checkDeleted checks if nr default CatalogSources have been removed from the cluster. For
 // example, nr=2 checks if the first 2 defaults helpers.DefaultSources have been deleted.
 func checkDeleted(nr int, namespace string) error {
+	var errors []error
 	for n := 0; n < nr; n++ {
 		err := checkCatsrcIsDeleted(helpers.DefaultSources[n].Name, namespace)
 		if err != nil {
-			return err
+			errors = append(errors, err)
 		}
 	}
-	return nil
+	return utilerrors.NewAggregate(errors)
 }
 
 // checkCreated checks if nr default CatalogSources are present on the cluster. For example,
@@ -439,8 +440,8 @@ func checkCatsrcIsDeleted(name, namespace string) error {
 	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
 		def := &olm.CatalogSource{}
 		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, def)
-		if !errors.IsNotFound(err) || def.Name != "" {
-			return false, fmt.Errorf("default CatalogSource still present on the cluster")
+		if errors.IsAlreadyExists(err) || def.Name != "" {
+			return false, fmt.Errorf("default %s/%s CatalogSource still present on the cluster", name, namespace)
 		}
 		return true, nil
 	})
@@ -450,8 +451,7 @@ func checkCatsrcIsDeleted(name, namespace string) error {
 // checkClusterOperatorHub checks if the cluster OperatorHub resource is in the expected state
 func checkClusterOperatorHub(t *testing.T, nrExpectedDisabled int) error {
 	cluster := getClusterOperatorHub(t)
-	assert.True(t, len(cluster.Status.Sources) == len(helpers.DefaultSources),
-		"Spurious elements in HubSourceStatus")
+	assert.True(t, len(cluster.Status.Sources) == len(helpers.DefaultSources), "Spurious elements in HubSourceStatus")
 
 	var nrDisabled int
 	for _, status := range cluster.Status.Sources {
@@ -459,9 +459,9 @@ func checkClusterOperatorHub(t *testing.T, nrExpectedDisabled int) error {
 			nrDisabled++
 		}
 	}
-
 	if nrDisabled != nrExpectedDisabled {
 		return fmt.Errorf("incorrect disabled default CatalogSources")
 	}
+
 	return nil
 }

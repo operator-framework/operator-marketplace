@@ -29,7 +29,6 @@ func TestMarketplace(t *testing.T) {
 // initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the
 // olm CatalogSource type to the framework scheme.
 func initTestingFramework(t *testing.T) {
-	// Add (olm) CatalogSources to framework scheme.
 	catalogSource := &olm.CatalogSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       olm.CatalogSourceKind,
@@ -43,8 +42,6 @@ func initTestingFramework(t *testing.T) {
 
 	_, err = helpers.EnsureConfigAPIIsAvailable()
 	if err != nil {
-		t.Logf("failed to add OpenShift config custom resource scheme to framework: %v. config tests will not run.",
-			err)
+		t.Logf("failed to add OpenShift config custom resource scheme to framework: %v. config tests will not run.", err)
 	}
-
 }
