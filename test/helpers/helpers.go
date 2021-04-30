@@ -226,7 +226,7 @@ func UpdateRuntimeObject(client test.FrameworkClient, obj runtime.Object) error 
 func UpdateCatalogSourceWithRetries(client test.FrameworkClient, obj *olmv1alpha1.CatalogSource) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		err := client.Update(context.TODO(), obj)
-		if err != nil && apierrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			clone := obj.DeepCopyObject().(*olmv1alpha1.CatalogSource)
 			key := types.NamespacedName{
 				Name:      obj.Name,
@@ -387,10 +387,7 @@ func WaitForCatsrcMarkedForDeletion(client test.FrameworkClient, name, namespace
 
 	return wait.Poll(RetryInterval, 1*time.Minute, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, resultCatalogSource)
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		if resultCatalogSource.DeletionTimestamp != nil {
+		if resultCatalogSource.DeletionTimestamp != nil || apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		return false, err
@@ -498,7 +495,6 @@ func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscri
 // checking.
 func EnsureConfigAPIIsAvailable() (bool, error) {
 	var err error
-	// TODO(tflannag): This can be deflated by checking if not nil and exiting early.
 	if isConfigAPIPresent == nil {
 		// present is used to allocate space for the isConfigAPIPresent pointer.
 		present := false

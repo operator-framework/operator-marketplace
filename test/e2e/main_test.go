@@ -26,8 +26,7 @@ func TestMarketplace(t *testing.T) {
 	t.Run("no-setup-test-group", testgroups.NoSetupTestGroup)
 }
 
-// initTestingFramework adds the marketplace OperatorSource and CatalogSourceConfig types as well as the
-// olm CatalogSource type to the framework scheme.
+// initTestingFramework adds the OLM CatalogSource type to the framework scheme.
 func initTestingFramework(t *testing.T) {
 	catalogSource := &olm.CatalogSource{
 		TypeMeta: metav1.TypeMeta{

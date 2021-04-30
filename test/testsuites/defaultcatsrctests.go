@@ -130,20 +130,17 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
-	const (
-		catSrcName      = "redhat-operators"
-		disableAllIndex = 4
-	)
-
-	client := test.Global.Client
 	namespace, err := ctx.GetOperatorNamespace()
 	require.NoError(t, err, "Could not get the marketplace namespace")
 
-	err = toggle(t, disableAllIndex, true, false) //Disable all default CatalogSources
+	err = toggle(t, 4, true, false) //Disable all default CatalogSources
 	require.NoError(t, err, "Could not disable default CatalogSources")
 
-	err = checkDeleted(disableAllIndex, namespace)
+	err = checkDeleted(4, namespace)
 	require.NoError(t, err, "Default CatalogSource was not removed from the cluster")
+
+	catSrcName := "redhat-operators"
+	client := test.Global.Client
 
 	customCatsrc := olm.CatalogSource{
 		TypeMeta: metav1.TypeMeta{
@@ -183,10 +180,10 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 	customCatsrc, err = checkForCatsrc(catSrcName, namespace)
 	require.NoError(t, err, "Custom CatalogSource %s was removed from the cluster after marketplace was restarted", catSrcName)
 
-	err = toggle(t, disableAllIndex, false, false) //Re-enable all default CatalogSources
+	err = toggle(t, 4, false, false) //Re-enable all default CatalogSources
 	require.NoError(t, err, "Could not enable default CatalogSources")
 
-	err = checkCreated(disableAllIndex, namespace)
+	err = checkCreated(4, namespace)
 	require.NoError(t, err, "Default CatalogSources were not created properly")
 
 	err = helpers.InitCatSrcDefinition()
@@ -211,8 +208,10 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 // checkForCatsrc checks if CatalogSource is present, and is not being removed after some time has passed
 func checkForCatsrc(name, namespace string) (olm.CatalogSource, error) {
 	client := test.Global.Client
-	time.Sleep(60 * time.Second)
-
+	// Wait for a minute
+	wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
+		return false, nil
+	})
 	//Check CatalogSource is present in the cluster
 	catsrc := olm.CatalogSource{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &catsrc)

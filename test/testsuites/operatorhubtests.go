@@ -440,10 +440,10 @@ func checkCatsrcIsDeleted(name, namespace string) error {
 	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
 		def := &olm.CatalogSource{}
 		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, def)
-		if errors.IsAlreadyExists(err) || def.Name != "" {
-			return false, fmt.Errorf("default %s/%s CatalogSource still present on the cluster", name, namespace)
+		if errors.IsNotFound(err) {
+			return true, nil
 		}
-		return true, nil
+		return false, err
 	})
 	return err
 }

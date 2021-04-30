@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 
@@ -39,7 +40,6 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -71,7 +71,7 @@ func main() {
 
 	// Check if version flag was set
 	if version {
-		logrus.Infof(sourceCommit.String())
+		logrus.Infof("%s", sourceCommit.String())
 		os.Exit(0)
 	}
 
@@ -79,28 +79,24 @@ func main() {
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
 	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
-		logrus.Errorf("failed to serve prometheus metrics: %s", err)
-		os.Exit(1)
+		logrus.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
-		logrus.Errorf("failed to get watch namespace: %v", err)
-		os.Exit(1)
+		logrus.Fatalf("failed to get watch namespace: %v", err)
 	}
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	// Set OpenShift config API availability
 	err = configv1.SetConfigAPIAvailability(cfg)
 	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -108,37 +104,36 @@ func main() {
 	// from the operator's namespace. The reason for watching all namespaces is
 	// watch for CatalogSources in targetNamespaces being deleted and recreate
 	// them.
+	//
+	// Note(tflannag): Setting the `MetricsBindAddress` to `0` here disables the
+	// metrics listener from controller-runtime. Previously, this was disabled by
+	// default in <v0.2.0, but it's now enabled by default and the default port
+	// conflicts with the same port we bind for the health checks.
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:              "",
-		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     "0",
+		Namespace:          "",
+		MetricsBindAddress: "0",
 	})
 	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	logrus.Info("Registering Components.")
 	logrus.Info("setting up scheme")
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	// Add external resource to scheme
 	if err := olmv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 	// If the config API is available add the config resources to the scheme
 	if configv1.IsAPIAvailable() {
 		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			logrus.Fatal(err)
 		}
 	}
 
@@ -148,40 +143,32 @@ func main() {
 	if clusterOperatorName != "" {
 		statusReporter, err = status.NewReporter(cfg, mgr, namespace, clusterOperatorName, os.Getenv("RELEASE_VERSION"), stopCh)
 		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			logrus.Fatal(err)
 		}
 	}
 
 	// Populate the global default OperatorSources definition and config
 	err = defaults.PopulateGlobals()
 	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	logrus.Info("Setting up health checks")
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		logrus.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("healthz", healthz.Ping); err != nil {
-		logrus.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	go http.ListenAndServe(":8080", nil)
 
 	// Wait until this instance becomes the leader.
 	logrus.Info("Waiting to become leader.")
 	err = leader.Become(context.TODO(), leaderElectionConfigMapName)
 	if err != nil {
-		logrus.Error(err, "Failed to retry for leader lock")
-		os.Exit(1)
+		logrus.Fatal(err, "Failed to retry for leader lock")
 	}
 	logrus.Info("Elected leader.")
 
@@ -190,8 +177,7 @@ func main() {
 	// migrate away from Marketplace API
 	clientGo, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		logrus.Error(err, "Failed to instantiate the client for migrator")
-		os.Exit(1)
+		logrus.Fatal(err, "Failed to instantiate the client for migrator")
 	}
 	migrator := migrator.New(clientGo)
 	err = migrator.Migrate()
@@ -207,8 +193,7 @@ func main() {
 	// Handle the defaults
 	err = ensureDefaults(cfg, mgr.GetScheme())
 	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+		logrus.Fatal(err)
 	}
 
 	err = defaults.RemoveObsoleteOpsrc(clientGo)
@@ -227,7 +212,6 @@ func main() {
 	exit(err)
 }
 
-// TODO(tflannag): Why aren't we passing a logrus.FieldLogger here?
 // exit stops the reporting of ClusterOperator status and exits with the proper exit code.
 func exit(err error) {
 	// If an error exists then exit with status set to 1
