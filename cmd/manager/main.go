@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -107,7 +108,11 @@ func main() {
 	// from the operator's namespace. The reason for watching all namespaces is
 	// watch for CatalogSources in targetNamespaces being deleted and recreate
 	// them.
-	mgr, err := manager.New(cfg, manager.Options{Namespace: ""})
+	mgr, err := manager.New(cfg, manager.Options{
+		Namespace:              "",
+		HealthProbeBindAddress: ":8080",
+		MetricsBindAddress:     "0",
+	})
 	if err != nil {
 		logrus.Error(err)
 		os.Exit(1)
@@ -161,11 +166,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Serve a health check.
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	go http.ListenAndServe(":8080", nil)
+	logrus.Info("Setting up health checks")
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		logrus.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("healthz", healthz.Ping); err != nil {
+		logrus.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
 
 	// Wait until this instance becomes the leader.
 	logrus.Info("Waiting to become leader.")
