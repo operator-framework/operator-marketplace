@@ -1,6 +1,7 @@
 package v1helpers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -43,7 +44,7 @@ func (fakeSharedIndexInformer) Run(stopCh <-chan struct{}) {
 }
 
 func (fakeSharedIndexInformer) HasSynced() bool {
-	panic("implement me")
+	return true
 }
 
 func (fakeSharedIndexInformer) LastSyncResourceVersion() string {
@@ -55,6 +56,10 @@ func (fakeSharedIndexInformer) AddIndexers(indexers cache.Indexers) error {
 }
 
 func (fakeSharedIndexInformer) GetIndexer() cache.Indexer {
+	panic("implement me")
+}
+
+func (fakeSharedIndexInformer) SetWatchErrorHandler(handler cache.WatchErrorHandler) error {
 	panic("implement me")
 }
 
@@ -73,7 +78,6 @@ func NewFakeStaticPodOperatorClient(
 }
 
 type fakeStaticPodOperatorClient struct {
-	fakeOperatorStatus          *operatorv1.OperatorStatus
 	fakeStaticPodOperatorSpec   *operatorv1.StaticPodOperatorSpec
 	fakeStaticPodOperatorStatus *operatorv1.StaticPodOperatorStatus
 	resourceVersion             string
@@ -83,6 +87,10 @@ type fakeStaticPodOperatorClient struct {
 
 func (c *fakeStaticPodOperatorClient) Informer() cache.SharedIndexInformer {
 	return &fakeSharedIndexInformer{}
+
+}
+func (c *fakeStaticPodOperatorClient) GetObjectMeta() (*metav1.ObjectMeta, error) {
+	panic("not supported")
 }
 
 func (c *fakeStaticPodOperatorClient) GetStaticPodOperatorState() (*operatorv1.StaticPodOperatorSpec, *operatorv1.StaticPodOperatorStatus, string, error) {
@@ -130,13 +138,29 @@ func (c *fakeStaticPodOperatorClient) UpdateStaticPodOperatorSpec(resourceVersio
 }
 
 func (c *fakeStaticPodOperatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operatorv1.OperatorStatus, string, error) {
-	return &c.fakeStaticPodOperatorSpec.OperatorSpec, &c.fakeStaticPodOperatorStatus.OperatorStatus, "", nil
+	return &c.fakeStaticPodOperatorSpec.OperatorSpec, &c.fakeStaticPodOperatorStatus.OperatorStatus, c.resourceVersion, nil
 }
 func (c *fakeStaticPodOperatorClient) UpdateOperatorSpec(string, *operatorv1.OperatorSpec) (spec *operatorv1.OperatorSpec, resourceVersion string, err error) {
 	panic("not supported")
 }
-func (c *fakeStaticPodOperatorClient) UpdateOperatorStatus(string, *operatorv1.OperatorStatus) (status *operatorv1.OperatorStatus, err error) {
-	panic("not supported")
+func (c *fakeStaticPodOperatorClient) UpdateOperatorStatus(resourceVersion string, status *operatorv1.OperatorStatus) (*operatorv1.OperatorStatus, error) {
+	if c.resourceVersion != resourceVersion {
+		return nil, errors.NewConflict(schema.GroupResource{Group: operatorv1.GroupName, Resource: "TestOperatorConfig"}, "instance", fmt.Errorf("invalid resourceVersion"))
+	}
+	rv, err := strconv.Atoi(resourceVersion)
+	if err != nil {
+		return nil, err
+	}
+	c.resourceVersion = strconv.Itoa(rv + 1)
+	if c.triggerStatusUpdateError != nil {
+		staticPodStatus := c.fakeStaticPodOperatorStatus.DeepCopy()
+		staticPodStatus.OperatorStatus = *status
+		if err := c.triggerStatusUpdateError(resourceVersion, staticPodStatus); err != nil {
+			return nil, err
+		}
+	}
+	c.fakeStaticPodOperatorStatus.OperatorStatus = *status
+	return &c.fakeStaticPodOperatorStatus.OperatorStatus, nil
 }
 
 // NewFakeNodeLister returns a fake node lister suitable to use in node controller unit test
@@ -149,7 +173,7 @@ type fakeNodeLister struct {
 }
 
 func (n *fakeNodeLister) List(selector labels.Selector) ([]*corev1.Node, error) {
-	nodes, err := n.client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: selector.String()})
+	nodes, err := n.client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -161,10 +185,6 @@ func (n *fakeNodeLister) List(selector labels.Selector) ([]*corev1.Node, error) 
 }
 
 func (n *fakeNodeLister) Get(name string) (*corev1.Node, error) {
-	panic("implement me")
-}
-
-func (n *fakeNodeLister) ListWithPredicate(predicate corev1listers.NodeConditionPredicate) ([]*corev1.Node, error) {
 	panic("implement me")
 }
 
@@ -187,6 +207,10 @@ type fakeOperatorClient struct {
 
 func (c *fakeOperatorClient) Informer() cache.SharedIndexInformer {
 	return &fakeSharedIndexInformer{}
+}
+
+func (c *fakeOperatorClient) GetObjectMeta() (*metav1.ObjectMeta, error) {
+	panic("not supported")
 }
 
 func (c *fakeOperatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operatorv1.OperatorStatus, string, error) {

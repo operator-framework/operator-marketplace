@@ -14,8 +14,16 @@
 
 package version
 
+import (
+	"fmt"
+	"runtime"
+)
+
+//var needs to be used instead of const for ldflags
 var (
-	Version    = "v0.8.0"
-	GitVersion = "unknown"
-	GitCommit  = "unknown"
+	Version           = "v0.19.0"
+	GitVersion        = "unknown"
+	GitCommit         = "unknown"
+	KubernetesVersion = "unknown"
+	GoVersion         = fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 )

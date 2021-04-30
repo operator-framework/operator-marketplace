@@ -5,7 +5,6 @@ package v1
 import (
 	v1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/client-go/config/clientset/versioned/scheme"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -24,6 +23,7 @@ type ConfigV1Interface interface {
 	IngressesGetter
 	NetworksGetter
 	OAuthsGetter
+	OperatorHubsGetter
 	ProjectsGetter
 	ProxiesGetter
 	SchedulersGetter
@@ -86,6 +86,10 @@ func (c *ConfigV1Client) OAuths() OAuthInterface {
 	return newOAuths(c)
 }
 
+func (c *ConfigV1Client) OperatorHubs() OperatorHubInterface {
+	return newOperatorHubs(c)
+}
+
 func (c *ConfigV1Client) Projects() ProjectInterface {
 	return newProjects(c)
 }
@@ -130,7 +134,7 @@ func setConfigDefaults(config *rest.Config) error {
 	gv := v1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

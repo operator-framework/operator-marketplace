@@ -3,7 +3,7 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 // +genclient
@@ -31,6 +31,32 @@ type ConsoleSpec struct {
 	Customization ConsoleCustomization `json:"customization"`
 	// providers contains configuration for using specific service providers.
 	Providers ConsoleProviders `json:"providers"`
+	// route contains hostname and secret reference that contains the serving certificate.
+	// If a custom route is specified, a new route will be created with the
+	// provided hostname, under which console will be available.
+	// In case of custom hostname uses the default routing suffix of the cluster,
+	// the Secret specification for a serving certificate will not be needed.
+	// In case of custom hostname points to an arbitrary domain, manual DNS configurations steps are necessary.
+	// The default console route will be maintained to reserve the default hostname
+	// for console if the custom route is removed.
+	// If not specified, default route will be used.
+	// +optional
+	Route ConsoleConfigRoute `json:"route"`
+}
+
+// ConsoleConfigRoute holds information on external route access to console.
+type ConsoleConfigRoute struct {
+	// hostname is the desired custom domain under which console will be available.
+	Hostname string `json:"hostname"`
+	// secret points to secret in the openshift-config namespace that contains custom
+	// certificate and key and needs to be created manually by the cluster admin.
+	// Referenced Secret is required to contain following key value pairs:
+	// - "tls.crt" - to specifies custom certificate
+	// - "tls.key" - to specifies private key of the custom certificate
+	// If the custom hostname uses the default routing suffix of the cluster,
+	// the Secret specification for a serving certificate will not be needed.
+	// +optional
+	Secret configv1.SecretNameReference `json:"secret"`
 }
 
 // ConsoleStatus defines the observed status of the Console.
@@ -63,6 +89,7 @@ type ConsoleCustomization struct {
 	// of the web console.  Providing documentationBaseURL will override the default
 	// documentation URL.
 	// Invalid value will prevent a console rollout.
+	// +kubebuilder:validation:Pattern=`^$|^((https):\/\/?)[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|\/?))\/$`
 	DocumentationBaseURL string `json:"documentationBaseURL,omitempty"`
 	// customProductName is the name that will be displayed in page titles, logo alt text, and the about dialog
 	// instead of the normal OpenShift product name.
@@ -78,10 +105,11 @@ type ConsoleCustomization struct {
 	// Dimensions: Max height of 68px and max width of 200px
 	// SVG format preferred
 	// +optional
-	CustomLogoFile v1.ConfigMapFileReference `json:"customLogoFile,omitempty"`
+	CustomLogoFile configv1.ConfigMapFileReference `json:"customLogoFile,omitempty"`
 }
 
 // Brand is a specific supported brand within the console.
+// +kubebuilder:validation:Pattern=`^$|^(ocp|origin|okd|dedicated|online|azure)$`
 type Brand string
 
 const (

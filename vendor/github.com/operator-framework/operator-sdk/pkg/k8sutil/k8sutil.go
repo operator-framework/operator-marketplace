@@ -22,9 +22,23 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	discovery "k8s.io/client-go/discovery"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+// ForceRunModeEnv indicates if the operator should be forced to run in either local
+// or cluster mode (currently only used for local mode)
+var ForceRunModeEnv = "OSDK_FORCE_RUN_MODE"
+
+type RunModeType string
+
+const (
+	LocalRunMode   RunModeType = "local"
+	ClusterRunMode RunModeType = "cluster"
 )
 
 var log = logf.Log.WithName("k8sutil")
@@ -38,12 +52,19 @@ func GetWatchNamespace() (string, error) {
 	return ns, nil
 }
 
-// errNoNS indicates that a namespace could not be found for the current
+// ErrNoNamespace indicates that a namespace could not be found for the current
 // environment
 var ErrNoNamespace = fmt.Errorf("namespace not found for current environment")
 
+// ErrRunLocal indicates that the operator is set to run in local mode (this error
+// is returned by functions that only work on operators running in cluster mode)
+var ErrRunLocal = fmt.Errorf("operator run mode forced to local")
+
 // GetOperatorNamespace returns the namespace the operator should be running in.
 func GetOperatorNamespace() (string, error) {
+	if isRunModeLocal() {
+		return "", ErrRunLocal
+	}
 	nsBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -71,7 +92,8 @@ func GetOperatorName() (string, error) {
 // ResourceExists returns true if the given resource kind exists
 // in the given api groupversion
 func ResourceExists(dc discovery.DiscoveryInterface, apiGroupVersion, kind string) (bool, error) {
-	apiLists, err := dc.ServerResources()
+
+	_, apiLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
 		return false, err
 	}
@@ -91,6 +113,9 @@ func ResourceExists(dc discovery.DiscoveryInterface, apiGroupVersion, kind strin
 // is currently running.
 // It expects the environment variable POD_NAME to be set by the downwards API.
 func GetPod(ctx context.Context, client crclient.Client, ns string) (*corev1.Pod, error) {
+	if isRunModeLocal() {
+		return nil, ErrRunLocal
+	}
 	podName := os.Getenv(PodNameEnvVar)
 	if podName == "" {
 		return nil, fmt.Errorf("required env %s not set, please configure downward API", PodNameEnvVar)
@@ -114,4 +139,94 @@ func GetPod(ctx context.Context, client crclient.Client, ns string) (*corev1.Pod
 	log.V(1).Info("Found Pod", "Pod.Namespace", ns, "Pod.Name", pod.Name)
 
 	return pod, nil
+}
+
+// GetGVKsFromAddToScheme takes in the runtime scheme and filters out all generic apimachinery meta types.
+// It returns just the GVK specific to this scheme.
+func GetGVKsFromAddToScheme(addToSchemeFunc func(*runtime.Scheme) error) ([]schema.GroupVersionKind, error) {
+	s := runtime.NewScheme()
+	err := addToSchemeFunc(s)
+	if err != nil {
+		return nil, err
+	}
+	schemeAllKnownTypes := s.AllKnownTypes()
+	ownGVKs := []schema.GroupVersionKind{}
+	for gvk := range schemeAllKnownTypes {
+		if !isKubeMetaKind(gvk.Kind) {
+			ownGVKs = append(ownGVKs, gvk)
+		}
+	}
+
+	return ownGVKs, nil
+}
+
+func isKubeMetaKind(kind string) bool {
+	if strings.HasSuffix(kind, "List") ||
+		kind == "PatchOptions" ||
+		kind == "GetOptions" ||
+		kind == "DeleteOptions" ||
+		kind == "ExportOptions" ||
+		kind == "APIVersions" ||
+		kind == "APIGroupList" ||
+		kind == "APIResourceList" ||
+		kind == "UpdateOptions" ||
+		kind == "CreateOptions" ||
+		kind == "Status" ||
+		kind == "WatchEvent" ||
+		kind == "ListOptions" ||
+		kind == "APIGroup" {
+		return true
+	}
+
+	return false
+}
+
+func isRunModeLocal() bool {
+	return os.Getenv(ForceRunModeEnv) == string(LocalRunMode)
+}
+
+// SupportsOwnerReference checks whether a given dependent supports owner references, based on the owner.
+// This function performs following checks:
+//  -- True: Owner is cluster-scoped.
+//  -- True: Both Owner and dependent are Namespaced with in same namespace.
+//  -- False: Owner is Namespaced and dependent is Cluster-scoped.
+//  -- False: Both Owner and dependent are Namespaced with different namespaces.
+func SupportsOwnerReference(restMapper meta.RESTMapper, owner, dependent runtime.Object) (bool, error) {
+	ownerGVK := owner.GetObjectKind().GroupVersionKind()
+	ownerMapping, err := restMapper.RESTMapping(ownerGVK.GroupKind(), ownerGVK.Version)
+	if err != nil {
+		return false, err
+	}
+	mOwner, err := meta.Accessor(owner)
+	if err != nil {
+		return false, err
+	}
+
+	depGVK := dependent.GetObjectKind().GroupVersionKind()
+	depMapping, err := restMapper.RESTMapping(depGVK.GroupKind(), depGVK.Version)
+	if err != nil {
+		return false, err
+	}
+	mDep, err := meta.Accessor(dependent)
+	if err != nil {
+		return false, err
+	}
+	ownerClusterScoped := ownerMapping.Scope.Name() == meta.RESTScopeNameRoot
+	ownerNamespace := mOwner.GetNamespace()
+	depClusterScoped := depMapping.Scope.Name() == meta.RESTScopeNameRoot
+	depNamespace := mDep.GetNamespace()
+
+	if ownerClusterScoped {
+		return true, nil
+	}
+
+	if depClusterScoped {
+		return false, nil
+	}
+
+	if ownerNamespace != depNamespace {
+		return false, nil
+	}
+	// Both owner and dependent are namespace-scoped and in the same namespace.
+	return true, nil
 }
