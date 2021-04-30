@@ -29,6 +29,9 @@ unit-test:
 e2e-test:
 	./scripts/e2e-tests.sh
 
+e2e-test-local:
+	./scripts/e2e-tests-local.sh
+
 e2e-job:
 	./scripts/run-e2e-job.sh
 
