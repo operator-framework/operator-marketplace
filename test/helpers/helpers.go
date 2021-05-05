@@ -10,21 +10,24 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
 	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-sdk/pkg/test"
-	apps "k8s.io/api/apps/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -77,7 +80,7 @@ var (
 
 	// DefaultSources is the in-memory copy of the default OperatorSource definitions
 	// from the defaults directory.
-	DefaultSources []*olm.CatalogSource
+	DefaultSources []*olmv1alpha1.CatalogSource
 )
 
 // WaitForResult polls the cluster for a particular resource name and namespace.
@@ -88,7 +91,7 @@ func WaitForResult(client test.FrameworkClient, result runtime.Object, namespace
 	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, result)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return false, nil
 			}
 			return false, err
@@ -100,14 +103,14 @@ func WaitForResult(client test.FrameworkClient, result runtime.Object, namespace
 // WaitForSuccessfulDeployment checks if a given deployment has readied all of
 // its replicas. If it has not, it retries until the deployment is ready or it
 // reaches the timeout.
-func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment apps.Deployment) error {
+func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment appsv1.Deployment) error {
 	// If deployment is already ready, lets just return.
 	if deployment.Status.ReadyReplicas == *deployment.Spec.Replicas {
 		return nil
 	}
 
 	namespacedName := types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}
-	result := &apps.Deployment{}
+	result := &appsv1.Deployment{}
 	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, result)
 		if err != nil {
@@ -142,9 +145,9 @@ func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName 
 }
 
 // WaitForExpectedSpec compares two CatalogSources and return true if their Specs are equal.
-func WaitForExpectedSpec(client test.FrameworkClient, name string, namespace string, expected *olm.CatalogSource) error {
+func WaitForExpectedSpec(client test.FrameworkClient, name string, namespace string, expected *olmv1alpha1.CatalogSource) error {
 	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
-		actual := &olm.CatalogSource{}
+		actual := &olmv1alpha1.CatalogSource{}
 		if err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, actual); err != nil {
 			return false, err
 		}
@@ -167,7 +170,7 @@ func WaitForNotFound(client test.FrameworkClient, result runtime.Object, namespa
 	err := wait.Poll(RetryInterval, Timeout, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, result)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
 			return false, err
@@ -182,7 +185,7 @@ func WaitForNotFound(client test.FrameworkClient, result runtime.Object, namespa
 }
 
 // CreateRuntimeObject creates a runtime object using the test framework.
-func CreateRuntimeObject(client test.FrameworkClient, ctx *test.TestCtx, obj runtime.Object) error {
+func CreateRuntimeObject(client test.FrameworkClient, ctx *test.Context, obj runtime.Object) error {
 	return client.Create(
 		context.TODO(),
 		obj,
@@ -220,6 +223,26 @@ func UpdateRuntimeObject(client test.FrameworkClient, obj runtime.Object) error 
 	)
 }
 
+func UpdateCatalogSourceWithRetries(client test.FrameworkClient, obj *olmv1alpha1.CatalogSource) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		err := client.Update(context.TODO(), obj)
+		if apierrors.IsConflict(err) {
+			clone := obj.DeepCopyObject().(*olmv1alpha1.CatalogSource)
+			key := types.NamespacedName{
+				Name:      obj.Name,
+				Namespace: obj.Namespace,
+			}
+			err = client.Get(context.TODO(), key, clone)
+			if err != nil {
+				return err
+			}
+
+			obj.SetResourceVersion(clone.GetResourceVersion())
+		}
+		return err
+	})
+}
+
 // CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into
 // a runtime object for tests that rely on an OperatorSource
 func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
@@ -249,13 +272,13 @@ func checkOwnerLabels(labels map[string]string, owner string) error {
 		_, hasNameLabel := labels[builders.OpsrcOwnerNameLabel]
 		_, hasNamespaceLabel := labels[builders.OpsrcOwnerNamespaceLabel]
 		if !hasNameLabel || !hasNamespaceLabel {
-			return fmt.Errorf("Created child resource does not have correct %v owner labels", owner)
+			return fmt.Errorf("created child resource does not have correct %v owner labels", owner)
 		}
 	case v2.CatalogSourceConfigKind:
 		_, hasNameLabel := labels[builders.CscOwnerNameLabel]
 		_, hasNamespaceLabel := labels[builders.CscOwnerNamespaceLabel]
 		if !hasNameLabel || !hasNamespaceLabel {
-			return fmt.Errorf("Created child resource does not have correct %v owner labels", owner)
+			return fmt.Errorf("created child resource does not have correct %v owner labels", owner)
 		}
 	}
 	return nil
@@ -266,7 +289,7 @@ func checkOwnerLabels(labels map[string]string, owner string) error {
 func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespace, targetNamespace, owner string) error {
 
 	// Check that the CatalogSource was created.
-	resultCatalogSource := &olm.CatalogSource{}
+	resultCatalogSource := &olmv1alpha1.CatalogSource{}
 	err := WaitForResult(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
@@ -292,7 +315,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespac
 	}
 
 	// Check that the Deployment was created.
-	resultDeployment := &apps.Deployment{}
+	resultDeployment := &appsv1.Deployment{}
 	err = WaitForResult(client, resultDeployment, namespace, opsrcName)
 	if err != nil {
 		return err
@@ -316,7 +339,7 @@ func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespac
 // child resources were deleted.
 func CheckChildResourcesDeleted(client test.FrameworkClient, opsrcName, namespace, targetNamespace string) error {
 	// Check that the CatalogSource was deleted.
-	resultCatalogSource := &olm.CatalogSource{}
+	resultCatalogSource := &olmv1alpha1.CatalogSource{}
 	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, opsrcName)
 	if err != nil {
 		return err
@@ -330,7 +353,7 @@ func CheckChildResourcesDeleted(client test.FrameworkClient, opsrcName, namespac
 	}
 
 	// Check that the Deployment was deleted.
-	resultDeployment := &apps.Deployment{}
+	resultDeployment := &appsv1.Deployment{}
 	err = WaitForNotFound(client, resultDeployment, namespace, opsrcName)
 	if err != nil {
 		return err
@@ -359,11 +382,12 @@ func WaitForOpsrcMarkedForDeletionWithFinalizer(client test.FrameworkClient, nam
 
 // WaitForCatsrcMarkedForDeletion waits until a CatalogSource is either deleted or is marked for deletion
 func WaitForCatsrcMarkedForDeletion(client test.FrameworkClient, name, namespace string) error {
-	resultCatalogSource := &olm.CatalogSource{}
+	resultCatalogSource := &olmv1alpha1.CatalogSource{}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
+
+	return wait.Poll(RetryInterval, 1*time.Minute, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, resultCatalogSource)
-		if resultCatalogSource.DeletionTimestamp != nil || errors.IsNotFound(err) {
+		if resultCatalogSource.DeletionTimestamp != nil || apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		return false, err
@@ -373,9 +397,9 @@ func WaitForCatsrcMarkedForDeletion(client test.FrameworkClient, name, namespace
 // WaitForDeploymentScaled waits Timeout amount of time for the given deployment to be updated
 // with the specified number of replicas.
 func WaitForDeploymentScaled(client test.FrameworkClient, name, namespace string, replicas int32) error {
-	result := &apps.Deployment{}
+	result := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	err := wait.Poll(RetryInterval, Timeout, func() (done bool, err error) {
+	err := wait.Poll(RetryInterval, 1*time.Minute, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, result)
 		if err != nil {
 			return false, err
@@ -393,8 +417,11 @@ func WaitForDeploymentScaled(client test.FrameworkClient, name, namespace string
 
 // ScaleMarketplace scales the marketplace deployment to the specified replica scale size
 func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32) error {
-	marketplace := &apps.Deployment{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: "marketplace-operator", Namespace: namespace}, marketplace)
+	// TODO(tflannag): This should be a parameter
+	const name = "marketplace-operator"
+
+	marketplace := &appsv1.Deployment{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, marketplace)
 	if err != nil {
 		return err
 	}
@@ -404,7 +431,7 @@ func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32
 		return err
 	}
 	// Wait for deployment to scale
-	err = WaitForDeploymentScaled(client, "marketplace-operator", namespace, scale)
+	err = WaitForDeploymentScaled(client, name, namespace, scale)
 	if err != nil {
 		return err
 	}
@@ -452,7 +479,7 @@ func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscri
 		return err
 	}
 	if subscription.Spec.CatalogSource != specSource {
-		return fmt.Errorf("User created Subscription %s Spec.CatalogSource has changed. Spec.CatalogSource was %s and is now %s", subscription.GetName(), subscription.Spec.CatalogSource, specSource)
+		return fmt.Errorf("user created Subscription %s Spec.CatalogSource has changed. Spec.CatalogSource was %s and is now %s", subscription.GetName(), subscription.Spec.CatalogSource, specSource)
 	}
 	return nil
 }
@@ -517,7 +544,7 @@ func InitCatSrcDefinition() error {
 		return err
 	}
 
-	DefaultSources = make([]*olm.CatalogSource, len(fileInfos))
+	DefaultSources = make([]*olmv1alpha1.CatalogSource, len(fileInfos))
 
 	for i, fileInfo := range fileInfos {
 		fileName := fileInfo.Name()
@@ -527,7 +554,7 @@ func InitCatSrcDefinition() error {
 			return err
 		}
 
-		DefaultSources[i] = &olm.CatalogSource{}
+		DefaultSources[i] = &olmv1alpha1.CatalogSource{}
 		decoder := yaml.NewYAMLOrJSONDecoder(file, 1024)
 		err = decoder.Decode(DefaultSources[i])
 		if err != nil {
@@ -539,9 +566,9 @@ func InitCatSrcDefinition() error {
 }
 
 // GetRegistryDeployment returns the deployment object for the given OperatorSource
-func GetRegistryDeployment(client test.FrameworkClient, name, namespace string) *apps.Deployment {
+func GetRegistryDeployment(client test.FrameworkClient, name, namespace string) *appsv1.Deployment {
 	// Get the registry deployment of the test OperatorSource
-	deployment := &apps.Deployment{}
+	deployment := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
 	err := client.Get(context.TODO(), namespacedName, deployment)
 	if err != nil {

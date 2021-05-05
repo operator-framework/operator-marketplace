@@ -4,37 +4,38 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
-	v1 "k8s.io/api/apps/v1"
-	v12 "k8s.io/api/core/v1"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
-	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/metrics"
-	"github.com/operator-framework/operator-marketplace/pkg/migrator"
+	"github.com/sirupsen/logrus"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/signals"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/metrics"
+	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
+	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
+
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	log "github.com/sirupsen/logrus"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,70 +44,59 @@ import (
 )
 
 const (
-	initialWait                = time.Duration(1) * time.Minute
-	updateNotificationSendWait = time.Duration(10) * time.Minute
-)
-
-var (
-	version     = flag.Bool("version", false, "displays marketplace source commit info.")
-	tlsKeyPath  = flag.String("tls-key", "", "Path to use for private key (requires tls-cert)")
-	tlsCertPath = flag.String("tls-cert", "", "Path to use for certificate (requires tls-key)")
+	leaderElectionConfigMapName = "marketplace-operator-lock"
 )
 
 func printVersion() {
-	log.Printf("Go Version: %s", runtime.Version())
-	log.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
-	log.Printf("operator-sdk Version: %v", sdkVersion.Version)
+	logrus.Printf("Go Version: %s", runtime.Version())
+	logrus.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
+	logrus.Printf("operator-sdk Version: %v", sdkVersion.Version)
 }
 
 func main() {
 	printVersion()
 
-	// Parse the command line arguments
-	flag.StringVar(&defaults.Dir, "defaultsDir",
-		"", "the directory where the default CatalogSources are stored")
-	var clusterOperatorName string
+	var (
+		clusterOperatorName string
+		tlsKeyPath          string
+		tlsCertPath         string
+		version             bool
+	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
+	flag.StringVar(&defaults.Dir, "defaultsDir", "", "the directory where the default CatalogSources are stored")
+	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
+	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
+	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.Parse()
 
 	// Check if version flag was set
-	if *version {
-		fmt.Print(sourceCommit.String())
-		// Exit immediately
+	if version {
+		logrus.Infof("%s", sourceCommit.String())
 		os.Exit(0)
 	}
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	var useTLS bool
-	if *tlsCertPath != "" && *tlsKeyPath == "" || *tlsCertPath == "" && *tlsKeyPath != "" {
-		log.Warn("both --tls-key and --tls-crt must be provided for TLS to be enabled, falling back to non-https")
-	} else if *tlsCertPath == "" && *tlsKeyPath == "" {
-		log.Info("TLS keys not set, using non-https for metrics")
-	} else {
-		log.Info("TLS keys set, using https for metrics")
-		useTLS = true
-	}
-	err := metrics.ServePrometheus(useTLS, *tlsCertPath, *tlsKeyPath)
+	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
-		log.Fatalf("failed to serve prometheus metrics: TLS enabled %d: %s", useTLS, err)
+		logrus.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
-		log.Fatalf("failed to get watch namespace: %v", err)
+		logrus.Fatalf("failed to get watch namespace: %v", err)
 	}
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	// Set OpenShift config API availability
 	err = configv1.SetConfigAPIAvailability(cfg)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -114,30 +104,36 @@ func main() {
 	// from the operator's namespace. The reason for watching all namespaces is
 	// watch for CatalogSources in targetNamespaces being deleted and recreate
 	// them.
-	mgr, err := manager.New(cfg, manager.Options{Namespace: ""})
+	//
+	// Note(tflannag): Setting the `MetricsBindAddress` to `0` here disables the
+	// metrics listener from controller-runtime. Previously, this was disabled by
+	// default in <v0.2.0, but it's now enabled by default and the default port
+	// conflicts with the same port we bind for the health checks.
+	mgr, err := manager.New(cfg, manager.Options{
+		Namespace:          "",
+		MetricsBindAddress: "0",
+	})
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
-	log.Print("Registering Components.")
-
+	logrus.Info("Registering Components.")
+	logrus.Info("setting up scheme")
 	// Setup Scheme for all defined resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		exit(err)
+		logrus.Fatal(err)
 	}
-
 	// Add external resource to scheme
-	if err := olm.AddToScheme(mgr.GetScheme()); err != nil {
-		exit(err)
+	if err := olmv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logrus.Fatal(err)
 	}
-
 	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
-		exit(err)
+		logrus.Fatal(err)
 	}
 	// If the config API is available add the config resources to the scheme
 	if configv1.IsAPIAvailable() {
 		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
-			exit(err)
+			logrus.Fatal(err)
 		}
 	}
 
@@ -147,64 +143,62 @@ func main() {
 	if clusterOperatorName != "" {
 		statusReporter, err = status.NewReporter(cfg, mgr, namespace, clusterOperatorName, os.Getenv("RELEASE_VERSION"), stopCh)
 		if err != nil {
-			exit(err)
+			logrus.Fatal(err)
 		}
 	}
 
 	// Populate the global default OperatorSources definition and config
 	err = defaults.PopulateGlobals()
 	if err != nil {
-		exit(err)
+		logrus.Fatal(err)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
-		exit(err)
+		logrus.Fatal(err)
 	}
 
-	// Serve a health check.
+	logrus.Info("Setting up health checks")
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	go http.ListenAndServe(":8080", nil)
 
 	// Wait until this instance becomes the leader.
-	log.Info("Waiting to become leader.")
-	err = leader.Become(context.TODO(), "marketplace-operator-lock")
+	logrus.Info("Waiting to become leader.")
+	err = leader.Become(context.TODO(), leaderElectionConfigMapName)
 	if err != nil {
-		log.Error(err, "Failed to retry for leader lock")
-		os.Exit(1)
+		logrus.Fatal(err, "Failed to retry for leader lock")
 	}
-	log.Info("Elected leader.")
+	logrus.Info("Elected leader.")
 
-	log.Print("Starting the Cmd.")
+	logrus.Info("Starting the Cmd.")
 
 	// migrate away from Marketplace API
 	clientGo, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		log.Error(err, "Failed to instantiate client for migrator")
-		os.Exit(1)
+		logrus.Fatal(err, "Failed to instantiate the client for migrator")
 	}
 	migrator := migrator.New(clientGo)
 	err = migrator.Migrate()
 	if err != nil {
-		log.Error(err, "[migration] Error in migrating Marketplace away from OperatorSource API")
+		logrus.Error(err, "[migration] Error while migrating Marketplace away from OperatorSource API")
 	}
 
 	err = cleanUpOldOpsrcResources(clientGo)
 	if err != nil {
-		log.Error(err, "OperatorSource child resource cleanup failed")
+		logrus.Error(err, "OperatorSource child resource cleanup failed")
 	}
 
 	// Handle the defaults
 	err = ensureDefaults(cfg, mgr.GetScheme())
 	if err != nil {
-		exit(err)
+		logrus.Fatal(err)
 	}
 
 	err = defaults.RemoveObsoleteOpsrc(clientGo)
 	if err != nil {
-		log.Error(err, "[defaults] Could not remove obsolete default OperatorSource/s")
+		logrus.Error(err, "[defaults] Could not remove the obsolete default OperatorSource(s)")
 	}
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := statusReporter.StartReporting()
@@ -222,11 +216,11 @@ func main() {
 func exit(err error) {
 	// If an error exists then exit with status set to 1
 	if err != nil {
-		log.Fatalf("The operator encountered an error, exit code 1: %v", err)
+		logrus.Fatalf("The operator encountered an error, exit code 1: %v", err)
 	}
 
 	// No error, graceful termination
-	log.Info("The operator exited gracefully, exit code 0")
+	logrus.Info("The operator exited gracefully, exit code 0")
 	os.Exit(0)
 }
 
@@ -238,7 +232,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	// for the defaults handler.
 	clientForDefaults, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
-		log.Errorf("Error initializing client for handling defaults - %v", err)
+		logrus.Errorf("Error initializing client for handling defaults - %v", err)
 		return err
 	}
 
@@ -266,14 +260,15 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 // cleanUpOldOpsrcResources cleans up old deployments and services associated with OperatorSources
 func cleanUpOldOpsrcResources(kubeClient client.Client) error {
 	ctx := context.TODO()
-	deploy := &v1.DeploymentList{}
-	svc := &v12.ServiceList{}
-	o := &client.ListOptions{}
-	if err := o.SetLabelSelector(strings.Join([]string{builders.OpsrcOwnerNameLabel, builders.OpsrcOwnerNamespaceLabel}, ",")); err != nil {
-		return err
+
+	deploy := &appsv1.DeploymentList{}
+	svc := &corev1.ServiceList{}
+	o := []client.ListOption{
+		client.MatchingLabels{builders.OpsrcOwnerNameLabel: builders.OpsrcOwnerNamespaceLabel},
 	}
-	allErrors := []error{}
-	if err := kubeClient.List(ctx, o, deploy); err == nil {
+
+	var allErrors []error
+	if err := kubeClient.List(ctx, deploy, o...); err == nil {
 		for _, d := range deploy.Items {
 			if err := kubeClient.Delete(ctx, &d); err != nil {
 				allErrors = append(allErrors, err)
@@ -282,7 +277,7 @@ func cleanUpOldOpsrcResources(kubeClient client.Client) error {
 	} else {
 		allErrors = append(allErrors, err)
 	}
-	if err := kubeClient.List(ctx, o, svc); err == nil {
+	if err := kubeClient.List(ctx, svc, o...); err == nil {
 		for _, s := range svc.Items {
 			if err := kubeClient.Delete(ctx, &s); err != nil {
 				allErrors = append(allErrors, err)

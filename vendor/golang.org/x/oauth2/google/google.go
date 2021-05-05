@@ -15,6 +15,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google/internal/externalaccount"
 	"golang.org/x/oauth2/jwt"
 )
 
@@ -93,6 +94,7 @@ func JWTConfigFromJSON(jsonKey []byte, scope ...string) (*jwt.Config, error) {
 const (
 	serviceAccountKey  = "service_account"
 	userCredentialsKey = "authorized_user"
+	externalAccountKey = "external_account"
 )
 
 // credentialsFile is the unmarshalled representation of a credentials file.
@@ -111,6 +113,15 @@ type credentialsFile struct {
 	ClientSecret string `json:"client_secret"`
 	ClientID     string `json:"client_id"`
 	RefreshToken string `json:"refresh_token"`
+
+	// External Account fields
+	Audience                       string                           `json:"audience"`
+	SubjectTokenType               string                           `json:"subject_token_type"`
+	TokenURLExternal               string                           `json:"token_url"`
+	TokenInfoURL                   string                           `json:"token_info_url"`
+	ServiceAccountImpersonationURL string                           `json:"service_account_impersonation_url"`
+	CredentialSource               externalaccount.CredentialSource `json:"credential_source"`
+	QuotaProjectID                 string                           `json:"quota_project_id"`
 }
 
 func (f *credentialsFile) jwtConfig(scopes []string) *jwt.Config {
@@ -141,6 +152,20 @@ func (f *credentialsFile) tokenSource(ctx context.Context, scopes []string) (oau
 		}
 		tok := &oauth2.Token{RefreshToken: f.RefreshToken}
 		return cfg.TokenSource(ctx, tok), nil
+	case externalAccountKey:
+		cfg := &externalaccount.Config{
+			Audience:                       f.Audience,
+			SubjectTokenType:               f.SubjectTokenType,
+			TokenURL:                       f.TokenURLExternal,
+			TokenInfoURL:                   f.TokenInfoURL,
+			ServiceAccountImpersonationURL: f.ServiceAccountImpersonationURL,
+			ClientSecret:                   f.ClientSecret,
+			ClientID:                       f.ClientID,
+			CredentialSource:               f.CredentialSource,
+			QuotaProjectID:                 f.QuotaProjectID,
+			Scopes:                         scopes,
+		}
+		return cfg.TokenSource(ctx), nil
 	case "":
 		return nil, errors.New("missing 'type' field in credentials")
 	default:
@@ -194,9 +219,16 @@ func (cs computeSource) Token() (*oauth2.Token, error) {
 	if res.ExpiresInSec == 0 || res.AccessToken == "" {
 		return nil, fmt.Errorf("oauth2/google: incomplete token received from metadata")
 	}
-	return &oauth2.Token{
+	tok := &oauth2.Token{
 		AccessToken: res.AccessToken,
 		TokenType:   res.TokenType,
 		Expiry:      time.Now().Add(time.Duration(res.ExpiresInSec) * time.Second),
-	}, nil
+	}
+	// NOTE(cbro): add hidden metadata about where the token is from.
+	// This is needed for detection by client libraries to know that credentials come from the metadata server.
+	// This may be removed in a future version of this library.
+	return tok.WithExtra(map[string]interface{}{
+		"oauth2.google.tokenSource":    "compute-metadata",
+		"oauth2.google.serviceAccount": acct,
+	}), nil
 }

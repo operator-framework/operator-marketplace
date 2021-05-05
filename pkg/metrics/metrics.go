@@ -8,7 +8,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -22,29 +22,25 @@ const (
 	metricsTLSPort = 8081
 )
 
-var (
-	// Wraps the default RoundTripperFunc with functions that record prometheus metrics.
-	roundTripper = http.DefaultTransport
-)
-
 // ServePrometheus enables marketplace to serve prometheus metrics.
-func ServePrometheus(useTLS bool, cert, key string) error {
+func ServePrometheus(cert, key string) error {
 	// Register metrics for the operator with the prometheus.
-	log.Info("[metrics] Registering marketplace metrics")
+	logrus.Info("[metrics] Registering marketplace metrics")
+
 	err := registerMetrics()
 	if err != nil {
-		log.Infof("[metrics] Unable to register marketplace metrics: %v", err)
+		logrus.Infof("[metrics] Unable to register marketplace metrics: %v", err)
 		return err
 	}
 
 	// Start the server and expose the registered metrics.
-	log.Info("[metrics] Serving marketplace metrics")
+	logrus.Info("[metrics] Serving marketplace metrics")
 	http.Handle(metricsPath, promhttp.Handler())
 
-	if useTLS {
-		tlsGetCertFn, err := filemonitor.OLMGetCertRotationFn(log.New(), cert, key)
+	if useTLS(cert, key) {
+		tlsGetCertFn, err := filemonitor.OLMGetCertRotationFn(logrus.New(), cert, key)
 		if err != nil {
-			log.Errorf("Certificate monitoring for metrics (https) failed: %v", err)
+			logrus.Errorf("Certificate monitoring for metrics (https) failed: %v", err)
 			return err
 		}
 
@@ -59,30 +55,45 @@ func ServePrometheus(useTLS bool, cert, key string) error {
 			err := httpsServer.ListenAndServeTLS("", "")
 			if err != nil {
 				if err == http.ErrServerClosed {
-					log.Errorf("Metrics (https) server closed")
+					logrus.Errorf("Metrics (https) server closed")
 					return
 				}
-				log.Errorf("Metrics (https) serving failed: %v", err)
+				logrus.Errorf("Metrics (https) serving failed: %v", err)
 			}
 		}()
-	} else {
-		go func() {
-			err := http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil)
-			if err != nil {
-				if err == http.ErrServerClosed {
-					log.Errorf("Metrics (http) server closed")
-					return
-				}
-				log.Errorf("Metrics (http) serving failed: %v", err)
-			}
-		}()
+		return nil
 	}
+
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf(":%d", metricsPort), nil)
+		if err != nil {
+			if err == http.ErrServerClosed {
+				logrus.Errorf("Metrics (http) server closed")
+				return
+			}
+			logrus.Errorf("Metrics (http) serving failed: %v", err)
+		}
+	}()
+
 	return nil
 }
 
 // registerMetrics registers marketplace prometheus metrics.
 func registerMetrics() error {
 	// Register all of the metrics in the standard registry.
-
 	return nil
+}
+
+func useTLS(certPath, keyPath string) bool {
+	if certPath != "" && keyPath == "" || certPath == "" && keyPath != "" {
+		logrus.Warn("both --tls-key and --tls-crt must be provided for TLS to be enabled, falling back to non-https")
+		return false
+	}
+	if certPath == "" && keyPath == "" {
+		logrus.Info("TLS keys not set, using non-https for metrics")
+		return false
+	}
+
+	logrus.Info("TLS keys set, using https for metrics")
+	return true
 }

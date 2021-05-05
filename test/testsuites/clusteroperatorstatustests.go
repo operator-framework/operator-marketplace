@@ -7,7 +7,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	olm "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,14 +19,11 @@ import (
 // defines the status of the marketplace operator has the correct status upon initialization. It
 // also confirms that the ClusterOperator's RelatedObjects contains the expected list of objects.
 func ClusterOperatorStatusOnStartup(t *testing.T) {
-	ctx := test.NewTestCtx(t)
+	ctx := test.NewContext(t)
 	defer ctx.Cleanup()
 
-	// Get global framework variables.
-	client := test.Global.Client
-
 	// Get namespace
-	namespace, err := test.NewTestCtx(t).GetNamespace()
+	namespace, err := ctx.GetNamespace()
 	require.NoError(t, err, "Could not get namespace")
 
 	// Check that the ClusterOperator resource has the correct status
@@ -35,7 +32,8 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 		configv1.OperatorUpgradeable: configv1.ConditionTrue,
 		configv1.OperatorProgressing: configv1.ConditionFalse,
 		configv1.OperatorAvailable:   configv1.ConditionTrue,
-		configv1.OperatorDegraded:    configv1.ConditionFalse}
+		configv1.OperatorDegraded:    configv1.ConditionFalse,
+	}
 
 	// Poll to ensure ClusterOperator is present and has the correct status
 	// i.e. ConditionType has a ConditionStatus matching expectedTypeStatus
@@ -43,6 +41,8 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 	result := &configv1.ClusterOperator{}
 	RetryInterval := time.Second * 5
 	Timeout := time.Minute * 5
+	client := test.Global.Client
+
 	err = wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
 		err = client.Get(context.TODO(), namespacedName, result)
 		if err != nil {
@@ -50,7 +50,7 @@ func ClusterOperatorStatusOnStartup(t *testing.T) {
 		}
 		for _, condition := range result.Status.Conditions {
 			if expectedTypeStatus[condition.Type] != condition.Status {
-				return false, fmt.Errorf("Expecting condition type %v of status %v but got %v", condition.Type, expectedTypeStatus[condition.Type], condition.Status)
+				return false, fmt.Errorf("expecting condition type %v of status %v but got %v", condition.Type, expectedTypeStatus[condition.Type], condition.Status)
 			}
 		}
 		return true, nil

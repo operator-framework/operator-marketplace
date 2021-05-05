@@ -192,7 +192,7 @@ func populateDefsConfig(dir string) (map[string]v1.OperatorSource, map[string]ol
 // in the cluster that has been switched into a default CatalogSource
 func RemoveObsoleteOpsrc(kubeClient client.Client) error {
 	opsrcs := &v1.OperatorSourceList{}
-	if err := kubeClient.List(context.TODO(), &client.ListOptions{}, opsrcs); err != nil {
+	if err := kubeClient.List(context.TODO(), opsrcs, &client.ListOptions{}); err != nil {
 		return err
 	}
 	allErrors := []error{}

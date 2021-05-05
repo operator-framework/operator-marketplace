@@ -5,7 +5,7 @@ package v1
 
 import (
 	config "github.com/openshift/api/config/v1"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 var (
