@@ -8,33 +8,25 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/sirupsen/logrus"
-
 	apiconfigv1 "github.com/openshift/api/config/v1"
-
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
-	"github.com/operator-framework/operator-marketplace/pkg/migrator"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
+	"github.com/sirupsen/logrus"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +120,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 	// Add external resource to scheme
-	if err := olmv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logrus.Fatal(err)
 	}
 	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
@@ -136,7 +128,7 @@ func main() {
 	}
 	// If the config API is available add the config resources to the scheme
 	if configv1.IsAPIAvailable() {
-		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
+		if err := apiconfigv1.Install(mgr.GetScheme()); err != nil {
 			logrus.Fatal(err)
 		}
 	}
@@ -170,32 +162,12 @@ func main() {
 
 	logrus.Info("Starting the Cmd.")
 
-	// migrate away from Marketplace API
-	clientGo, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		logrus.Fatal(err, "Failed to instantiate the client for migrator")
-	}
-	migrator := migrator.New(clientGo)
-	err = migrator.Migrate()
-	if err != nil {
-		logrus.Error(err, "[migration] Error while migrating Marketplace away from OperatorSource API")
-	}
-
-	err = cleanUpOldOpsrcResources(clientGo)
-	if err != nil {
-		logrus.Error(err, "OperatorSource child resource cleanup failed")
-	}
-
 	// Handle the defaults
 	err = ensureDefaults(cfg, mgr.GetScheme())
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	err = defaults.RemoveObsoleteOpsrc(clientGo)
-	if err != nil {
-		logrus.Error(err, "[defaults] Could not remove the obsolete default OperatorSource(s)")
-	}
 	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
 	statusReportingDoneCh := statusReporter.StartReporting()
 
@@ -251,36 +223,4 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	}
 
 	return nil
-}
-
-// cleanUpOldOpsrcResources cleans up old deployments and services associated with OperatorSources
-func cleanUpOldOpsrcResources(kubeClient client.Client) error {
-	ctx := context.TODO()
-
-	deploy := &appsv1.DeploymentList{}
-	svc := &corev1.ServiceList{}
-	o := []client.ListOption{
-		client.MatchingLabels{builders.OpsrcOwnerNameLabel: builders.OpsrcOwnerNamespaceLabel},
-	}
-
-	var allErrors []error
-	if err := kubeClient.List(ctx, deploy, o...); err == nil {
-		for _, d := range deploy.Items {
-			if err := kubeClient.Delete(ctx, &d); err != nil {
-				allErrors = append(allErrors, err)
-			}
-		}
-	} else {
-		allErrors = append(allErrors, err)
-	}
-	if err := kubeClient.List(ctx, svc, o...); err == nil {
-		for _, s := range svc.Items {
-			if err := kubeClient.Delete(ctx, &s); err != nil {
-				allErrors = append(allErrors, err)
-			}
-		}
-	} else {
-		allErrors = append(allErrors, err)
-	}
-	return utilerrors.NewAggregate(allErrors)
 }
