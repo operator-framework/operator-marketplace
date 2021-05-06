@@ -16,6 +16,7 @@ package leader
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -43,12 +44,13 @@ const maxBackoffInterval = time.Second * 16
 // leader. Upon termination of that pod, the garbage collector will delete the
 // ConfigMap, enabling a different pod to become the leader.
 func Become(ctx context.Context, lockName string) error {
-	log.Info("Trying to become the leader.")
+	fmt.Println("Trying to become the leader.")
 
 	ns, err := k8sutil.GetOperatorNamespace()
+	fmt.Printf("Using namespace: %s for lock", ns)
 	if err != nil {
 		if err == k8sutil.ErrNoNamespace || err == k8sutil.ErrRunLocal {
-			log.Info("Skipping leader election; not running in a cluster.")
+			fmt.Println("Skipping leader election; not running in a cluster.")
 			return nil
 		}
 		return err
@@ -78,16 +80,16 @@ func Become(ctx context.Context, lockName string) error {
 	case err == nil:
 		for _, existingOwner := range existing.GetOwnerReferences() {
 			if existingOwner.Name == owner.Name {
-				log.Info("Found existing lock with my name. I was likely restarted.")
-				log.Info("Continuing as the leader.")
+				fmt.Println("Found existing lock with my name. I was likely restarted.")
+				fmt.Println("Continuing as the leader.")
 				return nil
 			}
 			log.Info("Found existing lock", "LockOwner", existingOwner.Name)
 		}
 	case apierrors.IsNotFound(err):
-		log.Info("No pre-existing lock was found.")
+		fmt.Println("No pre-existing lock was found.")
 	default:
-		log.Error(err, "Unknown error trying to get ConfigMap")
+		fmt.Println(err, ": Unknown error trying to get ConfigMap")
 		return err
 	}
 
@@ -105,42 +107,42 @@ func Become(ctx context.Context, lockName string) error {
 		err := client.Create(ctx, cm)
 		switch {
 		case err == nil:
-			log.Info("Became the leader.")
+			fmt.Println("Became the leader.")
 			return nil
 		case apierrors.IsAlreadyExists(err):
 			// refresh the lock so we use current leader
 			key := crclient.ObjectKey{Namespace: ns, Name: lockName}
 			if err := client.Get(ctx, key, existing); err != nil {
-				log.Info("Leader lock configmap not found.")
+				fmt.Println("Leader lock configmap not found.")
 				continue // configmap got lost ... just wait a bit
 			}
 
 			existingOwners := existing.GetOwnerReferences()
 			switch {
 			case len(existingOwners) != 1:
-				log.Info("Leader lock configmap must have exactly one owner reference.", "ConfigMap", existing)
+				fmt.Println("Leader lock configmap must have exactly one owner reference.", "ConfigMap", existing)
 			case existingOwners[0].Kind != "Pod":
-				log.Info("Leader lock configmap owner reference must be a pod.", "OwnerReference", existingOwners[0])
+				fmt.Println("Leader lock configmap owner reference must be a pod.", "OwnerReference", existingOwners[0])
 			default:
 				leaderPod := &corev1.Pod{}
 				key = crclient.ObjectKey{Namespace: ns, Name: existingOwners[0].Name}
 				err = client.Get(ctx, key, leaderPod)
 				switch {
 				case apierrors.IsNotFound(err):
-					log.Info("Leader pod has been deleted, waiting for garbage collection to remove the lock.")
+					fmt.Println("Leader pod has been deleted, waiting for garbage collection to remove the lock.")
 				case err != nil:
 					return err
 				case isPodEvicted(*leaderPod) && leaderPod.GetDeletionTimestamp() == nil:
-					log.Info("Operator pod with leader lock has been evicted.", "leader", leaderPod.Name)
-					log.Info("Deleting evicted leader.")
+					fmt.Println("Operator pod with leader lock has been evicted.", "leader", leaderPod.Name)
+					fmt.Println("Deleting evicted leader.")
 					// Pod may not delete immediately, continue with backoff
 					err := client.Delete(ctx, leaderPod)
 					if err != nil {
-						log.Error(err, "Leader pod could not be deleted.")
+						fmt.Println(err, ": Leader pod could not be deleted.")
 					}
 
 				default:
-					log.Info("Not the leader. Waiting.")
+					fmt.Println("Not the leader. Waiting.")
 				}
 			}
 
@@ -154,7 +156,7 @@ func Become(ctx context.Context, lockName string) error {
 				return ctx.Err()
 			}
 		default:
-			log.Error(err, "Unknown error creating ConfigMap")
+			fmt.Println(err, ": Unknown error creating ConfigMap")
 			return err
 		}
 	}
