@@ -27,7 +27,6 @@ import (
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -57,16 +56,18 @@ func main() {
 	printVersion()
 
 	var (
-		clusterOperatorName string
-		tlsKeyPath          string
-		tlsCertPath         string
-		version             bool
+		clusterOperatorName     string
+		tlsKeyPath              string
+		tlsCertPath             string
+		version                 bool
+		leaderElectionNamespace string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "the directory where the default CatalogSources are stored")
 	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
+	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "Namespace in which the leader election lock is stored.")
 	flag.Parse()
 
 	// Check if version flag was set
@@ -110,8 +111,11 @@ func main() {
 	// default in <v0.2.0, but it's now enabled by default and the default port
 	// conflicts with the same port we bind for the health checks.
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          "",
-		MetricsBindAddress: "0",
+		Namespace:               "",
+		MetricsBindAddress:      "0",
+		LeaderElection:          true,
+		LeaderElectionNamespace: leaderElectionNamespace,
+		LeaderElectionID:        leaderElectionConfigMapName,
 	})
 	if err != nil {
 		logrus.Fatal(err)
@@ -163,14 +167,6 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 	go http.ListenAndServe(":8080", nil)
-
-	// Wait until this instance becomes the leader.
-	logrus.Info("Waiting to become leader.")
-	err = leader.Become(context.TODO(), leaderElectionConfigMapName)
-	if err != nil {
-		logrus.Fatal(err, "Failed to retry for leader lock")
-	}
-	logrus.Info("Elected leader.")
 
 	logrus.Info("Starting the Cmd.")
 
