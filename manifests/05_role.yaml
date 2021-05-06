@@ -6,6 +6,7 @@ metadata:
     include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 rules:
 - apiGroups:
   - ""
@@ -96,6 +97,7 @@ metadata:
     include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 rules:
 - apiGroups:
   - ""
@@ -156,6 +158,7 @@ metadata:
     include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
     include.release.openshift.io/single-node-developer: "true"
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 rules:
 - apiGroups:
   - config.openshift.io
