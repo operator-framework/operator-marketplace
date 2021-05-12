@@ -117,9 +117,11 @@ rules:
   - ""
   resources:
   - configmaps
+  - events
   verbs:
   - get
   - create
+  - update
 - apiGroups:
   - ""
   resources:
