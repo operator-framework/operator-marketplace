@@ -1,0 +1,46 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: marketplace-alert-rules
+  namespace: openshift-marketplace
+  labels:
+    prometheus: alert-rules
+    role: alert-rules
+spec:
+  groups:
+    - name: marketplace.community_operators.rules
+      rules:
+        - alert: CommunityOperatorsCatalogError
+          annotations:
+            message: Default OperatorHub source "community-operators" is in Non-Ready state for more than 10 mins.
+          expr: catalogsource_ready{name="community-operators",exported_namespace="openshift-marketplace"} == 0
+          for: 10m
+          labels:
+            severity: warning
+    - name: marketplace.certified_operators.rules
+      rules:
+        - alert: CertifiedOperatorsCatalogError
+          annotations:
+            message: Default OperatorHub source "certified-operators" is in Non-Ready state for more than 10 mins.
+          expr: catalogsource_ready{name="certified-operators",exported_namespace="openshift-marketplace"} == 0
+          for: 10m
+          labels:
+            severity: warning
+    - name: marketplace.redhat_operators.rules
+      rules:
+        - alert: RedhatOperatorsCatalogError
+          annotations:
+            message: Default OperatorHub source "redhat-operators" is in Non-Ready state for more than 10 mins.
+          expr: catalogsource_ready{name="redhat-operators",exported_namespace="openshift-marketplace"} == 0
+          for: 10m
+          labels:
+            severity: warning
+    - name: marketplace.redhat_marketplace.rules
+      rules:
+        - alert: RedhatMarketplaceCatalogError
+          annotations:
+            message: Default OperatorHub source "redhat-marketplace" is in Non-Ready state for more than 10 mins.
+          expr: catalogsource_ready{name="redhat-marketplace",exported_namespace="openshift-marketplace"} == 0
+          for: 10m
+          labels:
+            severity: warning
