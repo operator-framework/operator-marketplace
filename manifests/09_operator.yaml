@@ -61,6 +61,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+            initialDelaySeconds: 20
           resources:
             requests:
               cpu: 10m
