@@ -61,6 +61,7 @@ func main() {
 		tlsCertPath             string
 		version                 bool
 		leaderElectionNamespace string
+		logLevel                string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "the directory where the default CatalogSources are stored")
@@ -68,6 +69,7 @@ func main() {
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "Namespace in which the leader election lock is stored.")
+	flag.StringVar(&logLevel, "log-level", "info", "controls the logging verbosity")
 	flag.Parse()
 
 	// Check if version flag was set
@@ -75,10 +77,16 @@ func main() {
 		logrus.Infof("%s", sourceCommit.String())
 		os.Exit(0)
 	}
+	level, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		logrus.Info("failed to parse the log level (%s): %v", logLevel, err)
+		os.Exit(1)
+	}
+	logrus.SetLevel(level)
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
+	err = metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
 		logrus.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
