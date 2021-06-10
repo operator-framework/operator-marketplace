@@ -75,6 +75,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	logrus.Info("test")
+
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
 	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
