@@ -4,9 +4,12 @@ metadata:
   name: cluster
 spec:
   disableAllDefaultSources: true
-  sources: [
-    {
-      name: "community-operators",
-      disabled: false,
-    }
-  ]
+  sources:
+        - name: certified-operators
+          disabled: false
+        - name: community-operators
+          disabled: false
+        - name: redhat-marketplace
+          disabled: false
+        - name: redhat-operators
+          disabled: false
