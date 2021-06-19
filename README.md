@@ -9,7 +9,7 @@ In order to deploy the Marketplace Operator, you must:
 ## Using the Marketplace Operator
 
 ### Description
-The operator manages two CRDs: [OperatorSource](./deploy/upstream/03_operatorsource.crd.yaml) and [CatalogSourceConfig](./deploy/upstream/02_catalogsourceconfig.crd.yaml).
+The operator manages one CRD: [OperatorSource](./deploy/upstream/03_operatorsource.crd.yaml).
 
 #### OperatorSource
 
@@ -33,27 +33,6 @@ On adding an `OperatorSource` to an OKD cluster, operators will be visible in th
 
 The creation of an `OperatorSource` results in the creation of an OLM `CatalogSource` in the same namespace the marketplace operator is running in. This `CatalogSource` will be populated with operators from the `OperatorSource` ready to be managed by OLM.
 
-#### CatalogSourceConfig
-
-`CatalogSourceConfig` is used to create OLM `CatalogSources` consisting of operators from one `OperatorSource` so that these operators can then be managed by OLM.
-
-Here is a description of the spec fields:
-
-- `targetNamespace` is the namespace that OLM is watching. This is where the resulting `CatalogSource`, which will have the same name as the `CatalogSourceConfig`, is created or updated.
-
-- `source` is the name of the `OperatorSource` that the packages originate from.
-
-- `packages` is a comma separated list of operators.
-
-- `csDisplayName` and `csPublisher` are optional but will result in the `CatalogSource` having proper UI displays.
-
-To learn more about how the Marketplace Operator resolves source and package combinations, please review [this doc](docs/csc-source-resolution.md).
-
-Please see [here](deploy/examples/catalogsourceconfig.cr.yaml) for an example `CatalogSourceConfig`.
-
-Once a `CatalogSourceConfig` is created successfully you can create a [`Subscription`](https://github.com/operator-framework/operator-lifecycle-manager#discovery-catalogs-and-automated-upgrades) for your operator referencing the newly created or updated `CatalogSource`.
-
-Please note that the Marketplace operator uses `CatalogSourceConfigs` and `CatalogSources` internally and you will find them present in the namespace where the Marketplace operator is running. These resources can be ignored and should not be modified or used.
 
 ### Deploying the Marketplace Operator with OKD
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
