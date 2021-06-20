@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
 	"github.com/sirupsen/logrus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +44,7 @@ func getCatsrcDefinition(fileName string) (*olm.CatalogSource, error) {
 		return nil, err
 	}
 	if strings.Compare(catsrc.Kind, "CatalogSource") != 0 {
-		return nil, errors.New("Not an CatalogSource")
+		return nil, errors.New("not a CatalogSource")
 	}
 	return catsrc, nil
 }
@@ -161,7 +161,7 @@ func AreCatsrcSpecsEqual(spec1 *olm.CatalogSourceSpec, spec2 *olm.CatalogSourceS
 		return false
 	}
 	if spec1.UpdateStrategy != nil && spec2.UpdateStrategy != nil {
-		if spec1.UpdateStrategy.RegistryPoll != spec1.UpdateStrategy.RegistryPoll {
+		if spec1.UpdateStrategy.RegistryPoll != spec2.UpdateStrategy.RegistryPoll {
 			return false
 		}
 	}

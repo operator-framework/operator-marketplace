@@ -49,33 +49,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// We only care if the event came from the cluster config.
 	pred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Meta.GetName() == operatorhub.DefaultName {
-				return true
-			}
-			return false
+			return e.Meta.GetName() == operatorhub.DefaultName
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.MetaOld.GetName() == operatorhub.DefaultName {
-				return true
-			}
-			return false
+			return e.MetaOld.GetName() == operatorhub.DefaultName
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			if e.Meta.GetName() == operatorhub.DefaultName {
 				// If DeleteStateUnknown is true it implies that the Delete event was missed
 				// and we can ignore it.
-				if e.DeleteStateUnknown {
-					return false
-				}
-				return true
+				return !e.DeleteStateUnknown
 			}
 			return false
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			if e.Meta.GetName() == operatorhub.DefaultName {
-				return true
-			}
-			return false
+			return e.Meta.GetName() == operatorhub.DefaultName
 		},
 	}
 

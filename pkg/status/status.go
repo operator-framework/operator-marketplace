@@ -11,8 +11,8 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	cohelpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	operatorhelpers "github.com/openshift/library-go/pkg/operator/v1helpers"
+	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +60,7 @@ func (r *reporter) ensureClusterOperator() error {
 	}
 
 	if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("Error %v getting ClusterOperator", err)
+		return fmt.Errorf("error %v getting ClusterOperator", err)
 	}
 
 	clusterOperator := &configv1.ClusterOperator{
@@ -73,7 +73,7 @@ func (r *reporter) ensureClusterOperator() error {
 
 	r.clusterOperator, err = r.configClient.ClusterOperators().Create(context.TODO(), clusterOperator, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Error %v creating ClusterOperator", err)
+		return fmt.Errorf("error %v creating ClusterOperator", err)
 	}
 	log.Info("[status] Created ClusterOperator")
 	return nil
@@ -149,7 +149,7 @@ func (r *reporter) updateStatus(previousStatus *configv1.ClusterOperatorStatus) 
 
 		_, err := r.configClient.ClusterOperators().UpdateStatus(context.TODO(), r.clusterOperator, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("Error %v updating ClusterOperator", err)
+			return fmt.Errorf("error %v updating ClusterOperator", err)
 		}
 		log.Info("[status] ClusterOperator status conditions updated.")
 	}

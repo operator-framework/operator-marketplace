@@ -53,7 +53,7 @@ func (o *operatorhub) Disabled() bool {
 	defer o.lock.Unlock()
 
 	for _, disabled := range o.current {
-		if disabled == false {
+		if !disabled {
 			return false
 		}
 	}

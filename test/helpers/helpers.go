@@ -6,21 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-
-	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
-	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
-	v2 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v2"
-	"github.com/operator-framework/operator-marketplace/pkg/builders"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-sdk/pkg/test"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -123,26 +116,6 @@ func WaitForSuccessfulDeployment(client test.FrameworkClient, deployment appsv1.
 	})
 }
 
-// WaitForOpSrcExpectedPhaseAndMessage checks if an OperatorSource with the given name exists in the namespace
-// and makes sure that the phase and message matches the expected values. It also returns the OperatorSource object.
-func WaitForOpSrcExpectedPhaseAndMessage(client test.FrameworkClient, opSrcName string, namespace string, expectedPhase string, expectedMessage string) (*v1.OperatorSource, error) {
-	resultOperatorSource := &v1.OperatorSource{}
-	err := wait.Poll(RetryInterval, Timeout, func() (bool, error) {
-		err := WaitForResult(client, resultOperatorSource, namespace, opSrcName)
-		if err != nil {
-			return false, err
-		}
-		if resultOperatorSource.Status.CurrentPhase.Name == expectedPhase &&
-			strings.Contains(resultOperatorSource.Status.CurrentPhase.Message, expectedMessage) {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return resultOperatorSource, nil
-}
 
 // WaitForExpectedSpec compares two CatalogSources and return true if their Specs are equal.
 func WaitForExpectedSpec(client test.FrameworkClient, name string, namespace string, expected *olmv1alpha1.CatalogSource) error {
@@ -243,142 +216,6 @@ func UpdateCatalogSourceWithRetries(client test.FrameworkClient, obj *olmv1alpha
 	})
 }
 
-// CreateOperatorSourceDefinition returns an OperatorSource definition that can be turned into
-// a runtime object for tests that rely on an OperatorSource
-func CreateOperatorSourceDefinition(name, namespace string) *v1.OperatorSource {
-	return &v1.OperatorSource{
-		TypeMeta: metav1.TypeMeta{
-			Kind: v1.OperatorSourceKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				TestOperatorSourceLabelKey: TestOperatorSourceLabelValue,
-			},
-		},
-		Spec: v1.OperatorSourceSpec{
-			Type:              "appregistry",
-			Endpoint:          "https://quay.io/cnr",
-			RegistryNamespace: "marketplace_e2e",
-		},
-	}
-}
-
-// checkOwnerLabels verifies that the correct owner labels have been set
-func checkOwnerLabels(labels map[string]string, owner string) error {
-	switch owner {
-	case v1.OperatorSourceKind:
-		_, hasNameLabel := labels[builders.OpsrcOwnerNameLabel]
-		_, hasNamespaceLabel := labels[builders.OpsrcOwnerNamespaceLabel]
-		if !hasNameLabel || !hasNamespaceLabel {
-			return fmt.Errorf("created child resource does not have correct %v owner labels", owner)
-		}
-	case v2.CatalogSourceConfigKind:
-		_, hasNameLabel := labels[builders.CscOwnerNameLabel]
-		_, hasNamespaceLabel := labels[builders.CscOwnerNamespaceLabel]
-		if !hasNameLabel || !hasNamespaceLabel {
-			return fmt.Errorf("created child resource does not have correct %v owner labels", owner)
-		}
-	}
-	return nil
-}
-
-// CheckChildResourcesCreated checks that an OperatorSource's
-// child resources were deployed.
-func CheckChildResourcesCreated(client test.FrameworkClient, opsrcName, namespace, targetNamespace, owner string) error {
-
-	// Check that the CatalogSource was created.
-	resultCatalogSource := &olmv1alpha1.CatalogSource{}
-	err := WaitForResult(client, resultCatalogSource, targetNamespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check owner labels are correctly set.
-	err = checkOwnerLabels(resultCatalogSource.Labels, owner)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Service was created.
-	resultService := &corev1.Service{}
-	err = WaitForResult(client, resultService, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check owner labels are correctly set.
-	err = checkOwnerLabels(resultService.Labels, owner)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Deployment was created.
-	resultDeployment := &appsv1.Deployment{}
-	err = WaitForResult(client, resultDeployment, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check owner labels are correctly set.
-	err = checkOwnerLabels(resultDeployment.Labels, owner)
-	if err != nil {
-		return err
-	}
-
-	// Now check that the Deployment is ready.
-	err = WaitForSuccessfulDeployment(client, *resultDeployment)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// CheckChildResourcesDeleted checks that an OperatorSource's
-// child resources were deleted.
-func CheckChildResourcesDeleted(client test.FrameworkClient, opsrcName, namespace, targetNamespace string) error {
-	// Check that the CatalogSource was deleted.
-	resultCatalogSource := &olmv1alpha1.CatalogSource{}
-	err := WaitForNotFound(client, resultCatalogSource, targetNamespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Service was deleted.
-	resultService := &corev1.Service{}
-	err = WaitForNotFound(client, resultService, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-
-	// Check that the Deployment was deleted.
-	resultDeployment := &appsv1.Deployment{}
-	err = WaitForNotFound(client, resultDeployment, namespace, opsrcName)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForOpsrcMarkedForDeletionWithFinalizer waits until an object with a finalizer is marked for deletion
-// but the finalizer has not yet been removed. This method should only be used in the case where
-// the finalizer will not be removed automatically, otherwise it will return an error in the case of
-// a race condition.
-func WaitForOpsrcMarkedForDeletionWithFinalizer(client test.FrameworkClient, name, namespace string) error {
-	resultOperatorSource := &v1.OperatorSource{}
-	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	return wait.PollImmediate(RetryInterval, Timeout, func() (done bool, err error) {
-		err = client.Get(context.TODO(), namespacedName, resultOperatorSource)
-		if err != nil {
-			return false, err
-		}
-		if resultOperatorSource.DeletionTimestamp != nil && len(resultOperatorSource.Finalizers) > 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-}
 
 // WaitForCatsrcMarkedForDeletion waits until a CatalogSource is either deleted or is marked for deletion
 func WaitForCatsrcMarkedForDeletion(client test.FrameworkClient, name, namespace string) error {
@@ -436,51 +273,6 @@ func ScaleMarketplace(client test.FrameworkClient, namespace string, scale int32
 		return err
 	}
 
-	return nil
-}
-
-// CreateSubscriptionDefinition returns a newly built Subscription with the labels
-// `csc-owner-name` and `csc-owner-namespace` based on the catalogsourceconfig and the expected name
-func CreateSubscriptionDefinition(name, namespace, cscName string, isCreatedByUI bool) *v1alpha1.Subscription {
-	labels := make(map[string]string)
-	specSource := fmt.Sprintf("%s-%s", cscName, namespace)
-
-	if isCreatedByUI {
-		labels[builders.CscOwnerNameLabel] = specSource
-		labels[builders.CscOwnerNamespaceLabel] = namespace
-	}
-
-	return &v1alpha1.Subscription{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s",
-				v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version),
-			Kind: v1alpha1.SubscriptionKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Spec: &v1alpha1.SubscriptionSpec{
-			CatalogSource:          specSource,
-			CatalogSourceNamespace: namespace,
-			Channel:                "alpha",
-		},
-	}
-}
-
-// CheckSubscriptionNotUpdated checks that a user created subscription
-// was not updated during migration.
-func CheckSubscriptionNotUpdated(client test.FrameworkClient, namespace, subscriptionName, installedCscName string) error {
-	subscription := &v1alpha1.Subscription{}
-	specSource := fmt.Sprintf("%s-%s", installedCscName, namespace)
-	err := client.Get(context.TODO(), types.NamespacedName{Name: subscriptionName, Namespace: namespace}, subscription)
-	if err != nil {
-		return err
-	}
-	if subscription.Spec.CatalogSource != specSource {
-		return fmt.Errorf("user created Subscription %s Spec.CatalogSource has changed. Spec.CatalogSource was %s and is now %s", subscription.GetName(), subscription.Spec.CatalogSource, specSource)
-	}
 	return nil
 }
 
@@ -563,16 +355,4 @@ func InitCatSrcDefinition() error {
 		}
 	}
 	return nil
-}
-
-// GetRegistryDeployment returns the deployment object for the given OperatorSource
-func GetRegistryDeployment(client test.FrameworkClient, name, namespace string) *appsv1.Deployment {
-	// Get the registry deployment of the test OperatorSource
-	deployment := &appsv1.Deployment{}
-	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-	err := client.Get(context.TODO(), namespacedName, deployment)
-	if err != nil {
-		return nil
-	}
-	return deployment
 }

@@ -65,17 +65,11 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
-			if e.Meta.GetName() == ca.TrustedCaConfigMapName {
-				return true
-			}
-			return false
+			return  e.Meta.GetName() == ca.TrustedCaConfigMapName
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
-			if e.MetaOld.GetName() == ca.TrustedCaConfigMapName {
-				return true
-			}
-			return false
+			return  e.MetaOld.GetName() == ca.TrustedCaConfigMapName
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return false
