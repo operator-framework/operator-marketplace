@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -25,20 +26,29 @@ import (
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
-	leaderElectionConfigMapName = "marketplace-operator-lock"
+	// TODO(tflannag): Should this be configurable?
+	defaultLeaderElectionConfigMapName = "marketplace-operator-lock"
+	defaultRetryPeriod                 = 30 * time.Second
+	defaultRenewDeadline               = 60 * time.Second
+	defaultLeaseDuration               = 90 * time.Second
 )
 
 func printVersion() {
@@ -47,25 +57,44 @@ func printVersion() {
 	logrus.Printf("operator-sdk Version: %v", sdkVersion.Version)
 }
 
+func setupScheme() *kruntime.Scheme {
+	scheme := kruntime.NewScheme()
+
+	utilruntime.Must(apis.AddToScheme(scheme))
+	utilruntime.Must(olmv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(v1beta1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+
+	if configv1.IsAPIAvailable() {
+		utilruntime.Must(apiconfigv1.AddToScheme(scheme))
+	}
+
+	return scheme
+}
+
 func main() {
 	printVersion()
 
 	var (
-		clusterOperatorName string
-		tlsKeyPath          string
-		tlsCertPath         string
-		version             bool
+		clusterOperatorName     string
+		tlsKeyPath              string
+		tlsCertPath             string
+		leaderElectionNamespace string
+		version                 bool
 	)
-	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
-	flag.StringVar(&defaults.Dir, "defaultsDir", "", "the directory where the default CatalogSources are stored")
+	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "configures the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
+	flag.StringVar(&defaults.Dir, "defaultsDir", "", "configures the directory where the default CatalogSources are stored")
 	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
+	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "configures the namespace that will contain the leader election lock")
 	flag.Parse()
+
+	logger := logrus.New()
 
 	// Check if version flag was set
 	if version {
-		logrus.Infof("%s", sourceCommit.String())
+		logger.Infof("%s", sourceCommit.String())
 		os.Exit(0)
 	}
 
@@ -73,25 +102,28 @@ func main() {
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
 	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
-		logrus.Fatalf("failed to serve prometheus metrics: %s", err)
+		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
-		logrus.Fatalf("failed to get watch namespace: %v", err)
+		logger.Fatalf("failed to get watch namespace: %v", err)
 	}
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	// Set OpenShift config API availability
 	err = configv1.SetConfigAPIAvailability(cfg)
 	if err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(err)
 	}
+
+	logger.Info("setting up scheme")
+	scheme := setupScheme()
 
 	// Even though we are asking to watch all namespaces, we only handle events
 	// from the operator's namespace. The reason for watching all namespaces is
@@ -105,100 +137,116 @@ func main() {
 	mgr, err := manager.New(cfg, manager.Options{
 		Namespace:          "",
 		MetricsBindAddress: "0",
+		Scheme:             scheme,
 	})
 	if err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(err)
 	}
 
-	logrus.Info("Registering Components.")
-	logrus.Info("setting up scheme")
-	// Setup Scheme for all defined resources
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Fatal(err)
-	}
-	// Add external resource to scheme
-	if err := olmv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Fatal(err)
-	}
-	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
-		logrus.Fatal(err)
-	}
-	// If the config API is available add the config resources to the scheme
-	if configv1.IsAPIAvailable() {
-		if err := apiconfigv1.AddToScheme(mgr.GetScheme()); err != nil {
-			logrus.Fatal(err)
-		}
-	}
-
-	stopCh := signals.Context().Done()
-
-	var statusReporter status.Reporter = &status.NoOpReporter{}
-	if clusterOperatorName != "" {
-		statusReporter, err = status.NewReporter(cfg, mgr, namespace, clusterOperatorName, os.Getenv("RELEASE_VERSION"), stopCh)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-
-	// Populate the global default OperatorSources definition and config
-	err = defaults.PopulateGlobals()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	// Setup all Controllers
-	if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
-		logrus.Fatal(err)
-	}
-
-	logrus.Info("Setting up health checks")
+	logger.Info("setting up health checks")
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	go http.ListenAndServe(":8080", nil)
 
-	// Wait until this instance becomes the leader.
-	logrus.Info("Waiting to become leader.")
-	err = leader.Become(context.TODO(), leaderElectionConfigMapName)
-	if err != nil {
-		logrus.Fatal(err, "Failed to retry for leader lock")
+	ctx := signals.Context()
+	stopCh := ctx.Done()
+
+	leaderCtx, leaderCancel := context.WithCancel(context.Background())
+	defer leaderCancel()
+
+	run := func(ctx context.Context) {
+		logger.Info("registering components")
+		var statusReporter status.Reporter = &status.NoOpReporter{}
+		if clusterOperatorName != "" {
+			logger.Info("setting up the marketplace clusteroperator status reporter")
+			statusReporter, err = status.NewReporter(cfg, mgr, namespace, clusterOperatorName, os.Getenv("RELEASE_VERSION"), stopCh)
+			if err != nil {
+				logger.Fatal(err)
+			}
+		}
+
+		// Populate the global default OperatorSources definition and config
+		if err := defaults.PopulateGlobals(); err != nil {
+			logger.Fatal(err)
+		}
+
+		logger.Info("setting up controllers")
+		if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
+			logger.Fatal(err)
+		}
+
+		logger.Info("ensuring the default catalogsource resources")
+		if err := ensureDefaults(cfg, mgr.GetScheme()); err != nil {
+			logger.Fatalf("failed to setup the default catalogsource manifests: %v", err)
+		}
+
+		// start reporting the marketplace clusteroperator status reporting before
+		// starting the manager instance as mgr.Start is blocking
+		logger.Info("starting the marketplace clusteroperator status reporter")
+		statusReportingDoneCh := statusReporter.StartReporting()
+
+		logger.Info("starting manager")
+		if err := mgr.Start(stopCh); err != nil {
+			logger.WithError(err).Error("unable to run manager")
+		}
+
+		// Wait for ClusterOperator status reporting routine to close the statusReportingDoneCh channel.
+		<-statusReportingDoneCh
 	}
-	logrus.Info("Elected leader.")
 
-	logrus.Info("Starting the Cmd.")
-
-	// Handle the defaults
-	err = ensureDefaults(cfg, mgr.GetScheme())
+	client, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		logrus.Fatal(err)
+		logger.Fatal(fmt.Errorf("failed to initialize the kubernetes clientset: %v", err))
 	}
 
-	// statusReportingDoneCh will be closed after the operator has successfully stopped reporting ClusterOperator status.
-	statusReportingDoneCh := statusReporter.StartReporting()
+	id := os.Getenv("POD_NAME")
+	if id == "" {
+		logger.Warn("failed to determine $POD_NAME falling back to hostname")
+		id, err = os.Hostname()
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}
 
-	// Start the Cmd
-	err = mgr.Start(stopCh)
-
-	// Wait for ClusterOperator status reporting routine to close the statusReportingDoneCh channel.
-	<-statusReportingDoneCh
-
-	exit(err)
+	rl := &resourcelock.ConfigMapLock{
+		Client: client.CoreV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity: id,
+		},
+		ConfigMapMeta: v1.ObjectMeta{
+			Name:      defaultLeaderElectionConfigMapName,
+			Namespace: leaderElectionNamespace,
+		},
+	}
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		Lock:            rl,
+		ReleaseOnCancel: true,
+		LeaseDuration:   defaultLeaseDuration,
+		RenewDeadline:   defaultRenewDeadline,
+		RetryPeriod:     defaultRetryPeriod,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				logger.Infof("became leader: %s", id)
+				run(leaderCtx)
+			},
+			OnStoppedLeading: func() {
+				logger.Warnf("leader election lost for %s identity", id)
+				os.Exit(0)
+			},
+			OnNewLeader: func(identity string) {
+				if identity == id {
+					return
+				}
+				logger.Infof("current leader: %s", identity)
+			},
+		},
+	})
 }
 
-// exit stops the reporting of ClusterOperator status and exits with the proper exit code.
-func exit(err error) {
-	// If an error exists then exit with status set to 1
-	if err != nil {
-		logrus.Fatalf("The operator encountered an error, exit code 1: %v", err)
-	}
-
-	// No error, graceful termination
-	logrus.Info("The operator exited gracefully, exit code 0")
-	os.Exit(0)
-}
-
-// ensureDefaults ensures that all the default OperatorSources are present on
-// the cluster
+// ensureDefaults is responsible for ensuring that the list of default
+// CatalogSource on-disk manifests are present on-cluster, or absent
+// if disabled in the OperatorHub cluster singleton type.
 func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	// The default client serves read requests from the cache which only gets
 	// initialized after mgr.Start(). So we need to instantiate a new client
