@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -28,7 +30,9 @@ func Context() context.Context {
 
 			select {
 			case <-signalCtx.Done():
+				logrus.Info("received the done signal")
 			case <-c:
+				logrus.Info("received signal")
 				os.Exit(1) // second signal. Exit directly.
 			}
 		}()

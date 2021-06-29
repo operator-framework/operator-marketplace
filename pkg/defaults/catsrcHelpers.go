@@ -56,8 +56,8 @@ func processCatsrc(client wrapper.Client, def olm.CatalogSource, disable bool) e
 	cluster := &olm.CatalogSource{}
 	err := client.Get(context.TODO(), wrapper.ObjectKey{
 		Name:      def.Name,
-		Namespace: def.Namespace},
-		cluster)
+		Namespace: def.Namespace,
+	}, cluster)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		logrus.Errorf("[defaults] Error getting CatalogSource %s - %v", def.Name, err)
 		return err
