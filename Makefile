@@ -33,9 +33,6 @@ e2e-test:
 e2e-test-local:
 	./scripts/e2e-tests-local.sh
 
-e2e-job:
-	./scripts/run-e2e-job.sh
-
 e2e-test-minikube:
 	TEST_NAMESPACE=minikube ./scripts/e2e-tests.sh
 
