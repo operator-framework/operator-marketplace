@@ -25,7 +25,6 @@ import (
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -51,16 +50,20 @@ func main() {
 	printVersion()
 
 	var (
-		clusterOperatorName string
-		tlsKeyPath          string
-		tlsCertPath         string
-		version             bool
+		clusterOperatorName     string
+		tlsKeyPath              string
+		tlsCertPath             string
+		version                 bool
+		leaderElectionNamespace string
+		logLevel                string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "the directory where the default CatalogSources are stored")
 	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
+	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "Namespace in which the leader election lock is stored.")
+	flag.StringVar(&logLevel, "log-level", "info", "controls the logging verbosity")
 	flag.Parse()
 
 	// Check if version flag was set
@@ -68,10 +71,16 @@ func main() {
 		logrus.Infof("%s", sourceCommit.String())
 		os.Exit(0)
 	}
+	level, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		logrus.Info("failed to parse the log level (%s): %v", logLevel, err)
+		os.Exit(1)
+	}
+	logrus.SetLevel(level)
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
+	err = metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
 	if err != nil {
 		logrus.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
@@ -103,8 +112,11 @@ func main() {
 	// default in <v0.2.0, but it's now enabled by default and the default port
 	// conflicts with the same port we bind for the health checks.
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          "",
-		MetricsBindAddress: "0",
+		Namespace:               "",
+		MetricsBindAddress:      "0",
+		LeaderElection:          true,
+		LeaderElectionNamespace: leaderElectionNamespace,
+		LeaderElectionID:        leaderElectionConfigMapName,
 	})
 	if err != nil {
 		logrus.Fatal(err)
@@ -156,14 +168,6 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 	go http.ListenAndServe(":8080", nil)
-
-	// Wait until this instance becomes the leader.
-	logrus.Info("Waiting to become leader.")
-	err = leader.Become(context.TODO(), leaderElectionConfigMapName)
-	if err != nil {
-		logrus.Fatal(err, "Failed to retry for leader lock")
-	}
-	logrus.Info("Elected leader.")
 
 	logrus.Info("Starting the Cmd.")
 
