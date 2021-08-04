@@ -5,6 +5,7 @@ metadata:
   namespace: "openshift-marketplace"
   annotations:
     target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+    operatorframework.io/priorityclass: 'system-cluster-critical'
 spec:
   sourceType: grpc
   image: registry.redhat.io/redhat/redhat-operator-index:v4.8
