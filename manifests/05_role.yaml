@@ -17,6 +17,12 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - update
+- apiGroups:
   - config.openshift.io
   resources:
   - operatorhubs
