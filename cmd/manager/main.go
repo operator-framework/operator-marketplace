@@ -149,13 +149,11 @@ func main() {
 	})
 	go http.ListenAndServe(":8080", nil)
 
-	ctx := signals.Context()
-	stopCh := ctx.Done()
-
-	leaderCtx, leaderCancel := context.WithCancel(context.Background())
-	defer leaderCancel()
+	ctx, cancel := context.WithCancel(signals.Context())
+	defer cancel()
 
 	run := func(ctx context.Context) {
+		stopCh := ctx.Done()
 		logger.Info("registering components")
 		var statusReporter status.Reporter = &status.NoOpReporter{}
 		if clusterOperatorName != "" {
@@ -228,11 +226,14 @@ func main() {
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				logger.Infof("became leader: %s", id)
-				run(leaderCtx)
+				run(ctx)
 			},
 			OnStoppedLeading: func() {
 				logger.Warnf("leader election lost for %s identity", id)
-				os.Exit(0)
+				// Stop the controller just in case this doesn't coincide with container stop
+				// e.g. scale > 1 (which we don't support today and would require the ability
+				// to start/stop reconciliation dynamically)
+				cancel()
 			},
 			OnNewLeader: func(identity string) {
 				if identity == id {
