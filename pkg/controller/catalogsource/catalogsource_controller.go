@@ -45,13 +45,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if _, ok := defaultCatalogsources[e.MetaOld.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.ObjectOld.GetName()]; ok {
 				return true
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			if _, ok := defaultCatalogsources[e.Meta.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.Object.GetName()]; ok {
 				// If DeleteStateUnknown is true it implies that the Delete event was missed
 				// and we can ignore it.
 				if e.DeleteStateUnknown {
@@ -62,7 +62,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			if _, ok := defaultCatalogsources[e.Meta.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.Object.GetName()]; ok {
 				return true
 			}
 			return false
@@ -87,7 +87,7 @@ type ReconcileCatalogSource struct {
 	client client.Client
 }
 
-func (r *ReconcileCatalogSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileCatalogSource) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
 	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
 }

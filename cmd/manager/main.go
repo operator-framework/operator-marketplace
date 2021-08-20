@@ -185,7 +185,7 @@ func main() {
 		statusReportingDoneCh := statusReporter.StartReporting()
 
 		logger.Info("starting manager")
-		if err := mgr.Start(stopCh); err != nil {
+		if err := mgr.Start(ctx); err != nil {
 			logger.WithError(err).Error("unable to run manager")
 		}
 

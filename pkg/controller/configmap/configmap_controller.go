@@ -65,14 +65,14 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
-			if e.Meta.GetName() == ca.TrustedCaConfigMapName {
+			if e.Object.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
-			if e.MetaOld.GetName() == ca.TrustedCaConfigMapName {
+			if e.ObjectOld.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
 			return false
@@ -96,7 +96,7 @@ type ReconcileConfigMap struct {
 
 // Reconcile will restart the marketplace operator if the Certificate Authority ConfigMap is
 // not in sync with the Certificate Authority bundle on disk..
-func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling ConfigMap %s/%s\n", request.Namespace, request.Name)
 
 	// Check if the CA ConfigMap is in the same namespace that Marketplace is deployed in.
@@ -111,7 +111,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// Get configMap object
 	caConfigMap := &corev1.ConfigMap{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, caConfigMap)
+	err = r.client.Get(ctx, request.NamespacedName, caConfigMap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -123,8 +123,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	err = r.handler.Handle(context.TODO(), caConfigMap)
-
+	err = r.handler.Handle(ctx, caConfigMap)
 	return reconcile.Result{}, err
 }
 
