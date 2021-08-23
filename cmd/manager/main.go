@@ -16,6 +16,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
@@ -24,9 +25,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
-
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -54,7 +52,6 @@ const (
 func printVersion() {
 	logrus.Printf("Go Version: %s", runtime.Version())
 	logrus.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
-	logrus.Printf("operator-sdk Version: %v", sdkVersion.Version)
 }
 
 func setupScheme() *kruntime.Scheme {
@@ -105,7 +102,7 @@ func main() {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
-	namespace, err := k8sutil.GetWatchNamespace()
+	namespace, err := apiutils.GetWatchNamespace()
 	if err != nil {
 		logger.Fatalf("failed to get watch namespace: %v", err)
 	}
