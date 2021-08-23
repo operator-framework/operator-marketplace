@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -32,7 +32,7 @@ func WatchTests(t *testing.T) {
 // testRestoreOpSrcCs tests that when a CatalogSource that is owned by an OperatorSource
 // is restored upon deletion.
 func testRestoreOpSrcCs(t *testing.T) {
-	err := deleteCheckRestoreChild(t, olm.CatalogSourceKind, v1.OperatorSourceKind)
+	err := deleteCheckRestoreChild(t, olmv1alpha1.CatalogSourceKind, v1.OperatorSourceKind)
 	assert.NoError(t, err, opsrcErrMsg)
 }
 
@@ -80,10 +80,10 @@ func deleteCheckRestoreChild(t *testing.T, child string, owner string) error {
 	}
 
 	switch child {
-	case olm.CatalogSourceKind:
-		obj = &olm.CatalogSource{
+	case olmv1alpha1.CatalogSourceKind:
+		obj = &olmv1alpha1.CatalogSource{
 			TypeMeta: meta.TypeMeta{
-				Kind: olm.CatalogSourceKind,
+				Kind: olmv1alpha1.CatalogSourceKind,
 			},
 			ObjectMeta: meta.ObjectMeta{
 				Name:      name,

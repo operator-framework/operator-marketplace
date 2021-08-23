@@ -3,7 +3,7 @@ package e2e
 import (
 	"testing"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-marketplace/test/testgroups"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -28,13 +28,13 @@ func TestMarketplace(t *testing.T) {
 
 // initTestingFramework adds the OLM CatalogSource type to the framework scheme.
 func initTestingFramework(t *testing.T) {
-	catalogSource := &olm.CatalogSource{
+	catalogSource := &olmv1alpha1.CatalogSource{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       olm.CatalogSourceKind,
-			APIVersion: olm.CatalogSourceCRDAPIVersion,
+			Kind:       olmv1alpha1.CatalogSourceKind,
+			APIVersion: olmv1alpha1.CatalogSourceCRDAPIVersion,
 		},
 	}
-	err := test.AddToFrameworkScheme(olm.AddToScheme, catalogSource)
+	err := test.AddToFrameworkScheme(olmv1alpha1.AddToScheme, catalogSource)
 	if err != nil {
 		t.Fatalf("failed to add CatalogSource custom resource scheme to framework: %v", err)
 	}

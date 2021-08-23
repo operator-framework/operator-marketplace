@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
@@ -424,7 +424,7 @@ func checkCatsrcIsPresent(name, namespace string) error {
 	client := test.Global.Client
 	// Check if the CatalogSource is present
 	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olm.CatalogSource{})
+		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &olmv1alpha1.CatalogSource{})
 		if err != nil {
 			return false, err
 		}
@@ -438,7 +438,7 @@ func checkCatsrcIsDeleted(name, namespace string) error {
 	client := test.Global.Client
 	// Check if the CatalogSource is deleted
 	err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-		def := &olm.CatalogSource{}
+		def := &olmv1alpha1.CatalogSource{}
 		err = client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, def)
 		if errors.IsNotFound(err) {
 			return true, nil

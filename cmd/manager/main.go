@@ -13,9 +13,9 @@ import (
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
 	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"

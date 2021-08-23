@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/test/helpers"
 	"github.com/operator-framework/operator-sdk/pkg/test"
@@ -50,7 +50,7 @@ func testDeleteDefaultCatsrc(t *testing.T) {
 	err = helpers.DeleteRuntimeObject(client, &deleteCatsrc)
 	require.NoError(t, err, "Default CatalogSource could not be deleted successfully")
 
-	clusterCatSrc := &olm.CatalogSource{}
+	clusterCatSrc := &olmv1alpha1.CatalogSource{}
 	err = helpers.WaitForResult(client, clusterCatSrc, namespace, helpers.DefaultSources[0].Name)
 	assert.NoError(t, err, "Default CatalogSource was never created")
 
@@ -69,7 +69,7 @@ func testUpdateDefaultCatsrc(t *testing.T) {
 
 	client := test.Global.Client
 	testCatsrc := helpers.DefaultSources[0]
-	updateCatsrc := &olm.CatalogSource{}
+	updateCatsrc := &olmv1alpha1.CatalogSource{}
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: testCatsrc.Name, Namespace: testCatsrc.Namespace}, updateCatsrc)
 	require.NoError(t, err, "failed to query for the %s CatalogSource in the %s namespace", testCatsrc.Name, testCatsrc.Namespace)
@@ -114,7 +114,7 @@ func testDeleteDefaultCatsrcWhileStopped(t *testing.T) {
 	err = helpers.ScaleMarketplace(test.Global.Client, namespace, int32(1))
 	require.NoError(t, err, "Could not scale the %s deployment back up", marketplaceName)
 
-	clusterCatSrc := &olm.CatalogSource{}
+	clusterCatSrc := &olmv1alpha1.CatalogSource{}
 	err = helpers.WaitForResult(client, clusterCatSrc, namespace, helpers.DefaultSources[0].Name)
 	assert.NoError(t, err, "Default %s CatalogSource was never created", clusterCatSrc.Name)
 
@@ -142,7 +142,7 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 	catSrcName := "redhat-operators"
 	client := test.Global.Client
 
-	customCatsrc := olm.CatalogSource{
+	customCatsrc := olmv1alpha1.CatalogSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CatalogSource",
 			APIVersion: "operators.coreos.com/v1alpha1",
@@ -151,7 +151,7 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 			Name:      catSrcName,
 			Namespace: namespace,
 		},
-		Spec: olm.CatalogSourceSpec{
+		Spec: olmv1alpha1.CatalogSourceSpec{
 			SourceType:  "grpc",
 			Image:       "my-cool-registry/my-namespace/my-cool-index",
 			DisplayName: "My Cool Red Hat Operators",
@@ -194,7 +194,7 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 			continue
 		}
 		err := wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
-			clusterCatsrc := &olm.CatalogSource{}
+			clusterCatsrc := &olmv1alpha1.CatalogSource{}
 			err = client.Get(context.TODO(), types.NamespacedName{Name: catSrcName, Namespace: namespace}, clusterCatsrc)
 			if err != nil || !defaults.AreCatsrcSpecsEqual(&clusterCatsrc.Spec, &catsrcDef.Spec) {
 				return false, err
@@ -206,17 +206,17 @@ func testDefaultCatsrcWhileDisabled(t *testing.T) {
 }
 
 // checkForCatsrc checks if CatalogSource is present, and is not being removed after some time has passed
-func checkForCatsrc(name, namespace string) (olm.CatalogSource, error) {
+func checkForCatsrc(name, namespace string) (olmv1alpha1.CatalogSource, error) {
 	client := test.Global.Client
 	// Wait for a minute
 	wait.Poll(time.Second*5, time.Minute*1, func() (done bool, err error) {
 		return false, nil
 	})
 	//Check CatalogSource is present in the cluster
-	catsrc := olm.CatalogSource{}
+	catsrc := olmv1alpha1.CatalogSource{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &catsrc)
 	if err != nil {
-		return olm.CatalogSource{}, err
+		return olmv1alpha1.CatalogSource{}, err
 	}
 	return catsrc, nil
 }
