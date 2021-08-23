@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
-
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
@@ -27,7 +27,6 @@ import (
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -59,7 +58,6 @@ func setupScheme() *kruntime.Scheme {
 
 	utilruntime.Must(apis.AddToScheme(scheme))
 	utilruntime.Must(olmv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 
 	if configv1.IsAPIAvailable() {

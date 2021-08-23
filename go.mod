@@ -27,7 +27,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210413134643-5e61552d6c78 // indirect
 	golang.org/x/term v0.0.0-20210406210042-72f3dc4e9b72 // indirect
 	k8s.io/api v0.21.4
-	k8s.io/apiextensions-apiserver v0.21.4
+	k8s.io/apiextensions-apiserver v0.21.4 // indirect
 	k8s.io/apimachinery v0.21.4
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
