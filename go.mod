@@ -16,7 +16,7 @@ require (
 	github.com/openshift/api v0.0.0-20210331193751-3acddb19d360
 	github.com/openshift/client-go v0.0.0-20210331195552-cf6c2669e01f
 	github.com/openshift/library-go v0.0.0-00010101000000-000000000000
-	github.com/operator-framework/api v0.3.20
+	github.com/operator-framework/api v0.10.5
 	github.com/operator-framework/operator-sdk v0.19.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
@@ -24,7 +24,6 @@ require (
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
-	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/oauth2 v0.0.0-20210413134643-5e61552d6c78 // indirect
 	golang.org/x/term v0.0.0-20210406210042-72f3dc4e9b72 // indirect
 	k8s.io/api v0.21.4
