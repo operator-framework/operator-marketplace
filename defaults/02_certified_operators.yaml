@@ -8,7 +8,7 @@ metadata:
     operatorframework.io/priorityclass: 'system-cluster-critical'
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/certified-operator-index:v4.8
+  image: registry.redhat.io/redhat/certified-operator-index:v4.9
   displayName: "Certified Operators"
   publisher: "Red Hat"
   priority: -200
