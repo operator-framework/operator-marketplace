@@ -11,6 +11,8 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.14.0
 	github.com/openshift/api v0.0.0-20210331193751-3acddb19d360
 	github.com/openshift/client-go v0.0.0-20210331195552-cf6c2669e01f
 	github.com/openshift/library-go v0.0.0-00010101000000-000000000000
