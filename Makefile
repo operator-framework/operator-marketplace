@@ -43,4 +43,4 @@ vendor:
 
 .PHONY: manifests
 manifests:
-	./scripts/update-manifests.sh
+	./hack/update-manifests.sh
