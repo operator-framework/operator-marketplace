@@ -27,17 +27,10 @@ unit: unit-test
 unit-test:
 	go test -v ./pkg/...
 
-e2e-test:
-	./scripts/e2e-tests.sh
-
-e2e-test-local:
-	./scripts/e2e-tests-local.sh
+e2e: e2e-job
 
 e2e-job:
-	./scripts/run-e2e-job.sh
-
-e2e-test-minikube:
-	TEST_NAMESPACE=minikube ./scripts/e2e-tests.sh
+	go test -v -race -failfast -timeout 90m ./test/e2e/...
 
 install-olm-crds:
 	kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
