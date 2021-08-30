@@ -1,6 +1,7 @@
 package defaults
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 
@@ -43,8 +44,8 @@ const (
 // Defaults is the interface that can be used to ensure default OperatorSources
 // are always present on the cluster.
 type Defaults interface {
-	EnsureAll(client wrapper.Client) map[string]error
-	Ensure(client wrapper.Client, sourceName string) error
+	EnsureAll(ctx context.Context, client wrapper.Client) map[string]error
+	Ensure(ctx context.Context, client wrapper.Client, sourceName string) error
 	RestoreSpecIfDefault(in *v1.OperatorSource)
 }
 
@@ -84,24 +85,24 @@ func (d *defaults) RestoreSpecIfDefault(in *v1.OperatorSource) {
 // Ensure checks if the given OperatorSource or CatalogSource source is one of the
 // defaults and if it is, it ensures it is present or absent on the cluster
 // based on the config.
-func (d *defaults) Ensure(client wrapper.Client, sourceName string) error {
+func (d *defaults) Ensure(ctx context.Context, client wrapper.Client, sourceName string) error {
 	opsrc, present := d.opsrcDefinitions[sourceName]
 	if !present {
 		catsrc, present := d.catsrcDefinitions[sourceName]
 		if !present {
 			return nil
 		}
-		return ensureCatsrc(client, d.config, catsrc)
+		return ensureCatsrc(ctx, client, d.config, catsrc)
 	}
-	return ensureOpsrc(client, d.config, opsrc)
+	return ensureOpsrc(ctx, client, d.config, opsrc)
 }
 
 // EnsureAll processes all the default OperatorSources and Catalogsource and
 // ensures they are present or absent on the cluster based on the config.
-func (d *defaults) EnsureAll(client wrapper.Client) map[string]error {
+func (d *defaults) EnsureAll(ctx context.Context, client wrapper.Client) map[string]error {
 	result := make(map[string]error)
 	for name := range d.config {
-		err := d.Ensure(client, name)
+		err := d.Ensure(ctx, client, name)
 		if err != nil {
 			result[name] = err
 		}

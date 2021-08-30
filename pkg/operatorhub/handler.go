@@ -39,7 +39,7 @@ func (h *confighandler) Handle(ctx context.Context, in *configv1.OperatorHub) er
 
 	// Apply the configuration to the default OperatorSources
 	opsrcDefinitions, catsrcDefinitions := defaults.GetGlobalDefinitions()
-	result := defaults.New(opsrcDefinitions, catsrcDefinitions, currentConfig).EnsureAll(h.client)
+	result := defaults.New(opsrcDefinitions, catsrcDefinitions, currentConfig).EnsureAll(ctx, h.client)
 
 	err := h.updateStatus(ctx, log, in, currentConfig, result)
 	if err != nil {

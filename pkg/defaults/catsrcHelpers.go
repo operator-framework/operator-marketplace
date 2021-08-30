@@ -14,13 +14,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-func ensureCatsrc(client wrapper.Client, config map[string]bool, catsrc olmv1alpha1.CatalogSource) error {
+func ensureCatsrc(
+	ctx context.Context,
+	client wrapper.Client,
+	config map[string]bool,
+	catsrc olmv1alpha1.CatalogSource,
+) error {
 	disable, present := config[catsrc.Name]
 	if !present {
 		disable = false
 	}
 
-	err := processCatsrc(client, catsrc, disable)
+	err := processCatsrc(ctx, client, catsrc, disable)
 	if err != nil {
 		return err
 	}
@@ -51,10 +56,10 @@ func getCatsrcDefinition(fileName string) (*olmv1alpha1.CatalogSource, error) {
 
 // processCatsrc will ensure that the given CatalogSource is present or not on
 // the cluster based on the disable flag.
-func processCatsrc(client wrapper.Client, def olmv1alpha1.CatalogSource, disable bool) error {
+func processCatsrc(ctx context.Context, client wrapper.Client, def olmv1alpha1.CatalogSource, disable bool) error {
 	// Get CatalogSource on the cluster
 	cluster := &olmv1alpha1.CatalogSource{}
-	err := client.Get(context.TODO(), wrapper.ObjectKey{
+	err := client.Get(ctx, wrapper.ObjectKey{
 		Name:      def.Name,
 		Namespace: def.Namespace,
 	}, cluster)
@@ -65,10 +70,10 @@ func processCatsrc(client wrapper.Client, def olmv1alpha1.CatalogSource, disable
 
 	if disable {
 		if cluster.Annotations[defaultCatsrcAnnotationKey] == defaultCatsrcAnnotationValue {
-			err = ensureCatsrcAbsent(client, def, cluster)
+			err = ensureCatsrcAbsent(ctx, client, def, cluster)
 		}
 	} else {
-		err = ensureCatsrcPresent(client, def, cluster)
+		err = ensureCatsrcPresent(ctx, client, def, cluster)
 	}
 
 	if err != nil {
@@ -79,25 +84,33 @@ func processCatsrc(client wrapper.Client, def olmv1alpha1.CatalogSource, disable
 }
 
 // ensureCatsrcAbsent ensure that that the default CatalogSource is not present on the cluster
-func ensureCatsrcAbsent(client wrapper.Client, def olmv1alpha1.CatalogSource, cluster *olmv1alpha1.CatalogSource) error {
+func ensureCatsrcAbsent(
+	ctx context.Context,
+	client wrapper.Client,
+	def olmv1alpha1.CatalogSource,
+	cluster *olmv1alpha1.CatalogSource,
+) error {
 	// CatalogSource is not present on the cluster or has been marked for deletion
 	if cluster.Name == "" || !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
 		logrus.Infof("[defaults] CatalogSource %s not present or has been marked for deletion", def.Name)
 		return nil
 	}
 
-	err := client.Delete(context.TODO(), cluster)
-	if err != nil {
+	if err := client.Delete(ctx, cluster); err != nil {
 		return err
 	}
-
 	logrus.Infof("[defaults] Deleting CatalogSource %s", def.Name)
 
-	return err
+	return nil
 }
 
 // ensureCatsrcPresent ensure that that the default CatalogSource is present on the cluster
-func ensureCatsrcPresent(client wrapper.Client, def olmv1alpha1.CatalogSource, cluster *olmv1alpha1.CatalogSource) error {
+func ensureCatsrcPresent(
+	ctx context.Context,
+	client wrapper.Client,
+	def olmv1alpha1.CatalogSource,
+	cluster *olmv1alpha1.CatalogSource,
+) error {
 	def = *def.DeepCopy()
 	if def.Annotations == nil {
 		def.Annotations = make(map[string]string)
@@ -106,7 +119,7 @@ func ensureCatsrcPresent(client wrapper.Client, def olmv1alpha1.CatalogSource, c
 
 	// Create if not present or is deleted
 	if cluster.Name == "" || (!cluster.ObjectMeta.DeletionTimestamp.IsZero() && len(cluster.Finalizers) == 0) {
-		err := client.Create(context.TODO(), &def)
+		err := client.Create(ctx, &def)
 		if err != nil {
 			return err
 		}
@@ -125,7 +138,7 @@ func ensureCatsrcPresent(client wrapper.Client, def olmv1alpha1.CatalogSource, c
 		cluster.Annotations = make(map[string]string)
 	}
 	cluster.Annotations[defaultCatsrcAnnotationKey] = defaultCatsrcAnnotationValue
-	err := client.Update(context.TODO(), cluster)
+	err := client.Update(ctx, cluster)
 	if err != nil {
 		return err
 	}

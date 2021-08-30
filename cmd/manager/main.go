@@ -170,7 +170,7 @@ func main() {
 		}
 
 		logger.Info("ensuring the default catalogsource resources")
-		if err := ensureDefaults(cfg, mgr.GetScheme()); err != nil {
+		if err := ensureDefaults(ctx, cfg, mgr.GetScheme()); err != nil {
 			logger.Fatalf("failed to setup the default catalogsource manifests: %v", err)
 		}
 
@@ -243,7 +243,7 @@ func main() {
 // ensureDefaults is responsible for ensuring that the list of default
 // CatalogSource on-disk manifests are present on-cluster, or absent
 // if disabled in the OperatorHub cluster singleton type.
-func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
+func ensureDefaults(ctx context.Context, cfg *rest.Config, scheme *kruntime.Scheme) error {
 	// The default client serves read requests from the cache which only gets
 	// initialized after mgr.Start(). So we need to instantiate a new client
 	// for the defaults handler.
@@ -256,8 +256,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	if configv1.IsAPIAvailable() {
 		// Check if the cluster OperatorHub config resource is present.
 		operatorHubCluster := &apiconfigv1.OperatorHub{}
-		err = clientForDefaults.Get(context.TODO(), client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
-
+		err = clientForDefaults.Get(ctx, client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
 		// The default OperatorHub config resource is present which will take care of ensuring defaults
 		if err == nil {
 			return nil
@@ -266,7 +265,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 
 	// Ensure that the default OperatorSources are present based on the definitions
 	// in the defaults directory
-	result := defaults.New(defaults.GetGlobals()).EnsureAll(clientForDefaults)
+	result := defaults.New(defaults.GetGlobals()).EnsureAll(ctx, clientForDefaults)
 	if len(result) != 0 {
 		return fmt.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", result)
 	}

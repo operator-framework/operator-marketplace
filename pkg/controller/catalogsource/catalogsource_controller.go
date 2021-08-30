@@ -4,7 +4,6 @@ import (
 	"context"
 
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
@@ -91,14 +90,5 @@ type ReconcileCatalogSource struct {
 
 func (r *ReconcileCatalogSource) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
-	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
-}
-
-func createNewCatsrcInstance(client client.Client, catsrc olmv1alpha1.CatalogSource) error {
-	err := client.Create(context.TODO(), &catsrc)
-	if err != nil {
-		log.Warnf("Could not recreate default CatalogSource %s. Error: %s", catsrc.GetName(), err.Error())
-		return err
-	}
-	return nil
+	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(ctx, r.client, request.Name)
 }

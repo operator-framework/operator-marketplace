@@ -10,7 +10,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -97,34 +96,27 @@ type ReconcileConfigMap struct {
 // Reconcile will restart the marketplace operator if the Certificate Authority ConfigMap is
 // not in sync with the Certificate Authority bundle on disk..
 func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log.Printf("Reconciling ConfigMap %s/%s\n", request.Namespace, request.Name)
+	log.Printf("Reconciling ConfigMap %s/%s", request.Namespace, request.Name)
 
 	// Check if the CA ConfigMap is in the same namespace that Marketplace is deployed in.
 	isConfigMapInOtherNamespace, err := shared.IsObjectInOtherNamespace(request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
 	if isConfigMapInOtherNamespace {
 		return reconcile.Result{}, nil
 	}
 
 	// Get configMap object
 	caConfigMap := &corev1.ConfigMap{}
-	err = r.client.Get(ctx, request.NamespacedName, caConfigMap)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+	if err := r.client.Get(ctx, request.NamespacedName, caConfigMap); err != nil {
+		// Requested object was not found, could have been deleted after reconcile request.
+		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+		// Return and don't requeue
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
-	err = r.handler.Handle(ctx, caConfigMap)
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.handler.Handle(ctx, caConfigMap)
 }
 
 // isRunningOnPod returns true if marketplace is being ran on a pod.
