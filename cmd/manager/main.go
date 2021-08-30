@@ -12,10 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
-	olmv1alpha1 "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
@@ -25,11 +26,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -54,7 +51,6 @@ const (
 func printVersion() {
 	logrus.Printf("Go Version: %s", runtime.Version())
 	logrus.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
-	logrus.Printf("operator-sdk Version: %v", sdkVersion.Version)
 }
 
 func setupScheme() *kruntime.Scheme {
@@ -62,7 +58,6 @@ func setupScheme() *kruntime.Scheme {
 
 	utilruntime.Must(apis.AddToScheme(scheme))
 	utilruntime.Must(olmv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 
 	if configv1.IsAPIAvailable() {
@@ -105,7 +100,7 @@ func main() {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
-	namespace, err := k8sutil.GetWatchNamespace()
+	namespace, err := apiutils.GetWatchNamespace()
 	if err != nil {
 		logger.Fatalf("failed to get watch namespace: %v", err)
 	}
@@ -175,7 +170,7 @@ func main() {
 		}
 
 		logger.Info("ensuring the default catalogsource resources")
-		if err := ensureDefaults(cfg, mgr.GetScheme()); err != nil {
+		if err := ensureDefaults(ctx, cfg, mgr.GetScheme()); err != nil {
 			logger.Fatalf("failed to setup the default catalogsource manifests: %v", err)
 		}
 
@@ -185,7 +180,7 @@ func main() {
 		statusReportingDoneCh := statusReporter.StartReporting()
 
 		logger.Info("starting manager")
-		if err := mgr.Start(stopCh); err != nil {
+		if err := mgr.Start(ctx); err != nil {
 			logger.WithError(err).Error("unable to run manager")
 		}
 
@@ -248,7 +243,7 @@ func main() {
 // ensureDefaults is responsible for ensuring that the list of default
 // CatalogSource on-disk manifests are present on-cluster, or absent
 // if disabled in the OperatorHub cluster singleton type.
-func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
+func ensureDefaults(ctx context.Context, cfg *rest.Config, scheme *kruntime.Scheme) error {
 	// The default client serves read requests from the cache which only gets
 	// initialized after mgr.Start(). So we need to instantiate a new client
 	// for the defaults handler.
@@ -261,8 +256,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 	if configv1.IsAPIAvailable() {
 		// Check if the cluster OperatorHub config resource is present.
 		operatorHubCluster := &apiconfigv1.OperatorHub{}
-		err = clientForDefaults.Get(context.TODO(), client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
-
+		err = clientForDefaults.Get(ctx, client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
 		// The default OperatorHub config resource is present which will take care of ensuring defaults
 		if err == nil {
 			return nil
@@ -271,7 +265,7 @@ func ensureDefaults(cfg *rest.Config, scheme *kruntime.Scheme) error {
 
 	// Ensure that the default OperatorSources are present based on the definitions
 	// in the defaults directory
-	result := defaults.New(defaults.GetGlobals()).EnsureAll(clientForDefaults)
+	result := defaults.New(defaults.GetGlobals()).EnsureAll(ctx, clientForDefaults)
 	if len(result) != 0 {
 		return fmt.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", result)
 	}

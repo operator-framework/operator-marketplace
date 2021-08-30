@@ -3,12 +3,13 @@ package catalogsource
 import (
 	"context"
 
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+
 	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
-	log "github.com/sirupsen/logrus"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -45,13 +46,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if _, ok := defaultCatalogsources[e.MetaOld.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.ObjectOld.GetName()]; ok {
 				return true
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			if _, ok := defaultCatalogsources[e.Meta.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.Object.GetName()]; ok {
 				// If DeleteStateUnknown is true it implies that the Delete event was missed
 				// and we can ignore it.
 				if e.DeleteStateUnknown {
@@ -62,14 +63,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			if _, ok := defaultCatalogsources[e.Meta.GetName()]; ok {
+			if _, ok := defaultCatalogsources[e.Object.GetName()]; ok {
 				return true
 			}
 			return false
 		},
 	}
 
-	err = c.Watch(&source.Kind{Type: &olm.CatalogSource{}}, &handler.EnqueueRequestForObject{}, pred)
+	err = c.Watch(&source.Kind{Type: &olmv1alpha1.CatalogSource{}}, &handler.EnqueueRequestForObject{}, pred)
 	if err != nil {
 		return err
 	}
@@ -87,16 +88,7 @@ type ReconcileCatalogSource struct {
 	client client.Client
 }
 
-func (r *ReconcileCatalogSource) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileCatalogSource) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
-	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(r.client, request.Name)
-}
-
-func createNewCatsrcInstance(client client.Client, catsrc olm.CatalogSource) error {
-	err := client.Create(context.TODO(), &catsrc)
-	if err != nil {
-		log.Warnf("Could not recreate default CatalogSource %s. Error: %s", catsrc.GetName(), err.Error())
-		return err
-	}
-	return nil
+	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(ctx, r.client, request.Name)
 }

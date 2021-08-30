@@ -1,9 +1,28 @@
 package shared
 
 import (
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"fmt"
+	"os"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// GetWatchNamespace returns the Namespace the operator should be watching for changes
+// Note: the marketplace-operator YAML manifest deployed by the CVO specifies the
+// $WATCH_NAMESPACE as an environment variable using the downward API.
+// Source: https://sdk.operatorframework.io/docs/building-operators/golang/operator-scope/
+func GetWatchNamespace() (string, error) {
+	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
+	// which specifies the Namespace to watch.
+	// An empty value means the operator is running with cluster scope.
+	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
+	}
+	return ns, nil
+}
 
 // EnsureFinalizer ensures that the object's finalizer is included
 // in the ObjectMeta Finalizers slice. If it already exists, no state change occurs.
@@ -54,7 +73,7 @@ func HasFinalizer(objectMeta *metav1.ObjectMeta, expectedFinalizer string) bool 
 // namespace of the operator. An false, error will be returned if there was an
 // error getting the watched namespace.
 func IsObjectInOtherNamespace(namespace string) (bool, error) {
-	watchNamespace, err := k8sutil.GetWatchNamespace()
+	watchNamespace, err := GetWatchNamespace()
 	if err != nil {
 		return false, err
 	}

@@ -49,19 +49,19 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// We only care if the event came from the cluster config.
 	pred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Meta.GetName() == operatorhub.DefaultName {
+			if e.Object.GetName() == operatorhub.DefaultName {
 				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.MetaOld.GetName() == operatorhub.DefaultName {
+			if e.ObjectOld.GetName() == operatorhub.DefaultName {
 				return true
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			if e.Meta.GetName() == operatorhub.DefaultName {
+			if e.Object.GetName() == operatorhub.DefaultName {
 				// If DeleteStateUnknown is true it implies that the Delete event was missed
 				// and we can ignore it.
 				if e.DeleteStateUnknown {
@@ -72,7 +72,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			if e.Meta.GetName() == operatorhub.DefaultName {
+			if e.Object.GetName() == operatorhub.DefaultName {
 				return true
 			}
 			return false
@@ -101,12 +101,12 @@ type ReconcileOperatorHub struct {
 
 // Reconcile reads that state of the cluster for a OperatorHub object and makes changes based on the state read
 // and what is in the OperatorHub.Spec
-func (r *ReconcileOperatorHub) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileOperatorHub) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log.Infof("Reconciling OperatorHub %s", request.Name)
 
 	// Fetch the OperatorHub instance
 	instance := &configv1.OperatorHub{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -118,7 +118,7 @@ func (r *ReconcileOperatorHub) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	err = r.handler.Handle(context.TODO(), instance)
+	err = r.handler.Handle(ctx, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -65,14 +64,14 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
-			if e.Meta.GetName() == ca.TrustedCaConfigMapName {
+			if e.Object.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
-			if e.MetaOld.GetName() == ca.TrustedCaConfigMapName {
+			if e.ObjectOld.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
 			return false
@@ -96,36 +95,28 @@ type ReconcileConfigMap struct {
 
 // Reconcile will restart the marketplace operator if the Certificate Authority ConfigMap is
 // not in sync with the Certificate Authority bundle on disk..
-func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	log.Printf("Reconciling ConfigMap %s/%s\n", request.Namespace, request.Name)
+func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log.Printf("Reconciling ConfigMap %s/%s", request.Namespace, request.Name)
 
 	// Check if the CA ConfigMap is in the same namespace that Marketplace is deployed in.
 	isConfigMapInOtherNamespace, err := shared.IsObjectInOtherNamespace(request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
 	if isConfigMapInOtherNamespace {
 		return reconcile.Result{}, nil
 	}
 
 	// Get configMap object
 	caConfigMap := &corev1.ConfigMap{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, caConfigMap)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+	if err := r.client.Get(ctx, request.NamespacedName, caConfigMap); err != nil {
+		// Requested object was not found, could have been deleted after reconcile request.
+		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+		// Return and don't requeue
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
-	err = r.handler.Handle(context.TODO(), caConfigMap)
-
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.handler.Handle(ctx, caConfigMap)
 }
 
 // isRunningOnPod returns true if marketplace is being ran on a pod.

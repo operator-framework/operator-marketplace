@@ -1,25 +1,26 @@
 package builders
 
 import (
-	olm "github.com/operator-framework/operator-marketplace/pkg/apis/olm/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CatalogSourceBuilder builds a new CatalogSource object.
 type CatalogSourceBuilder struct {
-	cs olm.CatalogSource
+	cs olmv1alpha1.CatalogSource
 }
 
 // CatalogSource returns a CatalogSource object.
-func (b *CatalogSourceBuilder) CatalogSource() *olm.CatalogSource {
+func (b *CatalogSourceBuilder) CatalogSource() *olmv1alpha1.CatalogSource {
 	return &b.cs
 }
 
 // WithTypeMeta sets basic TypeMeta.
 func (b *CatalogSourceBuilder) WithTypeMeta() *CatalogSourceBuilder {
 	b.cs.TypeMeta = metav1.TypeMeta{
-		Kind:       olm.CatalogSourceKind,
-		APIVersion: olm.CatalogSourceCRDAPIVersion,
+		Kind:       olmv1alpha1.CatalogSourceKind,
+		APIVersion: olmv1alpha1.CatalogSourceCRDAPIVersion,
 	}
 	return b
 }
@@ -90,8 +91,8 @@ func (b *CatalogSourceBuilder) WithCscOwnerLabel(name, namespace string) *Catalo
 }
 
 // WithSpec sets Spec with input data.
-func (b *CatalogSourceBuilder) WithSpec(csType olm.SourceType, address, displayName, publisher string) *CatalogSourceBuilder {
-	b.cs.Spec = olm.CatalogSourceSpec{
+func (b *CatalogSourceBuilder) WithSpec(csType olmv1alpha1.SourceType, address, displayName, publisher string) *CatalogSourceBuilder {
+	b.cs.Spec = olmv1alpha1.CatalogSourceSpec{
 		SourceType:  csType,
 		Address:     address,
 		DisplayName: displayName,
