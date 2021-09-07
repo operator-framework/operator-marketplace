@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/go-openapi/spec v0.19.5
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
