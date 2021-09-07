@@ -42,5 +42,8 @@ vendor:
 	go mod verify
 
 .PHONY: manifests
-manifests:
+manifests: generate
 	./hack/update-manifests.sh
+
+generate:
+	./hack/openapi-gen.sh
