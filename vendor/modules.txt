@@ -19,6 +19,8 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.11.0+incompatible
 github.com/evanphx/json-patch
+# github.com/fatih/color v1.12.0
+github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit
 github.com/fsnotify/fsnotify
@@ -34,6 +36,12 @@ github.com/go-openapi/jsonpointer
 github.com/go-openapi/jsonreference
 # github.com/go-openapi/swag v0.19.14
 github.com/go-openapi/swag
+# github.com/goccy/go-yaml v1.8.1
+github.com/goccy/go-yaml/ast
+github.com/goccy/go-yaml/lexer
+github.com/goccy/go-yaml/printer
+github.com/goccy/go-yaml/scanner
+github.com/goccy/go-yaml/token
 # github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
@@ -65,17 +73,30 @@ github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
 # github.com/imdario/mergo v0.3.12
 github.com/imdario/mergo
+# github.com/inconshreveable/mousetrap v1.0.0
+github.com/inconshreveable/mousetrap
 # github.com/josharian/intern v1.0.0
 github.com/josharian/intern
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
+# github.com/kylelemons/godebug v1.1.0
+github.com/kylelemons/godebug/diff
 # github.com/mailru/easyjson v0.7.7
 ## explicit
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/mattn/go-colorable v0.1.8
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.12
+github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/mikefarah/yq/v3 v3.0.0-20201202084205-8846255d1c37
+## explicit
+github.com/mikefarah/yq/v3
+github.com/mikefarah/yq/v3/cmd
+github.com/mikefarah/yq/v3/pkg/yqlib
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -159,6 +180,8 @@ github.com/prometheus/procfs/internal/util
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
+# github.com/spf13/cobra v1.1.3
+github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
 # github.com/stretchr/testify v1.7.0
@@ -290,6 +313,8 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
+gopkg.in/op/go-logging.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
