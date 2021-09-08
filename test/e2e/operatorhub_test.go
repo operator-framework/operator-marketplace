@@ -105,14 +105,15 @@ var _ = Describe("operatorhub", func() {
 
 			Eventually(func() error {
 				css := &olmv1alpha1.CatalogSourceList{}
-				err = k8sClient.List(ctx, css)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(css).ToNot(BeNil())
-				Expect(css.Items).To(HaveLen(1), "unexpected number of catalogsource resources returned")
-
-				cs := css.Items[0]
-				Expect(cs).ToNot(BeNil())
-				Expect(cs.GetName()).To(Equal(nonDefaultCS.GetName()))
+				if err := k8sClient.List(ctx, css); err != nil {
+					return err
+				}
+				if len(css.Items) != 1 {
+					return fmt.Errorf("unexpected number of catalogsources returned from list call")
+				}
+				if css.Items[0].ObjectMeta.Name != nonDefaultName {
+					return fmt.Errorf("unexpected catalogsource returned from list call")
+				}
 				return nil
 			}, 15, 1).Should(BeNil())
 		})
