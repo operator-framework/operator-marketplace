@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,6 +13,11 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+)
+
+const (
+	defaultTimeout = 30 * time.Second
+	defaultPoll    = 1 * time.Second
 )
 
 var _ = Describe("operatorhub", func() {
@@ -33,7 +39,7 @@ var _ = Describe("operatorhub", func() {
 				}
 				og.Spec = configv1.OperatorHubSpec{}
 				return k8sClient.Update(ctx, og)
-			}).Should(BeNil())
+			}, defaultTimeout, defaultPoll).Should(BeNil())
 		})
 
 		It("should ensure default catalogsources are deleted when spec.disableAllSources is set to true", func() {
@@ -47,7 +53,7 @@ var _ = Describe("operatorhub", func() {
 					DisableAllDefaultSources: true,
 				}
 				return k8sClient.Update(ctx, og)
-			}, 30, 3).Should(BeNil())
+			}, defaultTimeout, 3).Should(BeNil())
 
 			By("ensuring all catalogsources have been deleted")
 			Eventually(func() error {
@@ -59,7 +65,7 @@ var _ = Describe("operatorhub", func() {
 					return fmt.Errorf("waiting for all default catalogsources to be deleted")
 				}
 				return nil
-			}, 30, 3).Should(BeNil())
+			}, defaultTimeout, 3).Should(BeNil())
 
 			By("ensuring that the marketplace clusteroperator resource is still available")
 			co := &configv1.ClusterOperator{}
@@ -101,7 +107,7 @@ var _ = Describe("operatorhub", func() {
 					DisableAllDefaultSources: true,
 				}
 				return k8sClient.Update(ctx, og)
-			}).Should(BeNil())
+			}, defaultTimeout, defaultPoll).Should(BeNil())
 
 			Eventually(func() error {
 				css := &olmv1alpha1.CatalogSourceList{}
@@ -114,7 +120,7 @@ var _ = Describe("operatorhub", func() {
 				Expect(cs).ToNot(BeNil())
 				Expect(cs.GetName()).To(Equal(nonDefaultCS.GetName()))
 				return nil
-			}, 15, 1).Should(BeNil())
+			}, defaultTimeout, defaultPoll).Should(BeNil())
 		})
 
 		It("should ensure disabling a single catalogsource", func() {
@@ -140,7 +146,7 @@ var _ = Describe("operatorhub", func() {
 					},
 				}
 				return k8sClient.Update(ctx, og)
-			}, 30, 3).Should(BeNil())
+			}, defaultTimeout, 3).Should(BeNil())
 
 			By("checking the redhat-operators catalogsource does not exist")
 			Eventually(func() bool {
@@ -149,7 +155,7 @@ var _ = Describe("operatorhub", func() {
 					return true
 				}
 				return false
-			}, 30, 3).Should(BeTrue())
+			}, defaultTimeout, 3).Should(BeTrue())
 
 			By("re-enabling the redhat-operators source in the operatorhub resource")
 			Eventually(func() error {
@@ -159,7 +165,7 @@ var _ = Describe("operatorhub", func() {
 				}
 				og.Spec = configv1.OperatorHubSpec{}
 				return k8sClient.Update(ctx, og)
-			}, 30, 3).Should(BeNil())
+			}, defaultTimeout, 3).Should(BeNil())
 
 			By("checking the redhat-operators catalogsource has been re-created")
 			Eventually(func() error {
@@ -169,7 +175,7 @@ var _ = Describe("operatorhub", func() {
 				Expect(cs).NotTo(BeNil())
 				Expect(cs.GetName()).To(Equal(disabledName))
 				return nil
-			}).Should(BeNil())
+			}, defaultTimeout, 3).Should(BeNil())
 		})
 
 		It("should prefer spec.sources[*].disabled over spec.disableAllSources", func() {
@@ -188,7 +194,7 @@ var _ = Describe("operatorhub", func() {
 					},
 				}
 				return k8sClient.Update(ctx, og)
-			}, 60, 3).Should(BeNil())
+			}, defaultTimeout, defaultPoll).Should(BeNil())
 
 			Eventually(func() bool {
 				css := &olmv1alpha1.CatalogSourceList{}
@@ -202,7 +208,7 @@ var _ = Describe("operatorhub", func() {
 					return false
 				}
 				return true
-			}, 30, 3).Should(BeTrue())
+			}, defaultTimeout, 3).Should(BeTrue())
 		})
 	})
 })
