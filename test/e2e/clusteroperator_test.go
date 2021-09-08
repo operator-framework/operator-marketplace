@@ -13,6 +13,7 @@ import (
 
 var _ = Describe("clusteroperator", func() {
 	var (
+		co                  = &configv1.ClusterOperator{}
 		ctx                 = context.Background()
 		clusterOperatorName = "marketplace"
 		expectedTypeStatus  = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
@@ -22,7 +23,6 @@ var _ = Describe("clusteroperator", func() {
 			configv1.OperatorDegraded:    configv1.ConditionFalse,
 		}
 	)
-	co := &configv1.ClusterOperator{}
 
 	It("Should contain the expected status conditions", func() {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: clusterOperatorName}, co)
@@ -35,6 +35,10 @@ var _ = Describe("clusteroperator", func() {
 	})
 
 	It("Should contain the correct related objects", func() {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: clusterOperatorName}, co)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(co).ToNot(BeNil())
+
 		expectedRelatedObjects := []configv1.ObjectReference{
 			{
 				Resource: "namespaces",
