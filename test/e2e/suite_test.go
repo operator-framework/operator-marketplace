@@ -9,7 +9,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/operator-framework/operator-marketplace/pkg/apis"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -39,8 +38,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
-	err = apis.AddToScheme(scheme.Scheme)
-	Expect(err).ToNot(HaveOccurred())
 	err = configv1.AddToScheme(scheme.Scheme)
 	Expect(err).ToNot(HaveOccurred())
 	err = corev1.AddToScheme(scheme.Scheme)

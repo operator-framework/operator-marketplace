@@ -53,12 +53,10 @@ type reporter struct {
 func (r *reporter) ensureClusterOperator() error {
 	var err error
 	r.clusterOperator, err = r.configClient.ClusterOperators().Get(context.TODO(), r.clusterOperatorName, metav1.GetOptions{})
-
 	if err == nil {
 		log.Debug("[status] Found existing ClusterOperator")
 		return nil
 	}
-
 	if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("Error %v getting ClusterOperator", err)
 	}
@@ -90,9 +88,7 @@ func (r *reporter) setStatus(statusConditions []configv1.ClusterOperatorStatusCo
 	for _, statusCondition := range statusConditions {
 		r.setStatusCondition(statusCondition)
 	}
-
-	err = r.updateStatus(previousStatus)
-	if err != nil {
+	if err := r.updateStatus(previousStatus); err != nil {
 		return err
 	}
 	return nil
@@ -121,43 +117,39 @@ func (r *reporter) setStatusCondition(statusCondition configv1.ClusterOperatorSt
 
 // updateStatus makes the API call to update the ClusterOperator if the status has changed.
 func (r *reporter) updateStatus(previousStatus *configv1.ClusterOperatorStatus) error {
-	var err error
 	if compareClusterOperatorStatusConditionArrays(previousStatus.Conditions, r.clusterOperator.Status.Conditions) {
 		log.Infof("[status] Previous and current ClusterOperator Status are the same, the ClusterOperator Status will not be updated.")
-	} else {
-		log.Debugf("[status] Previous and current ClusterOperator Status are different, attempting to update the ClusterOperator Status.")
-
-		// Check if the ClusterOperator version has changed and log the attempt to upgrade if it has
-		previousVersion := operatorhelpers.FindOperandVersion(previousStatus.Versions, "operator")
-		currentVersion := operatorhelpers.FindOperandVersion(r.clusterOperator.Status.Versions, "operator")
-		if currentVersion != nil {
-			if previousVersion == nil {
-				log.Infof("[status] Attempting to set ClusterOperator to version %s", currentVersion.Version)
-			} else if previousVersion.Version != currentVersion.Version {
-				log.Infof("[status] Attempting to upgrade ClusterOperator version from %s to %s", previousVersion.Version, currentVersion.Version)
-			}
-		}
-
-		// Log Conditions
-		log.Infof("[status] Attempting to set the ClusterOperator status conditions to:")
-		for _, statusCondition := range r.clusterOperator.Status.Conditions {
-			log.Infof("[status] ConditionType: %v ConditionStatus: %v ConditionMessage: %v", statusCondition.Type, statusCondition.Status, statusCondition.Message)
-		}
-
-		// Always update RelatedObjects to account for the upgrade case.
-		r.setRelatedObjects()
-
-		_, err := r.configClient.ClusterOperators().UpdateStatus(context.TODO(), r.clusterOperator, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("Error %v updating ClusterOperator", err)
-		}
-		log.Info("[status] ClusterOperator status conditions updated.")
+		return nil
 	}
-	return err
+	log.Debugf("[status] Previous and current ClusterOperator Status are different, attempting to update the ClusterOperator Status.")
+
+	// Check if the ClusterOperator version has changed and log the attempt to upgrade if it has
+	previousVersion := operatorhelpers.FindOperandVersion(previousStatus.Versions, "operator")
+	currentVersion := operatorhelpers.FindOperandVersion(r.clusterOperator.Status.Versions, "operator")
+	if currentVersion != nil {
+		if previousVersion == nil {
+			log.Infof("[status] Attempting to set ClusterOperator to version %s", currentVersion.Version)
+		} else if previousVersion.Version != currentVersion.Version {
+			log.Infof("[status] Attempting to upgrade ClusterOperator version from %s to %s", previousVersion.Version, currentVersion.Version)
+		}
+	}
+
+	log.Infof("[status] Attempting to set the ClusterOperator status conditions to:")
+	for _, statusCondition := range r.clusterOperator.Status.Conditions {
+		log.Infof("[status] ConditionType: %v ConditionStatus: %v ConditionMessage: %v", statusCondition.Type, statusCondition.Status, statusCondition.Message)
+	}
+
+	// Always update RelatedObjects to account for the upgrade case.
+	r.setRelatedObjects()
+	if _, err := r.configClient.ClusterOperators().UpdateStatus(context.TODO(), r.clusterOperator, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("Error %v updating ClusterOperator", err)
+	}
+	log.Info("[status] ClusterOperator status conditions updated.")
+	return nil
 }
 
 // setRelatedObjects populates RelatedObjects in the ClusterOperator.Status.
-// RelatedObjects are consumed by https://github.com/openshift/must-gather
+// RelatedObjects are consumed by https://github.com/openshift/must-gather.
 func (r *reporter) setRelatedObjects() {
 	objectReferences := []configv1.ObjectReference{
 		// Add the operator's namespace which will result in core resources
@@ -233,7 +225,7 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config v1 client: %s", err.Error())
 	}
-	// Client for listing OperatorSources
+	// Client for listing CatalogSources
 	rawClient, err := client.New(cfg, client.Options{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create raw client: %s", err.Error())

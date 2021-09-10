@@ -18,7 +18,7 @@ func NewHandler(client client.Client) Handler {
 
 // Handler is the interface that wraps the Handle method
 type Handler interface {
-	Handle(ctx context.Context, operatorSource *configv1.OperatorHub) error
+	Handle(context.Context, *configv1.OperatorHub) error
 }
 
 type confighandler struct {
@@ -32,32 +32,38 @@ func (h *confighandler) Handle(ctx context.Context, in *configv1.OperatorHub) er
 		"name": in.GetName(),
 	})
 
-	// Set the in memory configuration. This will be used by the OperatorSource reconcilers
+	// Set the in memory configuration. This will be used by the CatalogSources reconcilers
 	current := GetSingleton()
 	current.Set(in.Spec)
 	currentConfig := current.Get()
 
-	// Apply the configuration to the default OperatorSources
-	opsrcDefinitions, catsrcDefinitions := defaults.GetGlobalDefinitions()
-	result := defaults.New(opsrcDefinitions, catsrcDefinitions, currentConfig).EnsureAll(ctx, h.client)
+	// Apply the configuration to the default CatalogSources
+	catsrcDefinitions := defaults.GetGlobalCatalogSourceDefinitions()
+	result := defaults.New(catsrcDefinitions, currentConfig).EnsureAll(ctx, h.client)
 
-	err := h.updateStatus(ctx, log, in, currentConfig, result)
-	if err != nil {
+	if err := h.updateStatus(ctx, log, in, currentConfig, result); err != nil {
 		log.Errorf("Error updating cluster OperatorHub - %v", err)
+		return err
 	}
-	return err
+	return nil
 }
 
 // updateStatus reflects the current state of applying the configuration into
 // status subresource of the object.
-func (h *confighandler) updateStatus(ctx context.Context, log *logrus.Entry, in *configv1.OperatorHub, currentConfig map[string]bool, result map[string]error) error {
+func (h *confighandler) updateStatus(
+	ctx context.Context,
+	log *logrus.Entry,
+	in *configv1.OperatorHub,
+	currentConfig map[string]bool,
+	result map[string]error,
+) error {
 	var statuses []configv1.HubSourceStatus
 	for name, disabled := range currentConfig {
 		status := configv1.HubSourceStatus{}
 		status.Name = name
 		status.Disabled = disabled
 
-		// Check if there were any errors in the processing of actual default OperatorSources
+		// Check if there were any errors in the processing of actual default CatalogSources
 		if defaults.IsDefaultSource(name) {
 			err, present := result[name]
 			if !present {
@@ -68,7 +74,7 @@ func (h *confighandler) updateStatus(ctx context.Context, log *logrus.Entry, in 
 				status.Message = err.Error()
 			}
 		} else {
-			// A non-default or non-existent OperatorSource was present in the spec
+			// A non-default or non-existent CatalogSources was present in the spec
 			status.Status = "Error"
 			status.Message = "Not present in the default definitions"
 		}

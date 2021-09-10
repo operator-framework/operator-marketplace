@@ -74,9 +74,9 @@ func (o *operatorhub) Set(spec configv1.OperatorHubSpec) {
 	for k, v := range defaults.GetDefaultConfig() {
 		if spec.DisableAllDefaultSources {
 			o.current[k] = true
-		} else {
-			o.current[k] = v
+			continue
 		}
+		o.current[k] = v
 	}
 
 	// Override with what is in the spec.Sources
