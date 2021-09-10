@@ -151,7 +151,6 @@ github.com/operator-framework/operator-sdk/internal/util/k8sutil
 github.com/operator-framework/operator-sdk/internal/util/kubebuilder
 github.com/operator-framework/operator-sdk/internal/util/projutil
 github.com/operator-framework/operator-sdk/pkg/k8sutil
-github.com/operator-framework/operator-sdk/pkg/leader
 github.com/operator-framework/operator-sdk/pkg/test
 github.com/operator-framework/operator-sdk/version
 # github.com/pborman/uuid v1.2.0
