@@ -8,7 +8,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -106,20 +105,12 @@ func (r *ReconcileOperatorHub) Reconcile(ctx context.Context, request reconcile.
 
 	// Fetch the OperatorHub instance
 	instance := &configv1.OperatorHub{}
-	err := r.client.Get(ctx, request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+	if err := r.client.Get(ctx, request.NamespacedName, instance); err != nil {
+		// Request object not found, could have been deleted after reconcile request.
+		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
-
-	err = r.handler.Handle(ctx, instance)
-	if err != nil {
+	if err := r.handler.Handle(ctx, instance); err != nil {
 		return reconcile.Result{}, err
 	}
 

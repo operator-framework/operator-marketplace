@@ -95,8 +95,7 @@ func main() {
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath)
-	if err != nil {
+	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath); err != nil {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
@@ -112,8 +111,7 @@ func main() {
 	}
 
 	// Set OpenShift config API availability
-	err = configv1.SetConfigAPIAvailability(cfg)
-	if err != nil {
+	if err := configv1.SetConfigAPIAvailability(cfg); err != nil {
 		logger.Fatal(err)
 	}
 
@@ -159,7 +157,7 @@ func main() {
 			}
 		}
 
-		// Populate the global default OperatorSources definition and config
+		// Populate the global default CatalogSource definitions and config
 		if err := defaults.PopulateGlobals(); err != nil {
 			logger.Fatal(err)
 		}
@@ -263,11 +261,11 @@ func ensureDefaults(ctx context.Context, cfg *rest.Config, scheme *kruntime.Sche
 		}
 	}
 
-	// Ensure that the default OperatorSources are present based on the definitions
+	// Ensure that the default CatalogSources are present based on the definitions
 	// in the defaults directory
 	result := defaults.New(defaults.GetGlobals()).EnsureAll(ctx, clientForDefaults)
 	if len(result) != 0 {
-		return fmt.Errorf("[defaults] Error ensuring default OperatorSource(s) - %v", result)
+		return fmt.Errorf("[defaults] Error ensuring default CatalogSources(s) - %v", result)
 	}
 
 	return nil

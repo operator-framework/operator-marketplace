@@ -5,7 +5,6 @@ import (
 
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
-	v1 "github.com/operator-framework/operator-marketplace/pkg/apis/operators/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
@@ -34,13 +33,12 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-
 	c, err := controller.New("catalogsource-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
+	defaultCatalogsources := defaults.GetGlobalCatalogSourceDefinitions()
 	pred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			return false
@@ -89,6 +87,6 @@ type ReconcileCatalogSource struct {
 }
 
 func (r *ReconcileCatalogSource) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	_, defaultCatalogsources := defaults.GetGlobalDefinitions()
-	return reconcile.Result{}, defaults.New(map[string]v1.OperatorSource{}, defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(ctx, r.client, request.Name)
+	defaultCatalogsources := defaults.GetGlobalCatalogSourceDefinitions()
+	return reconcile.Result{}, defaults.New(defaultCatalogsources, operatorhub.GetSingleton().Get()).Ensure(ctx, r.client, request.Name)
 }

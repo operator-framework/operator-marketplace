@@ -18,12 +18,12 @@ func NewHandler(client client.Client) Handler {
 
 // Handler is the interface that wraps the Handle method
 //
-// Handle handles a new event associated with OperatorSource type.
+// Handle handles a new event associated with CatalogSources type.
 //
 // ctx represents the parent context.
 // event encapsulates the event fired by operator sdk.
 type Handler interface {
-	Handle(ctx context.Context, operatorSource *corev1.ConfigMap) error
+	Handle(context.Context, *corev1.ConfigMap) error
 }
 
 // configmapHandler implements the Handler interface

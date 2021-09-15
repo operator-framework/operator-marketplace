@@ -13,6 +13,7 @@ type ObjectKey = types.NamespacedName
 // Client is a wrapper around the raw kube client provided
 // by operator-sdk. Using the wrapper facilitates mocking of client
 // interactions with the cluster, while using fakeclient during unit testing.
+// TODO(tflannag): Should this be removed entirely in favor of c-r's dynamic client?
 type Client interface {
 	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
 	Get(ctx context.Context, key ObjectKey, objExisting client.Object) error
