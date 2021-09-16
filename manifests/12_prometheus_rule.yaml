@@ -17,7 +17,7 @@ spec:
         - alert: CommunityOperatorsCatalogError
           annotations:
             summary: Community-operators not ready for 10 minutes
-            description: Occurs whenever the community-operators source is not ready for more than 10 mins.
+            description: Fires whenever the community-operators source is not ready for more than 10 mins.
             message: Default OperatorHub source "community-operators" is in Non-Ready state for more than 10 mins.
           expr: catalogsource_ready{name="community-operators",exported_namespace="openshift-marketplace"} == 0
           for: 10m
@@ -28,7 +28,7 @@ spec:
         - alert: CertifiedOperatorsCatalogError
           annotations:
             summary: Certified-operators not ready for more than 10 minutes
-            description: Occurs whenever the certified-operators source is not ready for more than 10 mins.
+            description: Fires whenever the certified-operators source is not ready for more than 10 mins.
             message: Default OperatorHub source "certified-operators" is in Non-Ready state for more than 10 mins.
           expr: catalogsource_ready{name="certified-operators",exported_namespace="openshift-marketplace"} == 0
           for: 10m
@@ -39,7 +39,7 @@ spec:
         - alert: RedhatOperatorsCatalogError
           annotations:
             summary: Redhat-operators not ready for more than 10 minutes
-            description: Occurs whenever the redhat-operators source is not ready for more than 10 mins.
+            description: Fires whenever the redhat-operators source is not ready for more than 10 mins.
             message: Default OperatorHub source "redhat-operators" is in Non-Ready state for more than 10 mins.
           expr: catalogsource_ready{name="redhat-operators",exported_namespace="openshift-marketplace"} == 0
           for: 10m
@@ -50,7 +50,7 @@ spec:
         - alert: RedhatMarketplaceCatalogError
           annotations:
             summary: Redhat-marketplace not ready for more than 10 minutes
-            description: Occurs whenever the redhat-marketplace source is not ready for more than 10 mins.
+            description: Fires whenever the redhat-marketplace source is not ready for more than 10 mins.
             message: Default OperatorHub source "redhat-marketplace" is in Non-Ready state for more than 10 mins.
           expr: catalogsource_ready{name="redhat-marketplace",exported_namespace="openshift-marketplace"} == 0
           for: 10m
