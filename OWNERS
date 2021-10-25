@@ -14,9 +14,9 @@ reviewers:
   - timflannagan
 # approval == this is a good idea /approve
 approvers:
-  - ecordell
+  - joelanford
   - njhale
-  - benluddy
+  - awgreene
   - kevinrizza
 # Bugzilla component
 component: "OLM"
