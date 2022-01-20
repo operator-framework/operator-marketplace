@@ -259,11 +259,15 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 
 	s.TLSConfig.PreferServerCipherSuites = true
 
-	if !strSliceContains(s.TLSConfig.NextProtos, NextProtoTLS) {
-		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, NextProtoTLS)
+	haveNPN := false
+	for _, p := range s.TLSConfig.NextProtos {
+		if p == NextProtoTLS {
+			haveNPN = true
+			break
+		}
 	}
-	if !strSliceContains(s.TLSConfig.NextProtos, "http/1.1") {
-		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, "http/1.1")
+	if !haveNPN {
+		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, NextProtoTLS)
 	}
 
 	if s.TLSNextProto == nil {
@@ -816,7 +820,7 @@ func (sc *serverConn) serve() {
 	})
 	sc.unackedSettings++
 
-	// Each connection starts with initialWindowSize inflow tokens.
+	// Each connection starts with intialWindowSize inflow tokens.
 	// If a higher value is configured, we add more tokens.
 	if diff := sc.srv.initialConnRecvWindowSize() - initialWindowSize; diff > 0 {
 		sc.sendWindowUpdate(nil, int(diff))
@@ -856,15 +860,6 @@ func (sc *serverConn) serve() {
 		case res := <-sc.wroteFrameCh:
 			sc.wroteFrame(res)
 		case res := <-sc.readFrameCh:
-			// Process any written frames before reading new frames from the client since a
-			// written frame could have triggered a new stream to be started.
-			if sc.writingFrameAsync {
-				select {
-				case wroteRes := <-sc.wroteFrameCh:
-					sc.wroteFrame(wroteRes)
-				default:
-				}
-			}
 			if !sc.processFrameFromReader(res) {
 				return
 			}
