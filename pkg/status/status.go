@@ -23,7 +23,7 @@ import (
 
 const (
 	// coStatusReportInterval is the interval at which the ClusterOperator status is updated
-	coStatusReportInterval = 20 * time.Second
+	coStatusReportInterval = 60 * time.Second
 
 	upgradeable = "Marketplace is upgradeable"
 
