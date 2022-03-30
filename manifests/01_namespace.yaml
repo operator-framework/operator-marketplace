@@ -7,6 +7,7 @@ metadata:
     include.release.openshift.io/single-node-developer: "true"
     openshift.io/node-selector: ""
     workload.openshift.io/allowed: "management"
+    capability.openshift.io/name: "marketplace"
   labels:
     openshift.io/cluster-monitoring: "true"
   name: "openshift-marketplace"
