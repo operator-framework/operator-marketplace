@@ -6,6 +6,7 @@ metadata:
   annotations:
     config.openshift.io/inject-proxy: "marketplace-operator"
     include.release.openshift.io/ibm-cloud-managed: "true"
+    capability.openshift.io/name: "marketplace"
 spec:
   replicas: 1
   selector:
