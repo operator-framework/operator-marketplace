@@ -31,3 +31,9 @@ vendor:
 .PHONY: manifests
 manifests:
 	./hack/update-manifests.sh
+
+include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
+  targets/openshift/crd-schema-gen.mk \
+)
+
+$(call add-crd-gen,config,./vendor/github.com/openshift/api/config/v1,./manifests,./manifests)

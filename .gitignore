@@ -3,6 +3,9 @@
 build/_output
 build/_test
 
+# Temporary files for CRD schema patching
+_output
+
 # Generated mock go files used for testing
 pkg/mocks
 

@@ -175,6 +175,16 @@ github.com/onsi/gomega/types
 ## explicit; go 1.13
 github.com/openshift/api/config/v1
 github.com/openshift/api/operator/v1
+# github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
+## explicit; go 1.13
+github.com/openshift/build-machinery-go
+github.com/openshift/build-machinery-go/make
+github.com/openshift/build-machinery-go/make/lib
+github.com/openshift/build-machinery-go/make/targets
+github.com/openshift/build-machinery-go/make/targets/golang
+github.com/openshift/build-machinery-go/make/targets/openshift
+github.com/openshift/build-machinery-go/make/targets/openshift/operator
+github.com/openshift/build-machinery-go/scripts
 # github.com/openshift/client-go v0.0.0-20210331195552-cf6c2669e01f => github.com/openshift/client-go v0.0.0-20200326155132-2a6cd50aedd0
 ## explicit; go 1.13
 github.com/openshift/client-go/config/clientset/versioned/scheme
