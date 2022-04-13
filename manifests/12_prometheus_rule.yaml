@@ -13,47 +13,13 @@ metadata:
     role: alert-rules
 spec:
   groups:
-    - name: marketplace.community_operators.rules
+    - name: operator.marketplace.rules
       rules:
-        - alert: CommunityOperatorsCatalogError
+        - alert: OperatorHubSourceError
           annotations:
-            summary: Community-operators not ready for 10 minutes
-            description: Fires whenever the community-operators source is not ready for more than 10 mins.
-            message: Default OperatorHub source "community-operators" is in Non-Ready state for more than 10 mins.
-          expr: catalogsource_ready{name="community-operators",exported_namespace="openshift-marketplace"} == 0
-          for: 10m
-          labels:
-            severity: warning
-    - name: marketplace.certified_operators.rules
-      rules:
-        - alert: CertifiedOperatorsCatalogError
-          annotations:
-            summary: Certified-operators not ready for more than 10 minutes
-            description: Fires whenever the certified-operators source is not ready for more than 10 mins.
-            message: Default OperatorHub source "certified-operators" is in Non-Ready state for more than 10 mins.
-          expr: catalogsource_ready{name="certified-operators",exported_namespace="openshift-marketplace"} == 0
-          for: 10m
-          labels:
-            severity: warning
-    - name: marketplace.redhat_operators.rules
-      rules:
-        - alert: RedhatOperatorsCatalogError
-          annotations:
-            summary: Redhat-operators not ready for more than 10 minutes
-            description: Fires whenever the redhat-operators source is not ready for more than 10 mins.
-            message: Default OperatorHub source "redhat-operators" is in Non-Ready state for more than 10 mins.
-          expr: catalogsource_ready{name="redhat-operators",exported_namespace="openshift-marketplace"} == 0
-          for: 10m
-          labels:
-            severity: warning
-    - name: marketplace.redhat_marketplace.rules
-      rules:
-        - alert: RedhatMarketplaceCatalogError
-          annotations:
-            summary: Redhat-marketplace not ready for more than 10 minutes
-            description: Fires whenever the redhat-marketplace source is not ready for more than 10 mins.
-            message: Default OperatorHub source "redhat-marketplace" is in Non-Ready state for more than 10 mins.
-          expr: catalogsource_ready{name="redhat-marketplace",exported_namespace="openshift-marketplace"} == 0
+            summary: The {{ $labels.name }} source is in non-ready state for more than 10 minutes.
+            description: Operators shipped via the {{ $labels.name }} source are not available for installation until the issue is fixed. Operators already installed from this source will not receive updates until issue is fixed. Inspect the status of the pod owned by {{ $labels.name }} source in the openshift-marketplace namespace (oc -n openshift-marketplace get pods -l olm.catalogSource={{ $labels.name }}) to diagnose and repair.
+          expr: catalogsource_ready{exported_namespace="openshift-marketplace"} == 0
           for: 10m
           labels:
             severity: warning
