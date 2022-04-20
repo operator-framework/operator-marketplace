@@ -76,6 +76,7 @@ func main() {
 		tlsCertPath             string
 		leaderElectionNamespace string
 		version                 bool
+		loglvl                  string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "configures the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "configures the directory where the default CatalogSources are stored")
@@ -83,9 +84,17 @@ func main() {
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "configures the namespace that will contain the leader election lock")
+	flag.StringVar(&loglvl, "level", "info", "Sets level of logger with default verbosity info level. See https://github.com/sirupsen/logrus for other verbosity levels.")
 	flag.Parse()
-
 	logger := logrus.New()
+
+	// Set verbosity level
+	parsedLevel, err := logrus.ParseLevel(loglvl)
+	if err != nil {
+		logger.Error(err)
+		os.Exit(1)
+	}
+	logger.SetLevel(parsedLevel)
 
 	// Check if version flag was set
 	if version {
