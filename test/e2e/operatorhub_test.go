@@ -67,6 +67,30 @@ var _ = Describe("operatorhub", func() {
 				return nil
 			}, defaultTimeout, 3).Should(BeNil())
 
+			By("ensuring the operatorHub status reflects that the default catalogsources have been disabled successfully")
+			Eventually(func() error {
+				oh := &configv1.OperatorHub{}
+				if err := k8sClient.Get(ctx, nn, oh); err != nil {
+					return err
+				}
+				defaultSources := map[string]struct{}{
+					"redhat-operators":    {},
+					"certified-operators": {},
+					"community-operators": {},
+					"redhat-marketplace":  {},
+				}
+				for _, source := range oh.Status.Sources {
+					if source.Disabled == true && source.Status == "Success" && source.Message == "" {
+						delete(defaultSources, source.Name)
+					}
+				}
+				if len(defaultSources) != 0 {
+					return fmt.Errorf("operatorHub.Status.Sources not in expected state: %v", oh.Status.Sources)
+				}
+
+				return nil
+			}, defaultTimeout, 3).Should(BeNil())
+
 			By("ensuring that the marketplace clusteroperator resource is still available")
 			co := &configv1.ClusterOperator{}
 			err := k8sClient.Get(ctx, types.NamespacedName{Name: "marketplace"}, co)
