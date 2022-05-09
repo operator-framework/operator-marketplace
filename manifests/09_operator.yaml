@@ -20,6 +20,10 @@ spec:
       labels:
         name: marketplace-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: marketplace-operator
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -38,6 +42,10 @@ spec:
         tolerationSeconds: 120
       containers:
         - name: marketplace-operator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           image: quay.io/openshift/origin-operator-marketplace:latest
           ports:
           - containerPort: 60000

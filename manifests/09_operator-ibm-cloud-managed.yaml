@@ -19,6 +19,10 @@ spec:
       labels:
         name: marketplace-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: marketplace-operator
       nodeSelector: {}
       priorityClassName: "system-cluster-critical"
@@ -36,6 +40,10 @@ spec:
           tolerationSeconds: 120
       containers:
         - name: marketplace-operator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           image: quay.io/openshift/origin-operator-marketplace:latest
           ports:
             - containerPort: 60000
