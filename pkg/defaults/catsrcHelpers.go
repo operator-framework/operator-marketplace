@@ -59,15 +59,15 @@ func getCatsrcDefinition(fileName string) (*olmv1alpha1.CatalogSource, error) {
 func processCatsrc(ctx context.Context, client wrapper.Client, def olmv1alpha1.CatalogSource, disable bool) error {
 	// Get CatalogSource on the cluster
 	cluster := &olmv1alpha1.CatalogSource{}
-	err := client.Get(ctx, wrapper.ObjectKey{
+	if err := client.Get(ctx, wrapper.ObjectKey{
 		Name:      def.Name,
 		Namespace: def.Namespace,
-	}, cluster)
-	if err != nil && !k8sErrors.IsNotFound(err) {
+	}, cluster); err != nil && !k8sErrors.IsNotFound(err) {
 		logrus.Errorf("[defaults] Error getting CatalogSource %s - %v", def.Name, err)
 		return err
 	}
 
+	var err error
 	if disable {
 		if cluster.Annotations[defaultCatsrcAnnotationKey] == defaultCatsrcAnnotationValue {
 			err = ensureCatsrcAbsent(ctx, client, def, cluster)
