@@ -12,4 +12,5 @@ metadata:
     openshift.io/cluster-monitoring: "true"
     pod-security.kubernetes.io/audit: baseline
     pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/enforce: baseline
   name: "openshift-marketplace"
