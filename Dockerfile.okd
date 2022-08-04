@@ -13,6 +13,7 @@ COPY vendor/github.com/openshift/api/config/v1/*operatorhub.crd.yaml /manifests
 
 USER root
 RUN sed -i 's;registry.redhat.io;registry.access.redhat.com;' /defaults/03_community_operators.yaml
+COPY hack/okd/ /manifests
 USER marketplace-operator
 
 LABEL io.k8s.display-name="OpenShift Marketplace Operator" \
