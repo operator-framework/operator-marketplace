@@ -1,5 +1,5 @@
 # Marketplace Operator
-Marketplace is a conduit to bring off-cluster operators to your cluster.
+Marketplace is a conduit to bring off-cluster operators to your cluster. Foo text change to test ci.
 
 ## Prerequisites
 In order to deploy the Marketplace Operator, you must:
