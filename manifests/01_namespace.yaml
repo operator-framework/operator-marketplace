@@ -10,6 +10,8 @@ metadata:
     capability.openshift.io/name: "marketplace"
   labels:
     openshift.io/cluster-monitoring: "true"
-    pod-security.kubernetes.io/enforce: restricted
-    pod-security.kubernetes.io/enforce-version: v1.24
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.25
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
   name: "openshift-marketplace"

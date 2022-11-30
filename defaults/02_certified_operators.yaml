@@ -11,6 +11,8 @@ spec:
   displayName: "Certified Operators"
   publisher: "Red Hat"
   priority: -200
+  grpcPodConfig:
+    securityContextConfig: restricted
   updateStrategy:
     registryPoll:
       interval: 10m
