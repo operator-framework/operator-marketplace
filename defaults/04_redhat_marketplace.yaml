@@ -11,6 +11,8 @@ spec:
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
   priority: -300
+  grpcPodConfig:
+    securityContextConfig: restricted
   updateStrategy:
     registryPoll:
       interval: 10m

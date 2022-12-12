@@ -11,6 +11,8 @@ spec:
   displayName: "Community Operators"
   publisher: "Red Hat"
   priority: -400
+  grpcPodConfig:
+    securityContextConfig: restricted
   updateStrategy:
     registryPoll:
       interval: 10m
