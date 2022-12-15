@@ -11,12 +11,11 @@ spec:
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
   priority: -300
-  grpcPodConfig:
-    securityContextConfig: restricted
   updateStrategy:
     registryPoll:
       interval: 10m
   grpcPodConfig:
+    securityContextConfig: restricted
     nodeSelector:
         node-role.kubernetes.io/master: ""
         kubernetes.io/os: "linux"
