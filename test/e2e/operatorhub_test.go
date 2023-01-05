@@ -22,10 +22,11 @@ const (
 
 var _ = Describe("operatorhub", func() {
 	var (
-		operatorhubName = "cluster"
-		globalNamespace = "openshift-marketplace"
-		ctx             = context.Background()
-		nn              = types.NamespacedName{Name: operatorhubName}
+		operatorhubName           = "cluster"
+		globalNamespace           = "openshift-marketplace"
+		ctx                       = context.Background()
+		nn                        = types.NamespacedName{Name: operatorhubName}
+		defaultCatalogSourceNames = []string{"redhat-operators", "certified-operators", "community-operators", "redhat-marketplace"}
 	)
 
 	// TODO: verify garbage collection of underlying catalogsource resources works as intended
@@ -40,6 +41,41 @@ var _ = Describe("operatorhub", func() {
 				og.Spec = configv1.OperatorHubSpec{}
 				return k8sClient.Update(ctx, og)
 			}, defaultTimeout, defaultPoll).Should(BeNil())
+		})
+		It("should create the default catalogsources in restricted mode", func() {
+			// keysToListFunc takes a map and returns the keys as a string array
+			keysToListFunc := func(m map[string]struct{}) []string {
+				keys := []string{}
+				for key := range m {
+					keys = append(keys, key)
+				}
+				return keys
+			}
+
+			Eventually(func() error {
+				csl := &olmv1alpha1.CatalogSourceList{}
+				if err := k8sClient.List(ctx, csl); err != nil {
+					return err
+				}
+
+				defaultSources := map[string]struct{}{}
+				for _, name := range defaultCatalogSourceNames {
+					defaultSources[name] = struct{}{}
+				}
+
+				for _, cs := range csl.Items {
+					if cs.Spec.GrpcPodConfig.SecurityContextConfig == olmv1alpha1.Restricted {
+						delete(defaultSources, cs.GetName())
+					}
+				}
+
+				defaultSourcesNotFoundInRestrictedMode := keysToListFunc(defaultSources)
+				if len(defaultSourcesNotFoundInRestrictedMode) != 0 {
+					return fmt.Errorf("The following default catalogsources were not found in restricted mode: %v", defaultSourcesNotFoundInRestrictedMode)
+				}
+
+				return nil
+			}, defaultTimeout, 3).Should(BeNil())
 		})
 
 		It("should ensure default catalogsources are deleted when spec.disableAllSources is set to true", func() {
@@ -73,12 +109,11 @@ var _ = Describe("operatorhub", func() {
 				if err := k8sClient.Get(ctx, nn, oh); err != nil {
 					return err
 				}
-				defaultSources := map[string]struct{}{
-					"redhat-operators":    {},
-					"certified-operators": {},
-					"community-operators": {},
-					"redhat-marketplace":  {},
+				defaultSources := map[string]struct{}{}
+				for _, name := range defaultCatalogSourceNames {
+					defaultSources[name] = struct{}{}
 				}
+
 				for _, source := range oh.Status.Sources {
 					if source.Disabled == true && source.Status == "Success" && source.Message == "" {
 						delete(defaultSources, source.Name)
