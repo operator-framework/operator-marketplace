@@ -16,7 +16,7 @@ type ObjectKey = types.NamespacedName
 // TODO(tflannag): Should this be removed entirely in favor of c-r's dynamic client?
 type Client interface {
 	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
-	Get(ctx context.Context, key ObjectKey, objExisting client.Object) error
+	Get(ctx context.Context, key ObjectKey, objExisting client.Object, opts ...client.GetOption) error
 	Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error
 	Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
@@ -41,8 +41,8 @@ func (h *kubeClient) Create(ctx context.Context, obj client.Object, opts ...clie
 }
 
 // Get gets an existing runtime object from the cluster
-func (h *kubeClient) Get(ctx context.Context, key ObjectKey, objExisting client.Object) error {
-	return h.client.Get(ctx, key, objExisting)
+func (h *kubeClient) Get(ctx context.Context, key ObjectKey, objExisting client.Object, opts ...client.GetOption) error {
+	return h.client.Get(ctx, key, objExisting, opts...)
 }
 
 // Update updates an existing runtime object in the cluster
