@@ -27,7 +27,6 @@ import (
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -35,6 +34,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -209,16 +209,14 @@ func main() {
 		}
 	}
 
-	rl := &resourcelock.ConfigMapLock{
-		Client: client.CoreV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity: id,
-		},
-		ConfigMapMeta: v1.ObjectMeta{
-			Name:      defaultLeaderElectionConfigMapName,
-			Namespace: leaderElectionNamespace,
-		},
+	rl, err := resourcelock.New(resourcelock.ConfigMapsLeasesResourceLock, leaderElectionNamespace, defaultLeaderElectionConfigMapName, client.CoreV1(), client.CoordinationV1(), resourcelock.ResourceLockConfig{
+		Identity:      id,
+		EventRecorder: record.NewBroadcaster().NewRecorder(scheme, corev1.EventSource{Component: id}),
+	})
+	if err != nil {
+		logger.Fatal(err)
 	}
+
 	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:            rl,
 		ReleaseOnCancel: true,
