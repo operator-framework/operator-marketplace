@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -159,24 +160,26 @@ func AreCatsrcSpecsEqual(spec1 *olmv1alpha1.CatalogSourceSpec, spec2 *olmv1alpha
 	if spec1 == nil || spec2 == nil {
 		return false
 	}
-	if !strings.EqualFold(string(spec1.SourceType), string(spec2.SourceType)) ||
-		!strings.EqualFold(spec1.ConfigMap, spec2.ConfigMap) ||
-		!strings.EqualFold(spec1.Address, spec2.Address) ||
-		!strings.EqualFold(spec1.DisplayName, spec2.DisplayName) ||
-		!strings.EqualFold(spec1.Publisher, spec2.Publisher) ||
-		!strings.EqualFold(spec1.Image, spec2.Image) {
-		return false
-	}
-	if spec1.UpdateStrategy != nil && spec2.UpdateStrategy == nil {
-		return false
-	}
-	if spec1.UpdateStrategy == nil && spec2.UpdateStrategy != nil {
-		return false
-	}
-	if spec1.UpdateStrategy != nil && spec2.UpdateStrategy != nil {
-		if spec1.UpdateStrategy.RegistryPoll != spec1.UpdateStrategy.RegistryPoll {
-			return false
-		}
-	}
-	return true
+	spec1Copy := spec1.DeepCopy()
+	spec2Copy := spec2.DeepCopy()
+
+	spec1Copy.SourceType = olmv1alpha1.SourceType(strings.ToLower(string(spec1Copy.SourceType)))
+	spec2Copy.SourceType = olmv1alpha1.SourceType(strings.ToLower(string(spec2Copy.SourceType)))
+
+	spec1Copy.ConfigMap = strings.ToLower(spec1Copy.ConfigMap)
+	spec2Copy.ConfigMap = strings.ToLower(spec2Copy.ConfigMap)
+
+	spec1Copy.Address = strings.ToLower(spec1Copy.Address)
+	spec2Copy.Address = strings.ToLower(spec2Copy.Address)
+
+	spec1Copy.DisplayName = strings.ToLower(spec1Copy.DisplayName)
+	spec2Copy.DisplayName = strings.ToLower(spec2Copy.DisplayName)
+
+	spec1Copy.Publisher = strings.ToLower(spec1Copy.Publisher)
+	spec2Copy.Publisher = strings.ToLower(spec2Copy.Publisher)
+
+	spec1Copy.Image = strings.ToLower(spec1Copy.Image)
+	spec2Copy.Image = strings.ToLower(spec2Copy.Image)
+
+	return reflect.DeepEqual(spec1Copy, spec2Copy)
 }
