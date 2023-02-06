@@ -3,7 +3,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,6 +15,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -76,6 +79,126 @@ var _ = Describe("operatorhub", func() {
 
 				return nil
 			}, defaultTimeout, 3).Should(BeNil())
+		})
+		Context("default CatalogSource value enforcement", func() {
+			var (
+				cs                 olmv1alpha1.CatalogSource
+				originalCatSrcSpec olmv1alpha1.CatalogSourceSpec
+				catSrcSpec         olmv1alpha1.CatalogSourceSpec
+				catSrcNN           types.NamespacedName = types.NamespacedName{Name: "certified-operators", Namespace: globalNamespace}
+			)
+			flipCase := func(s string) string {
+				flip := func(r rune) rune {
+					if unicode.IsUpper(r) {
+						return unicode.ToLower(r)
+					} else if unicode.IsLower(r) {
+						return unicode.ToUpper(r)
+					}
+					return r
+				}
+				return strings.Map(flip, s)
+			}
+			BeforeEach(func() {
+				cs = olmv1alpha1.CatalogSource{}
+				err := k8sClient.Get(ctx, catSrcNN, &cs)
+				Expect(err).ToNot(HaveOccurred())
+				originalCatSrcSpec = cs.Spec
+			})
+			AfterEach(func() {
+				// Return the spec back to default when finished testing, in case we fail somewhere before the end
+				err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					cs := olmv1alpha1.CatalogSource{}
+					err := k8sClient.Get(ctx, catSrcNN, &cs)
+					if err != nil {
+						return err
+					}
+					cs.Spec = originalCatSrcSpec
+					return k8sClient.Update(ctx, &cs)
+				})
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should maintain the values of default catalogsources, ignoring character case in strings", func() {
+				By("swapping the letter case of spec.SourceType, ConfigMap, Address, DisplayName, and Publisher")
+				Eventually(func() error {
+					// Flip the letter case of all case-insensitive fields except Image
+					cs.Spec.SourceType = olmv1alpha1.SourceType(flipCase(string(cs.Spec.SourceType)))
+					cs.Spec.ConfigMap = flipCase(cs.Spec.ConfigMap)
+					cs.Spec.Address = flipCase(cs.Spec.Address)
+					cs.Spec.DisplayName = flipCase(cs.Spec.DisplayName)
+					cs.Spec.Publisher = flipCase(cs.Spec.Publisher)
+					// Update our Spec to track changes so far
+					catSrcSpec = cs.Spec
+					return k8sClient.Update(ctx, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
+				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
+					newCs := &olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
+						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					return newCs.Spec, nil
+					// Spec should not have been reverted (no differences detected)
+				}, defaultTimeout, 3).Should(Equal(catSrcSpec))
+
+				By("swapping the letter case of spec.Image")
+				Eventually(func() error {
+					cs = olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, &cs); err != nil {
+						return err
+					}
+					// Flip the letter case of spec.Image
+					cs.Spec.Image = flipCase(cs.Spec.Image)
+					// Update our Spec to track changes so far
+					catSrcSpec.Image = cs.Spec.Image
+					return k8sClient.Update(ctx, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
+				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
+					newCs := &olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
+						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					return newCs.Spec, nil
+					// Spec should not have been reverted (no differences detected)
+				}, defaultTimeout, 3).Should(Equal(catSrcSpec))
+
+				By("setting the value of spec.ConfigMap to a new value")
+				Eventually(func() error {
+					cs = olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, &cs); err != nil {
+						return err
+					}
+					// Add a new suffix to the existing ConfigMap value
+					cs.Spec.ConfigMap = cs.Spec.ConfigMap + "-foo"
+					return k8sClient.Update(ctx, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
+				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
+					newCs := &olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
+						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					return newCs.Spec, nil
+					// Spec should eventually be reverted back to default values due to a detected difference
+				}, defaultTimeout, 3).Should(Equal(originalCatSrcSpec))
+
+				By("changing the content of spec.grpcPodConfig")
+				Eventually(func() error {
+					cs = olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, &cs); err != nil {
+						return err
+					}
+					// Set the value of Spec.GrpcPodConfig.PriorityClassName
+					newClassName := "foo"
+					cs.Spec.GrpcPodConfig.PriorityClassName = &newClassName
+					return k8sClient.Update(ctx, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
+				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
+					newCs := &olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
+						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					return newCs.Spec, nil
+					// Spec should eventually be reverted back to default values due to a detected difference
+				}, defaultTimeout, 3).Should(Equal(originalCatSrcSpec))
+			})
 		})
 
 		It("should ensure default catalogsources are deleted when spec.disableAllSources is set to true", func() {
