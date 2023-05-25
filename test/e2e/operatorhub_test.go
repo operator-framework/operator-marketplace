@@ -14,6 +14,7 @@ import (
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 )
@@ -117,7 +118,7 @@ var _ = Describe("operatorhub", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 			})
-			It("should maintain the values of default catalogsources, ignoring character case in strings", func() {
+			It("should maintain some values of default catalogsources, ignoring character case in strings", func() {
 				By("swapping the letter case of spec.SourceType, ConfigMap, Address, DisplayName, and Publisher")
 				Eventually(func() error {
 					// Flip the letter case of all case-insensitive fields except Image
@@ -151,6 +152,30 @@ var _ = Describe("operatorhub", func() {
 					catSrcSpec.Image = cs.Spec.Image
 					return k8sClient.Update(ctx, &cs)
 				}, defaultTimeout, 3).Should(BeNil())
+				Eventually(func() ([]metav1.Condition, error) {
+					newCs := &olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
+						return []metav1.Condition{}, err
+					}
+					return newCs.Status.Conditions, nil
+					// Spec should not have been reverted (no differences detected)
+				}, defaultTimeout, 3).Should(ContainElement(metav1.Condition{
+					Type:    "Upgradeable",
+					Status:  metav1.ConditionFalse,
+					Message: "CatalogSource not Upgradeable",
+					Reason:  "CatalogSource has been modified from default settings and is no longer Upgradeable",
+				}))
+
+				By("changing the content of spec.RegistryPoll")
+				Eventually(func() error {
+					cs = olmv1alpha1.CatalogSource{}
+					if err := k8sClient.Get(ctx, catSrcNN, &cs); err != nil {
+						return err
+					}
+					// Add an hour to the existing RegistryPoll Interval
+					cs.Spec.UpdateStrategy.RegistryPoll.Interval.Duration += time.Duration(time.Duration.Hours(1))
+					return k8sClient.Update(ctx, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
 				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
 					newCs := &olmv1alpha1.CatalogSource{}
 					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
@@ -178,29 +203,8 @@ var _ = Describe("operatorhub", func() {
 					return newCs.Spec, nil
 					// Spec should eventually be reverted back to default values due to a detected difference
 				}, defaultTimeout, 3).Should(Equal(originalCatSrcSpec))
-
-				By("changing the content of spec.grpcPodConfig")
-				Eventually(func() error {
-					cs = olmv1alpha1.CatalogSource{}
-					if err := k8sClient.Get(ctx, catSrcNN, &cs); err != nil {
-						return err
-					}
-					// Set the value of Spec.GrpcPodConfig.PriorityClassName
-					newClassName := "foo"
-					cs.Spec.GrpcPodConfig.PriorityClassName = &newClassName
-					return k8sClient.Update(ctx, &cs)
-				}, defaultTimeout, 3).Should(BeNil())
-				Eventually(func() (olmv1alpha1.CatalogSourceSpec, error) {
-					newCs := &olmv1alpha1.CatalogSource{}
-					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
-						return olmv1alpha1.CatalogSourceSpec{}, err
-					}
-					return newCs.Spec, nil
-					// Spec should eventually be reverted back to default values due to a detected difference
-				}, defaultTimeout, 3).Should(Equal(originalCatSrcSpec))
 			})
 		})
-
 		It("should ensure default catalogsources are deleted when spec.disableAllSources is set to true", func() {
 			By("setting spec.disableAllSources to true")
 			Eventually(func() error {

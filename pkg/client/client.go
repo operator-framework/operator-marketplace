@@ -18,6 +18,7 @@ type Client interface {
 	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
 	Get(ctx context.Context, key ObjectKey, objExisting client.Object, opts ...client.GetOption) error
 	Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error
+	Status() client.StatusWriter
 	Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error
 	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
 }
@@ -48,6 +49,11 @@ func (h *kubeClient) Get(ctx context.Context, key ObjectKey, objExisting client.
 // Update updates an existing runtime object in the cluster
 func (h *kubeClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	return h.client.Update(ctx, obj, opts...)
+}
+
+// Status updates an existing runtime object's status in the cluster
+func (h *kubeClient) Status() client.StatusWriter {
+	return h.client.Status()
 }
 
 // Delete deletes a new runtime object in the cluster
