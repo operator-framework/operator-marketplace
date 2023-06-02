@@ -21,7 +21,6 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
-	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
 	sourceCommit "github.com/operator-framework/operator-marketplace/pkg/version"
@@ -31,11 +30,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -176,11 +173,6 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		logger.Info("ensuring the default catalogsource resources")
-		if err := ensureDefaults(ctx, cfg, mgr.GetScheme()); err != nil {
-			logger.Fatalf("failed to setup the default catalogsource manifests: %v", err)
-		}
-
 		// start reporting the marketplace clusteroperator status reporting before
 		// starting the manager instance as mgr.Start is blocking
 		logger.Info("starting the marketplace clusteroperator status reporter")
@@ -243,37 +235,4 @@ func main() {
 			},
 		},
 	})
-}
-
-// ensureDefaults is responsible for ensuring that the list of default
-// CatalogSource on-disk manifests are present on-cluster, or absent
-// if disabled in the OperatorHub cluster singleton type.
-func ensureDefaults(ctx context.Context, cfg *rest.Config, scheme *kruntime.Scheme) error {
-	// The default client serves read requests from the cache which only gets
-	// initialized after mgr.Start(). So we need to instantiate a new client
-	// for the defaults handler.
-	clientForDefaults, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		logrus.Errorf("Error initializing client for handling defaults - %v", err)
-		return err
-	}
-
-	if configv1.IsAPIAvailable() {
-		// Check if the cluster OperatorHub config resource is present.
-		operatorHubCluster := &apiconfigv1.OperatorHub{}
-		err = clientForDefaults.Get(ctx, client.ObjectKey{Name: operatorhub.DefaultName}, operatorHubCluster)
-		// The default OperatorHub config resource is present which will take care of ensuring defaults
-		if err == nil {
-			return nil
-		}
-	}
-
-	// Ensure that the default CatalogSources are present based on the definitions
-	// in the defaults directory
-	result := defaults.New(defaults.GetGlobals()).EnsureAll(ctx, clientForDefaults)
-	if len(result) != 0 {
-		return fmt.Errorf("[defaults] Error ensuring default CatalogSources(s) - %v", result)
-	}
-
-	return nil
 }
