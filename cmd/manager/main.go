@@ -76,12 +76,14 @@ func main() {
 		tlsKeyPath              string
 		tlsCertPath             string
 		leaderElectionNamespace string
+		pprofAddress            string
 		version                 bool
 		loglvl                  string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "configures the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "configures the directory where the default CatalogSources are stored")
 	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
+	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to serve pprof endpoints on.")
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "configures the namespace that will contain the leader election lock")
@@ -140,6 +142,7 @@ func main() {
 	mgr, err := manager.New(cfg, manager.Options{
 		Namespace:          "",
 		MetricsBindAddress: "0",
+		PprofBindAddress:   pprofAddress,
 		Scheme:             scheme,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
