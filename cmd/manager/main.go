@@ -9,7 +9,11 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -137,6 +141,16 @@ func main() {
 		Namespace:          "",
 		MetricsBindAddress: "0",
 		Scheme:             scheme,
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.ConfigMap{}: {
+					Field: fields.SelectorFromSet(fields.Set{
+						"metadata.namespace": namespace,
+						"metadata.name":      certificateauthority.TrustedCaConfigMapName,
+					}),
+				},
+			},
+		},
 	})
 	if err != nil {
 		logger.Fatal(err)
