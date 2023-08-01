@@ -49,7 +49,7 @@ func add(mgr manager.Manager, r *ReconcileConfigMap) error {
 	}
 
 	// Watch for changes to primary resource ConfigMap.
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}, getPredicateFunctions())
+	err = c.Watch(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}), &handler.EnqueueRequestForObject{}, getPredicateFunctions())
 	if err != nil {
 		return err
 	}

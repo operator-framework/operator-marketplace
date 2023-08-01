@@ -4,9 +4,8 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	configv1 "github.com/openshift/api/config/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
@@ -15,7 +14,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -27,7 +25,7 @@ var (
 
 func TestMarketplace(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Controller Integration Suite", []Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Integration Suite")
 }
 
 var _ = BeforeSuite(func() {
