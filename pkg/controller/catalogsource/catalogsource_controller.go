@@ -68,7 +68,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	err = c.Watch(&source.Kind{Type: &olmv1alpha1.CatalogSource{}}, &handler.EnqueueRequestForObject{}, pred)
+	err = c.Watch(source.Kind(mgr.GetCache(), &olmv1alpha1.CatalogSource{}), &handler.EnqueueRequestForObject{}, pred)
 	if err != nil {
 		return err
 	}
