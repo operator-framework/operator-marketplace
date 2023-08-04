@@ -9,90 +9,40 @@ metadata:
     capability.openshift.io/name: "marketplace"
 rules:
 - apiGroups:
-  - ""
+  - config.openshift.io
   resources:
-  - configmaps
-  - namespaces
+  - clusteroperators
+  - operatorhubs
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - ""
+  - config.openshift.io
+  resourceNames:
+  - marketplace
   resources:
-  - configmaps
+  - clusteroperators/status
   verbs:
+  - patch
   - update
 - apiGroups:
   - config.openshift.io
+  resourceNames:
+  - cluster
   resources:
-  - operatorhubs
   - operatorhubs/status
   verbs:
-  - get
-  - list
-  - watch
+  - patch
   - update
 - apiGroups:
   - operators.coreos.com
   resources:
   - catalogsources
-  - operatorsources
   verbs:
   - get
-  - create
-  - delete
-  - update
   - list
   - watch
-- apiGroups:
-  - config.openshift.io
-  resources:
-  - clusteroperators
-  - clusteroperators/status
-  verbs:
-  - create
-  - get
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  - services
-  - serviceaccounts
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  - rolebindings
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - operators.coreos.com
-  resources:
-  - subscriptions
-  verbs:
-  - get
-  - update
-  - list
-- apiGroups:
-  - apiextensions.k8s.io
-  resources:
-  - customresourcedefinitions
-  verbs:
-  - get
-  - delete
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -106,69 +56,38 @@ metadata:
     capability.openshift.io/name: "marketplace"
 rules:
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - secrets
+  - leases
   verbs:
   - get
-- apiGroups:
-  - ""
-  resources:
-  - services
-  - serviceaccounts
-  verbs:
-  - get
+  - list
+  - watch
   - create
-  - delete
+  - patch
   - update
+  - delete
 - apiGroups:
   - ""
   resources:
   - configmaps
   verbs:
   - get
+  - list
+  - watch
   - create
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - get
-  - create
-  - delete
-  - update
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  - rolebindings
-  verbs:
-  - get
-  - create
-  - delete
-  - update
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  resourceNames:
-  - marketplace-operator-lock
-  verbs:
-  - get
-  - update
   - patch
+  - update
+  - delete
 - apiGroups:
-  - coordination.k8s.io
+  - operators.coreos.com
   resources:
-  - leases
+  - catalogsources
   verbs:
   - create
+  - patch
+  - update
+  - delete
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
