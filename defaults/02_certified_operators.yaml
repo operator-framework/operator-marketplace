@@ -32,3 +32,4 @@ spec:
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 120
+    memoryTarget: 4Mi
