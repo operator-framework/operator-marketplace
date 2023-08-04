@@ -72,8 +72,8 @@ spec:
               port: 8080
           resources:
             requests:
-              cpu: 10m
-              memory: 50Mi
+              cpu: 1m
+              memory: 5Mi
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
@@ -88,6 +88,8 @@ spec:
             - name: "RELEASE_VERSION"
               # The string "0.0.1-snapshot" is substituted by the CVO with the version of the payload
               value: "0.0.1-snapshot"
+            - name: GOMEMLIMIT
+              value: 5MiB
           volumeMounts:
             - name: marketplace-trusted-ca
               mountPath: /etc/pki/ca-trust/extracted/pem/
