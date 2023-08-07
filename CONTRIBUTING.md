@@ -36,33 +36,6 @@ $ sed -i -e 's?quay.io/openshift/origin-operator-marketplace:latest?<REGISTRYHOS
 $ oc apply -f deploy/operator.yaml
 ```
 
-## Marketplace-operator on vanilla Kubernetes
-
-- To set up marketplace-operator on vanilla Kubernetes, [install Operator-Lifecycle-Manager(OLM)](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/install/install.md) in a Kubernetes Cluster. 
-- `cd` into the marketplace-operator repository and install the marketplace-operator using 
-```
-$ kubectl apply -f deploy/upstream
-```
-- To delete the marketplace-operator deployment use 
-```
-$ kubectl delete deployment marketplace
-``` 
-
-### Testing changes to RBAC policy on vanilla Kubernetes
-- If there's any modification in existing RBAC policies, the modifications need to be tested using a separate deployment. Easiest way to do this is to build an image locally using [this dockerfile](./Dockerfile), push the image to a registry, and replace the [image here](https://github.com/operator-framework/operator-marketplace/blob/master/deploy/upstream/07_operator.yaml#L28) with the newly built image. The operator can then be redeployed with the new changes.
-
-```
-$ cd <path-to-operator-marketplace-repo>
-
-$ operator-sdk build . --tag=<REGISTRYHOST>/<USERNAME>/marketplace-operator
-
-$ docker push <REGISTRYHOST>/<USERNAME>/marketplace-operator 
-
-$ sed -i -e 's?quay.io/openshift/origin-operator-marketplace:latest?<REGISTRYHOST>/<USERNAME>/marketplace-operator?g' deploy/upstream/07_operator.yaml
-
-$ kubectl apply -f deploy/upstream/operator.yaml
-```
-
 ## Reporting bugs and creating issues
 
 If any part of the operator-marketplace project has bugs or documentation mistakes, please let us know by [opening an issue](https://github.com/operator-framework/operator-marketplace/issues/new) or a PR. 
