@@ -10,10 +10,10 @@ require (
 	github.com/openshift/api v0.0.0-20230613151523-ba04973d3ed1
 	github.com/openshift/client-go v0.0.0-20230503144108-75015d2347cb
 	github.com/openshift/library-go v0.0.0-20230724150037-c515269de16e
-	github.com/operator-framework/api v0.17.3
+	github.com/operator-framework/api v0.17.8-0.20230803152844-704ae942c4a9
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.1
+	github.com/sirupsen/logrus v1.9.2
+	github.com/stretchr/testify v1.8.3
 	k8s.io/api v0.27.4
 	k8s.io/apimachinery v0.27.4
 	k8s.io/client-go v0.27.4
@@ -46,7 +46,7 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
+	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
