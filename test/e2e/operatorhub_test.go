@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -135,6 +136,9 @@ var _ = Describe("operatorhub", func() {
 					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
 						return olmv1alpha1.CatalogSourceSpec{}, err
 					}
+					if diff := cmp.Diff(catSrcSpec, newCs.Spec); diff != "" {
+						fmt.Println(diff)
+					}
 					return newCs.Spec, nil
 					// Spec should not have been reverted (no differences detected)
 				}, defaultTimeout, 3).Should(Equal(catSrcSpec))
@@ -156,6 +160,9 @@ var _ = Describe("operatorhub", func() {
 					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
 						return olmv1alpha1.CatalogSourceSpec{}, err
 					}
+					if diff := cmp.Diff(catSrcSpec, newCs.Spec); diff != "" {
+						fmt.Println(diff)
+					}
 					return newCs.Spec, nil
 					// Spec should not have been reverted (no differences detected)
 				}, defaultTimeout, 3).Should(Equal(catSrcSpec))
@@ -174,6 +181,9 @@ var _ = Describe("operatorhub", func() {
 					newCs := &olmv1alpha1.CatalogSource{}
 					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
 						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					if diff := cmp.Diff(originalCatSrcSpec, newCs.Spec); diff != "" {
+						fmt.Println(diff)
 					}
 					return newCs.Spec, nil
 					// Spec should eventually be reverted back to default values due to a detected difference
@@ -194,6 +204,9 @@ var _ = Describe("operatorhub", func() {
 					newCs := &olmv1alpha1.CatalogSource{}
 					if err := k8sClient.Get(ctx, catSrcNN, newCs); err != nil {
 						return olmv1alpha1.CatalogSourceSpec{}, err
+					}
+					if diff := cmp.Diff(originalCatSrcSpec, newCs.Spec); diff != "" {
+						fmt.Println(diff)
 					}
 					return newCs.Spec, nil
 					// Spec should eventually be reverted back to default values due to a detected difference
