@@ -101,8 +101,9 @@ var _ = Describe("operatorhub", func() {
 			}
 			BeforeEach(func() {
 				cs = olmv1alpha1.CatalogSource{}
-				err := k8sClient.Get(ctx, catSrcNN, &cs)
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() error {
+					return k8sClient.Get(ctx, catSrcNN, &cs)
+				}, defaultTimeout, 3).Should(BeNil())
 				originalCatSrcSpec = cs.Spec
 			})
 			AfterEach(func() {
