@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -48,6 +50,10 @@ const (
 	defaultRenewDeadline               = 60 * time.Second
 	defaultLeaseDuration               = 90 * time.Second
 )
+
+func init() {
+	log.SetLogger(zap.New())
+}
 
 func printVersion() {
 	logrus.Printf("Go Version: %s", runtime.Version())
