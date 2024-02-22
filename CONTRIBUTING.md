@@ -2,6 +2,13 @@
 
 Operator Marketplace is Apache 2.0 licensed and accepts contributions via GitHub pull requests. This document outlines some of the conventions on commit message formatting, instructions on how to set up a dev environment, and other resources to help get contributions into operator-marketplace.  
 
+# Certificate of Origin
+
+By contributing to this project you agree to the Developer Certificate of
+Origin (DCO). This document was created by the Linux Kernel community and is a
+simple statement that you, as a contributor, have the legal right to make the
+contribution. See the [DCO](DCO) file for details.
+
 ## Setting up a dev environment
 
 - Fork the repository on GitHub
