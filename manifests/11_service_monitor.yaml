@@ -24,6 +24,8 @@ spec:
       tlsConfig:
         caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
         serverName: marketplace-operator-metrics.openshift-marketplace.svc
+        certFile: /etc/prometheus/secrets/metrics-client-certs/tls.crt
+        keyFile: /etc/prometheus/secrets/metrics-client-certs/tls.key
   namespaceSelector:
     matchNames:
     - openshift-marketplace
