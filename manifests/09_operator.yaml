@@ -74,6 +74,7 @@ spec:
             requests:
               cpu: 1m
               memory: 5Mi
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
