@@ -7,6 +7,11 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=etcds,scope=Cluster,categories=coreoperators
+// +kubebuilder:subresource:status
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/752
+// +openshift:file-pattern=cvoRunLevel=0000_12,operatorName=etcd,operatorOrdering=01
 
 // Etcd provides information to configure an operator to manage etcd.
 //
@@ -28,11 +33,40 @@ type Etcd struct {
 
 type EtcdSpec struct {
 	StaticPodOperatorSpec `json:",inline"`
+	// HardwareSpeed allows user to change the etcd tuning profile which configures
+	// the latency parameters for heartbeat interval and leader election timeouts
+	// allowing the cluster to tolerate longer round-trip-times between etcd members.
+	// Valid values are "", "Standard" and "Slower".
+	//	"" means no opinion and the platform is left to choose a reasonable default
+	//	which is subject to change without notice.
+	// +kubebuilder:validation:Optional
+	// +openshift:enable:FeatureGate=HardwareSpeed
+	// +optional
+	HardwareSpeed ControlPlaneHardwareSpeed `json:"controlPlaneHardwareSpeed"`
 }
 
 type EtcdStatus struct {
 	StaticPodOperatorStatus `json:",inline"`
+	HardwareSpeed           ControlPlaneHardwareSpeed `json:"controlPlaneHardwareSpeed"`
 }
+
+const (
+	// StandardHardwareSpeed provides the normal tolerances for hardware speed and latency.
+	//	Currently sets (values subject to change at any time):
+	//		ETCD_HEARTBEAT_INTERVAL: 100ms
+	// 	ETCD_LEADER_ELECTION_TIMEOUT: 1000ms
+	StandardHardwareSpeed ControlPlaneHardwareSpeed = "Standard"
+	// SlowerHardwareSpeed provides more tolerance for slower hardware and/or higher latency networks.
+	// Sets (values subject to change):
+	//		ETCD_HEARTBEAT_INTERVAL: 5x Standard
+	// 	ETCD_LEADER_ELECTION_TIMEOUT: 2.5x Standard
+	SlowerHardwareSpeed ControlPlaneHardwareSpeed = "Slower"
+)
+
+// ControlPlaneHardwareSpeed declares valid hardware speed tolerance levels
+// +enum
+// +kubebuilder:validation:Enum:="";Standard;Slower
+type ControlPlaneHardwareSpeed string
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
