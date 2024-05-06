@@ -3,7 +3,7 @@ WORKDIR /go/src/github.com/operator-framework/operator-marketplace
 COPY . .
 RUN make osbs-build
 
-FROM registry.ci.openshift.org/ocp/4.16:base
+FROM registry.ci.openshift.org/ocp/4.16:base-rhel9
 RUN useradd marketplace-operator
 USER marketplace-operator
 COPY --from=builder /go/src/github.com/operator-framework/operator-marketplace/build/_output/bin/marketplace-operator /usr/bin
