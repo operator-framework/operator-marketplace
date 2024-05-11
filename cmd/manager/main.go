@@ -41,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const (
@@ -146,10 +147,9 @@ func main() {
 	// default in <v0.2.0, but it's now enabled by default and the default port
 	// conflicts with the same port we bind for the health checks.
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          "",
-		MetricsBindAddress: "0",
-		PprofBindAddress:   pprofAddress,
-		Scheme:             scheme,
+		Metrics:          metricsserver.Options{BindAddress: "0"},
+		PprofBindAddress: pprofAddress,
+		Scheme:           scheme,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
@@ -224,7 +224,7 @@ func main() {
 		}
 	}
 
-	rl, err := resourcelock.New(resourcelock.ConfigMapsLeasesResourceLock, leaderElectionNamespace, defaultLeaderElectionConfigMapName, client.CoreV1(), client.CoordinationV1(), resourcelock.ResourceLockConfig{
+	rl, err := resourcelock.New(resourcelock.LeasesResourceLock, leaderElectionNamespace, defaultLeaderElectionConfigMapName, client.CoreV1(), client.CoordinationV1(), resourcelock.ResourceLockConfig{
 		Identity:      id,
 		EventRecorder: record.NewBroadcaster().NewRecorder(scheme, corev1.EventSource{Component: id}),
 	})
