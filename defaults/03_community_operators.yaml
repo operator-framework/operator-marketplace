@@ -33,6 +33,3 @@ spec:
       effect: "NoExecute"
       tolerationSeconds: 120
     memoryTarget: 120Mi
-    extractContent:
-      cacheDir: /tmp/cache
-      catalogDir: /configs
