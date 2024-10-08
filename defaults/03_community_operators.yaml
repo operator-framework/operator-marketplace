@@ -5,6 +5,7 @@ metadata:
   namespace: "openshift-marketplace"
   annotations:
     target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+    openshift.io/required-scc: restricted-v2
 spec:
   sourceType: grpc
   image: registry.redhat.io/redhat/community-operator-index:v4.18
