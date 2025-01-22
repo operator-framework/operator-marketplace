@@ -8,7 +8,7 @@ metadata:
     openshift.io/required-scc: restricted-v2
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/community-operator-index:v4.18
+  image: registry.redhat.io/redhat/community-operator-index:v4.19
   displayName: "Community Operators"
   publisher: "Red Hat"
   priority: -400
