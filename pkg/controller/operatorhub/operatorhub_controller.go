@@ -2,6 +2,7 @@ package operatorhub
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	configv1 "github.com/openshift/api/config/v1"
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
@@ -9,13 +10,10 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Add creates a new OperatorHub Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -37,12 +35,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if !mktconfig.IsAPIAvailable() {
 		return nil
-	}
-
-	// Create a new controller
-	c, err := controller.New("operatorhub-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
 	}
 
 	// We only care if the event came from the cluster config.
@@ -78,13 +70,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	// Watch for changes to primary resource OperatorHub
-	err = c.Watch(source.Kind(mgr.GetCache(), &configv1.OperatorHub{}), &handler.EnqueueRequestForObject{}, pred)
-	if err != nil {
-		return err
-	}
+	return builder.ControllerManagedBy(mgr).
+		Named("operatorhub-controller").
+		For(&configv1.OperatorHub{}).
+		WithEventFilter(pred).
+		Complete(r)
 
-	return nil
 }
 
 // blank assignment to verify that ReconcileOperatorHub implements reconcile.Reconciler

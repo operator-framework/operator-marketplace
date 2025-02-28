@@ -9,14 +9,12 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/operatorhub"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Add creates a new CatalogSource Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -33,11 +31,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	c, err := controller.New("catalogsource-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
 	defaultCatalogsources := defaults.GetGlobalCatalogSourceDefinitions()
 	pred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -68,12 +61,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	err = c.Watch(source.Kind(mgr.GetCache(), &olmv1alpha1.CatalogSource{}), &handler.EnqueueRequestForObject{}, pred)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return builder.ControllerManagedBy(mgr).
+		Named("catalogsource-controller").
+		For(&olmv1alpha1.CatalogSource{}).
+		WithEventFilter(pred).
+		Complete(r)
 }
 
 // blank assignment to verify that ReconcileOperatorHub implements reconcile.Reconciler
