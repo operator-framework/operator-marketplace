@@ -8,7 +8,7 @@ metadata:
     openshift.io/required-scc: restricted-v2
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.18
+  image: registry.redhat.io/redhat/redhat-marketplace-index:v4.19
   displayName: "Red Hat Marketplace"
   publisher: "Red Hat"
   priority: -300
