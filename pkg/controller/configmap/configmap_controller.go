@@ -3,6 +3,7 @@ package configmap
 import (
 	"context"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
@@ -11,13 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Add creates a new ConfigMap Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -42,19 +40,11 @@ func add(mgr manager.Manager, r *ReconcileConfigMap) error {
 		return nil
 	}
 
-	// Create a new controller
-	c, err := controller.New("configmap-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource ConfigMap.
-	err = c.Watch(source.Kind(mgr.GetCache(), &corev1.ConfigMap{}), &handler.EnqueueRequestForObject{}, getPredicateFunctions())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return builder.ControllerManagedBy(mgr).
+		Named("configmap-controller").
+		For(&corev1.ConfigMap{}).
+		WithEventFilter(getPredicateFunctions()).
+		Complete(r)
 }
 
 // getPredicateFunctions returns the predicate functions used to identify the configmap
