@@ -1,0 +1,36 @@
+name: Dependabot Go Mod Tidy and Vendor
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  tidy-vendor:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Run go mod vendor
+        run: go mod vendor
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "dependabot[bot]"
+          git config --global user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git add go.mod go.sum vendor/
+          git commit -m "chore: run go mod tidy & vendor" || exit 0
+          git push
