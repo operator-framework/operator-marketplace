@@ -2,7 +2,7 @@ module github.com/operator-framework/operator-marketplace
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0
@@ -17,9 +17,9 @@ require (
 	github.com/prometheus/client_golang v1.21.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
-	k8s.io/client-go v0.32.2
+	k8s.io/api v0.32.3
+	k8s.io/apimachinery v0.32.3
+	k8s.io/client-go v0.32.3
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7
 	sigs.k8s.io/controller-runtime v0.20.2
 )
