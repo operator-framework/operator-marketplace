@@ -12,9 +12,9 @@ metadata:
   labels:
     openshift.io/cluster-monitoring: "true"
     pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/enforce-version: v1.25
+    pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/audit-version: v1.25
+    pod-security.kubernetes.io/audit-version: latest
     pod-security.kubernetes.io/warn: baseline
-    pod-security.kubernetes.io/warn-version: v1.25
+    pod-security.kubernetes.io/warn-version: latest
   name: "openshift-marketplace"
