@@ -8,8 +8,8 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/google/go-cmp v0.7.0
 	github.com/mikefarah/yq/v3 v3.0.0-20201202084205-8846255d1c37
-	github.com/onsi/ginkgo/v2 v2.23.0
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/ginkgo/v2 v2.23.3
+	github.com/onsi/gomega v1.37.0
 	github.com/openshift/api v0.0.0-20240429104249-ac9356ba1784
 	github.com/openshift/client-go v0.0.0-20240422164335-6c851f4919dd
 	github.com/openshift/library-go v0.0.0-20240426153406-52527b886e57
