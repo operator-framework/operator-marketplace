@@ -6,4 +6,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "NO-ISSUE:"
+    groups:
+      k8s-dependencies:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      golang-x-deps:
+        patterns:
+          - "golang.org/x/*"
 
