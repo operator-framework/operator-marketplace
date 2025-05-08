@@ -11,4 +11,5 @@ metadata:
     include.release.openshift.io/single-node-developer: "true"
     release.openshift.io/create-only: "true"
     capability.openshift.io/name: "marketplace"
-spec: {}
+spec:
+  disableAllDefaultSources: true
