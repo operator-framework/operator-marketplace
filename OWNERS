@@ -4,19 +4,23 @@ reviewers:
   - anik120
   - awgreene
   - ankitathomas
+  - camilamacedo86
   - oceanc80
   - grokspawn
   - rashmigottipati
   - everettraven
   - theishshah
+  - tmshort
 # approval == this is a good idea /approve
 approvers:
   - joelanford
   - awgreene
   - kevinrizza
   - anik120
+  - camilamacedo86
   - perdasilva
   - oceanc80
   - grokspawn
+  - tmshort
 # Bugzilla component
 component: "OLM"
