@@ -45,6 +45,7 @@ spec:
         - name: marketplace-operator
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           image: quay.io/openshift/origin-operator-marketplace:latest
