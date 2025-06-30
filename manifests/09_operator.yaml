@@ -44,8 +44,8 @@ spec:
       containers:
         - name: marketplace-operator
           securityContext:
-            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
           image: quay.io/openshift/origin-operator-marketplace:latest
