@@ -44,6 +44,7 @@ spec:
       containers:
         - name: marketplace-operator
           securityContext:
+            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -75,7 +76,6 @@ spec:
             requests:
               cpu: 1m
               memory: 5Mi
-          readOnlyRootFilesystem: true
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
