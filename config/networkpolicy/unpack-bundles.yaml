@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: unpack-bundles
+  namespace: openshift-marketplace
+spec:
+  podSelector:
+    matchExpressions:
+    - key: operatorframework.io/bundle-unpack-ref
+      operator: Exists
+    - key: olm.managed
+      operator: In
+      values:
+      - "true"
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+
