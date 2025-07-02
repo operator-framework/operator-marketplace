@@ -94,11 +94,15 @@ spec:
             - name: GOMEMLIMIT
               value: 5MiB
           volumeMounts:
+            - mountPath: /tmp
+              name: tmp
             - name: marketplace-trusted-ca
               mountPath: /etc/pki/ca-trust/extracted/pem/
             - name: marketplace-operator-metrics
               mountPath: /var/run/secrets/serving-cert
       volumes:
+        - emptyDir: {}
+          name: tmp
         - name: marketplace-trusted-ca
           configMap:
             optional: true
