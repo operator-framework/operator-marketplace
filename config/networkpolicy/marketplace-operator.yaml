@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: marketplace-operator
+  namespace: openshift-marketplace
+spec:
+  podSelector:
+    matchLabels:
+      name: marketplace-operator
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
