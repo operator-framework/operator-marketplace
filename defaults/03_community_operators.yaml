@@ -16,7 +16,7 @@ spec:
     registryPoll:
       interval: 10m
   grpcPodConfig:
-    securityContextConfig: restricted
+    securityContextConfig: legacy
     nodeSelector:
         node-role.kubernetes.io/master: ""
         kubernetes.io/os: "linux"
