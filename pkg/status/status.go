@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -46,6 +47,7 @@ type reporter struct {
 	monitorDoneCh       chan struct{}
 	clusterOperatorName string
 	once                sync.Once
+	clock               clock.PassiveClock
 }
 
 // ensureClusterOperator ensures that a ClusterOperator CR is present on the
@@ -112,7 +114,7 @@ func (r *reporter) setStatusCondition(statusCondition configv1.ClusterOperatorSt
 	if statusCondition.Type == configv1.OperatorAvailable && statusCondition.Status == configv1.ConditionTrue {
 		r.setOperandVersion()
 	}
-	cohelpers.SetStatusCondition(&r.clusterOperator.Status.Conditions, statusCondition)
+	cohelpers.SetStatusCondition(&r.clusterOperator.Status.Conditions, statusCondition, r.clock)
 }
 
 // updateStatus makes the API call to update the ClusterOperator if the status has changed.
@@ -246,6 +248,7 @@ func NewReporter(cfg *rest.Config, mgr manager.Manager, namespace string, name s
 		stopCh:              stopCh,
 		monitorDoneCh:       make(chan struct{}),
 		clusterOperatorName: name,
+		clock:               clock.RealClock{},
 	}, nil
 }
 
