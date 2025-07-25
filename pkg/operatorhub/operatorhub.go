@@ -28,7 +28,7 @@ type operatorhub struct {
 }
 
 // OperatorHub is the interface to interact with the OperatorHub configuration in
-//  memory.
+// memory.
 type OperatorHub interface {
 	Get() map[string]bool
 	Set(spec configv1.OperatorHubSpec)
