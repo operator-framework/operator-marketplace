@@ -2,6 +2,8 @@
 
 SHELL := /bin/bash
 
+OLM_API_VERSION := $(shell go list -m github.com/operator-framework/api | cut -d" " -f2)
+
 all: build
 
 build: osbs-build
@@ -20,7 +22,7 @@ e2e-job:
 	go test -v -race -failfast -timeout 90m ./test/e2e/... --ginkgo.randomizeAllSpecs
 
 install-olm-crds:
-	kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
+	kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_API_VERSION)/crds.yaml
 
 .PHONY: vendor
 vendor:
