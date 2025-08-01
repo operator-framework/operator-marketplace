@@ -43,6 +43,7 @@ spec:
       containers:
         - name: marketplace-operator
           securityContext:
+            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -72,8 +73,9 @@ spec:
               port: 8080
           resources:
             requests:
-              cpu: 10m
-              memory: 50Mi
+              cpu: 1m
+              memory: 5Mi
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
@@ -88,12 +90,18 @@ spec:
             - name: "RELEASE_VERSION"
               # The string "0.0.1-snapshot" is substituted by the CVO with the version of the payload
               value: "0.0.1-snapshot"
+            - name: GOMEMLIMIT
+              value: 5MiB
           volumeMounts:
+            - mountPath: /tmp
+              name: tmp
             - name: marketplace-trusted-ca
               mountPath: /etc/pki/ca-trust/extracted/pem/
             - name: marketplace-operator-metrics
               mountPath: /var/run/secrets/serving-cert
       volumes:
+        - emptyDir: {}
+          name: tmp
         - name: marketplace-trusted-ca
           configMap:
             optional: true
