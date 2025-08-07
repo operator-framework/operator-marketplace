@@ -1,5 +1,0 @@
-resources:
-  - default-deny.yaml
-  - marketplace-operator.yaml
-  - unpack-bundles.yaml
-
