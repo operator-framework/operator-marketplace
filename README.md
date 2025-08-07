@@ -22,7 +22,7 @@ Here is a description of the spec fields:
                   
 - `sources` is the list of default hub sources and their configuration. If the list is empty, it implies that the default hub sources are enabled on the cluster unless disableAllDefaultSources is true. If disableAllDefaultSources is true and sources is not empty, the configuration present in sources will take precedence. The list of default hub sources and their current state will always be reflected in the status block.
 
-Please see [here][https://docs.openshift.com/container-platform/4.13/operators/understanding/olm-understanding-operatorhub.html] for more information.
+Please see [here](https://docs.openshift.com/container-platform/4.13/operators/understanding/olm-understanding-operatorhub.html) for more information.
 
 ### Deploying the Marketplace Operator with OKD
 The Marketplace Operator is deployed by default with OKD and no further steps are required.
