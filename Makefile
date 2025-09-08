@@ -20,7 +20,7 @@ e2e-job:
 	go test -v -race -failfast -timeout 90m ./test/e2e/... --ginkgo.randomizeAllSpecs
 
 install-olm-crds:
-	kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
+	kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.32.0/crds.yaml
 
 .PHONY: vendor
 vendor:
