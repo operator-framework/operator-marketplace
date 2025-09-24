@@ -32,7 +32,7 @@ spec:
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 120
-    memoryTarget: 20Mi
+    memoryTarget: 40Mi
     extractContent:
       cacheDir: /tmp/cache
       catalogDir: /configs
