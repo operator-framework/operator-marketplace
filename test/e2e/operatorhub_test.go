@@ -353,10 +353,12 @@ var _ = Describe("operatorhub", func() {
 			By("checking the redhat-operators catalogsource has been re-created")
 			Eventually(func() error {
 				cs := &olmv1alpha1.CatalogSource{}
-				err := k8sClient.Get(ctx, disabledNN, cs)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(cs).NotTo(BeNil())
-				Expect(cs.GetName()).To(Equal(disabledName))
+				if err := k8sClient.Get(ctx, disabledNN, cs); err != nil {
+					return err
+				}
+				if cs.GetName() != disabledName {
+					return fmt.Errorf("expected name %s, got %s", disabledName, cs.GetName())
+				}
 				return nil
 			}, defaultTimeout, 3).Should(BeNil())
 		})
