@@ -1,9 +1,9 @@
-FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.24-openshift-4.20 AS builder
+FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.24-openshift-4.21 AS builder
 WORKDIR /go/src/github.com/operator-framework/operator-marketplace
 COPY . .
 RUN make osbs-build
 
-FROM registry.ci.openshift.org/ocp/4.20:base-rhel9
+FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
 RUN useradd marketplace-operator
 USER marketplace-operator
 COPY --from=builder /go/src/github.com/operator-framework/operator-marketplace/build/_output/bin/marketplace-operator /usr/bin
