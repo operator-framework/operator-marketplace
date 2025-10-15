@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.38.2
 	github.com/openshift/api v0.0.0-20251015095338-264e80a2b6e7
 	github.com/openshift/client-go v0.0.0-20251015124057-db0dee36e235
-	github.com/openshift/library-go v0.0.0-20251009131428-6c2d3d0d6f05
+	github.com/openshift/library-go v0.0.0-20251015151611-6fc7a74b67c5
 	github.com/operator-framework/api v0.35.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.3
