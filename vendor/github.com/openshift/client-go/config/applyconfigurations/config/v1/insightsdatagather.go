@@ -3,73 +3,72 @@
 package v1
 
 import (
-	operatorv1 "github.com/openshift/api/operator/v1"
-	internal "github.com/openshift/client-go/operator/applyconfigurations/internal"
+	configv1 "github.com/openshift/api/config/v1"
+	internal "github.com/openshift/client-go/config/applyconfigurations/internal"
 	apismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
-// OLMApplyConfiguration represents a declarative configuration of the OLM type for use
+// InsightsDataGatherApplyConfiguration represents a declarative configuration of the InsightsDataGather type for use
 // with apply.
-type OLMApplyConfiguration struct {
+type InsightsDataGatherApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
-	Spec                                 *OLMSpecApplyConfiguration   `json:"spec,omitempty"`
-	Status                               *OLMStatusApplyConfiguration `json:"status,omitempty"`
+	Spec                                 *InsightsDataGatherSpecApplyConfiguration `json:"spec,omitempty"`
 }
 
-// OLM constructs a declarative configuration of the OLM type for use with
+// InsightsDataGather constructs a declarative configuration of the InsightsDataGather type for use with
 // apply.
-func OLM(name string) *OLMApplyConfiguration {
-	b := &OLMApplyConfiguration{}
+func InsightsDataGather(name string) *InsightsDataGatherApplyConfiguration {
+	b := &InsightsDataGatherApplyConfiguration{}
 	b.WithName(name)
-	b.WithKind("OLM")
-	b.WithAPIVersion("operator.openshift.io/v1")
+	b.WithKind("InsightsDataGather")
+	b.WithAPIVersion("config.openshift.io/v1")
 	return b
 }
 
-// ExtractOLM extracts the applied configuration owned by fieldManager from
-// oLM. If no managedFields are found in oLM for fieldManager, a
-// OLMApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// ExtractInsightsDataGather extracts the applied configuration owned by fieldManager from
+// insightsDataGather. If no managedFields are found in insightsDataGather for fieldManager, a
+// InsightsDataGatherApplyConfiguration is returned with only the Name, Namespace (if applicable),
 // APIVersion and Kind populated. It is possible that no managed fields were found for because other
 // field managers have taken ownership of all the fields previously owned by fieldManager, or because
 // the fieldManager never owned fields any fields.
-// oLM must be a unmodified OLM API object that was retrieved from the Kubernetes API.
-// ExtractOLM provides a way to perform a extract/modify-in-place/apply workflow.
+// insightsDataGather must be a unmodified InsightsDataGather API object that was retrieved from the Kubernetes API.
+// ExtractInsightsDataGather provides a way to perform a extract/modify-in-place/apply workflow.
 // Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
 // applied if another fieldManager has updated or force applied any of the previously applied fields.
 // Experimental!
-func ExtractOLM(oLM *operatorv1.OLM, fieldManager string) (*OLMApplyConfiguration, error) {
-	return extractOLM(oLM, fieldManager, "")
+func ExtractInsightsDataGather(insightsDataGather *configv1.InsightsDataGather, fieldManager string) (*InsightsDataGatherApplyConfiguration, error) {
+	return extractInsightsDataGather(insightsDataGather, fieldManager, "")
 }
 
-// ExtractOLMStatus is the same as ExtractOLM except
+// ExtractInsightsDataGatherStatus is the same as ExtractInsightsDataGather except
 // that it extracts the status subresource applied configuration.
 // Experimental!
-func ExtractOLMStatus(oLM *operatorv1.OLM, fieldManager string) (*OLMApplyConfiguration, error) {
-	return extractOLM(oLM, fieldManager, "status")
+func ExtractInsightsDataGatherStatus(insightsDataGather *configv1.InsightsDataGather, fieldManager string) (*InsightsDataGatherApplyConfiguration, error) {
+	return extractInsightsDataGather(insightsDataGather, fieldManager, "status")
 }
 
-func extractOLM(oLM *operatorv1.OLM, fieldManager string, subresource string) (*OLMApplyConfiguration, error) {
-	b := &OLMApplyConfiguration{}
-	err := managedfields.ExtractInto(oLM, internal.Parser().Type("com.github.openshift.api.operator.v1.OLM"), fieldManager, b, subresource)
+func extractInsightsDataGather(insightsDataGather *configv1.InsightsDataGather, fieldManager string, subresource string) (*InsightsDataGatherApplyConfiguration, error) {
+	b := &InsightsDataGatherApplyConfiguration{}
+	err := managedfields.ExtractInto(insightsDataGather, internal.Parser().Type("com.github.openshift.api.config.v1.InsightsDataGather"), fieldManager, b, subresource)
 	if err != nil {
 		return nil, err
 	}
-	b.WithName(oLM.Name)
+	b.WithName(insightsDataGather.Name)
 
-	b.WithKind("OLM")
-	b.WithAPIVersion("operator.openshift.io/v1")
+	b.WithKind("InsightsDataGather")
+	b.WithAPIVersion("config.openshift.io/v1")
 	return b, nil
 }
-func (b OLMApplyConfiguration) IsApplyConfiguration() {}
+func (b InsightsDataGatherApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Kind field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithKind(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithKind(value string) *InsightsDataGatherApplyConfiguration {
 	b.TypeMetaApplyConfiguration.Kind = &value
 	return b
 }
@@ -77,7 +76,7 @@ func (b *OLMApplyConfiguration) WithKind(value string) *OLMApplyConfiguration {
 // WithAPIVersion sets the APIVersion field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the APIVersion field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithAPIVersion(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithAPIVersion(value string) *InsightsDataGatherApplyConfiguration {
 	b.TypeMetaApplyConfiguration.APIVersion = &value
 	return b
 }
@@ -85,7 +84,7 @@ func (b *OLMApplyConfiguration) WithAPIVersion(value string) *OLMApplyConfigurat
 // WithName sets the Name field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Name field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithName(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithName(value string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.Name = &value
 	return b
@@ -94,7 +93,7 @@ func (b *OLMApplyConfiguration) WithName(value string) *OLMApplyConfiguration {
 // WithGenerateName sets the GenerateName field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the GenerateName field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithGenerateName(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithGenerateName(value string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.GenerateName = &value
 	return b
@@ -103,7 +102,7 @@ func (b *OLMApplyConfiguration) WithGenerateName(value string) *OLMApplyConfigur
 // WithNamespace sets the Namespace field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Namespace field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithNamespace(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithNamespace(value string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.Namespace = &value
 	return b
@@ -112,7 +111,7 @@ func (b *OLMApplyConfiguration) WithNamespace(value string) *OLMApplyConfigurati
 // WithUID sets the UID field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the UID field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithUID(value types.UID) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithUID(value types.UID) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.UID = &value
 	return b
@@ -121,7 +120,7 @@ func (b *OLMApplyConfiguration) WithUID(value types.UID) *OLMApplyConfiguration 
 // WithResourceVersion sets the ResourceVersion field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the ResourceVersion field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithResourceVersion(value string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithResourceVersion(value string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.ResourceVersion = &value
 	return b
@@ -130,7 +129,7 @@ func (b *OLMApplyConfiguration) WithResourceVersion(value string) *OLMApplyConfi
 // WithGeneration sets the Generation field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Generation field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithGeneration(value int64) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithGeneration(value int64) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.Generation = &value
 	return b
@@ -139,7 +138,7 @@ func (b *OLMApplyConfiguration) WithGeneration(value int64) *OLMApplyConfigurati
 // WithCreationTimestamp sets the CreationTimestamp field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the CreationTimestamp field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithCreationTimestamp(value apismetav1.Time) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithCreationTimestamp(value apismetav1.Time) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.CreationTimestamp = &value
 	return b
@@ -148,7 +147,7 @@ func (b *OLMApplyConfiguration) WithCreationTimestamp(value apismetav1.Time) *OL
 // WithDeletionTimestamp sets the DeletionTimestamp field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the DeletionTimestamp field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithDeletionTimestamp(value apismetav1.Time) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithDeletionTimestamp(value apismetav1.Time) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.DeletionTimestamp = &value
 	return b
@@ -157,7 +156,7 @@ func (b *OLMApplyConfiguration) WithDeletionTimestamp(value apismetav1.Time) *OL
 // WithDeletionGracePeriodSeconds sets the DeletionGracePeriodSeconds field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the DeletionGracePeriodSeconds field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithDeletionGracePeriodSeconds(value int64) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithDeletionGracePeriodSeconds(value int64) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	b.ObjectMetaApplyConfiguration.DeletionGracePeriodSeconds = &value
 	return b
@@ -167,7 +166,7 @@ func (b *OLMApplyConfiguration) WithDeletionGracePeriodSeconds(value int64) *OLM
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, the entries provided by each call will be put on the Labels field,
 // overwriting an existing map entries in Labels field with the same key.
-func (b *OLMApplyConfiguration) WithLabels(entries map[string]string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithLabels(entries map[string]string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	if b.ObjectMetaApplyConfiguration.Labels == nil && len(entries) > 0 {
 		b.ObjectMetaApplyConfiguration.Labels = make(map[string]string, len(entries))
@@ -182,7 +181,7 @@ func (b *OLMApplyConfiguration) WithLabels(entries map[string]string) *OLMApplyC
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, the entries provided by each call will be put on the Annotations field,
 // overwriting an existing map entries in Annotations field with the same key.
-func (b *OLMApplyConfiguration) WithAnnotations(entries map[string]string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithAnnotations(entries map[string]string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	if b.ObjectMetaApplyConfiguration.Annotations == nil && len(entries) > 0 {
 		b.ObjectMetaApplyConfiguration.Annotations = make(map[string]string, len(entries))
@@ -196,7 +195,7 @@ func (b *OLMApplyConfiguration) WithAnnotations(entries map[string]string) *OLMA
 // WithOwnerReferences adds the given value to the OwnerReferences field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, values provided by each call will be appended to the OwnerReferences field.
-func (b *OLMApplyConfiguration) WithOwnerReferences(values ...*metav1.OwnerReferenceApplyConfiguration) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithOwnerReferences(values ...*metav1.OwnerReferenceApplyConfiguration) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	for i := range values {
 		if values[i] == nil {
@@ -210,7 +209,7 @@ func (b *OLMApplyConfiguration) WithOwnerReferences(values ...*metav1.OwnerRefer
 // WithFinalizers adds the given value to the Finalizers field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, values provided by each call will be appended to the Finalizers field.
-func (b *OLMApplyConfiguration) WithFinalizers(values ...string) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithFinalizers(values ...string) *InsightsDataGatherApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	for i := range values {
 		b.ObjectMetaApplyConfiguration.Finalizers = append(b.ObjectMetaApplyConfiguration.Finalizers, values[i])
@@ -218,7 +217,7 @@ func (b *OLMApplyConfiguration) WithFinalizers(values ...string) *OLMApplyConfig
 	return b
 }
 
-func (b *OLMApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
+func (b *InsightsDataGatherApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
 	if b.ObjectMetaApplyConfiguration == nil {
 		b.ObjectMetaApplyConfiguration = &metav1.ObjectMetaApplyConfiguration{}
 	}
@@ -227,37 +226,29 @@ func (b *OLMApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
 // WithSpec sets the Spec field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Spec field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithSpec(value *OLMSpecApplyConfiguration) *OLMApplyConfiguration {
+func (b *InsightsDataGatherApplyConfiguration) WithSpec(value *InsightsDataGatherSpecApplyConfiguration) *InsightsDataGatherApplyConfiguration {
 	b.Spec = value
 	return b
 }
 
-// WithStatus sets the Status field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Status field is set to the value of the last call.
-func (b *OLMApplyConfiguration) WithStatus(value *OLMStatusApplyConfiguration) *OLMApplyConfiguration {
-	b.Status = value
-	return b
-}
-
 // GetKind retrieves the value of the Kind field in the declarative configuration.
-func (b *OLMApplyConfiguration) GetKind() *string {
+func (b *InsightsDataGatherApplyConfiguration) GetKind() *string {
 	return b.TypeMetaApplyConfiguration.Kind
 }
 
 // GetAPIVersion retrieves the value of the APIVersion field in the declarative configuration.
-func (b *OLMApplyConfiguration) GetAPIVersion() *string {
+func (b *InsightsDataGatherApplyConfiguration) GetAPIVersion() *string {
 	return b.TypeMetaApplyConfiguration.APIVersion
 }
 
 // GetName retrieves the value of the Name field in the declarative configuration.
-func (b *OLMApplyConfiguration) GetName() *string {
+func (b *InsightsDataGatherApplyConfiguration) GetName() *string {
 	b.ensureObjectMetaApplyConfigurationExists()
 	return b.ObjectMetaApplyConfiguration.Name
 }
 
 // GetNamespace retrieves the value of the Namespace field in the declarative configuration.
-func (b *OLMApplyConfiguration) GetNamespace() *string {
+func (b *InsightsDataGatherApplyConfiguration) GetNamespace() *string {
 	b.ensureObjectMetaApplyConfigurationExists()
 	return b.ObjectMetaApplyConfiguration.Namespace
 }
