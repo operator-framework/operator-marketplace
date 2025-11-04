@@ -188,7 +188,7 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/openshift/api v0.0.0-20251023193535-8691c3014652
+# github.com/openshift/api v0.0.0-20251104141128-d13e8c65d30f
 ## explicit; go 1.24.0
 github.com/openshift/api/config/v1
 github.com/openshift/api/config/v1/zz_generated.crd-manifests
@@ -203,13 +203,13 @@ github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/operator/applyconfigurations/internal
 github.com/openshift/client-go/operator/applyconfigurations/operator/v1
-# github.com/openshift/library-go v0.0.0-20251027092748-1a3af44c9cd0
+# github.com/openshift/library-go v0.0.0-20251104164011-e9c2485b059c
 ## explicit; go 1.24.0
 github.com/openshift/library-go/pkg/apiserver/jsonpatch
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 github.com/openshift/library-go/pkg/operator/v1helpers
-# github.com/operator-framework/api v0.35.0
-## explicit; go 1.24.4
+# github.com/operator-framework/api v0.36.0
+## explicit; go 1.24.6
 github.com/operator-framework/api/pkg/lib/version
 github.com/operator-framework/api/pkg/operators
 github.com/operator-framework/api/pkg/operators/v1alpha1
@@ -231,11 +231,11 @@ github.com/prometheus/client_golang/prometheus/promhttp/internal
 # github.com/prometheus/client_model v0.6.2
 ## explicit; go 1.22.0
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.67.1
+# github.com/prometheus/common v0.67.2
 ## explicit; go 1.24.0
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.19.1
+# github.com/prometheus/procfs v0.19.2
 ## explicit; go 1.24.0
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
@@ -851,7 +851,7 @@ k8s.io/utils/lru
 k8s.io/utils/net
 k8s.io/utils/ptr
 k8s.io/utils/trace
-# sigs.k8s.io/controller-runtime v0.22.3
+# sigs.k8s.io/controller-runtime v0.22.4
 ## explicit; go 1.24.0
 sigs.k8s.io/controller-runtime/pkg/builder
 sigs.k8s.io/controller-runtime/pkg/cache
