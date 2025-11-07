@@ -3,6 +3,7 @@ package configmap
 import (
 	"context"
 	"os"
+
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	mktconfig "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
@@ -18,18 +19,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	// the rootCA for authenticating client certs is made available at the
+	// kube-system/extension-apiserver-authentication configMap, under the key
+	// client-ca-file.
+	ClientCANamespace = "kube-system"
+	ClientCAConfigMap = "extension-apiserver-authentication"
+	ClientCAKey = "client-ca-file"
+)
+
 // Add creates a new ConfigMap Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ options.ControllerOptions) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, o options.ControllerOptions) error {
+	return add(mgr, NewReconciler(mgr, o.ClientCAStore))
 }
 
 // newReconciler returns a new ReconcileConfigMap.
-func newReconciler(mgr manager.Manager) *ReconcileConfigMap {
+func NewReconciler(mgr manager.Manager, clientCAStore *ca.ClientCAStore) *ReconcileConfigMap {
 	client := mgr.GetClient()
 	return &ReconcileConfigMap{
 		client:  client,
 		handler: ca.NewHandler(client),
+		clientCAStore: clientCAStore,
 	}
 }
 
@@ -54,6 +65,10 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
+			if e.Object.GetName() == ClientCAConfigMap && 
+				e.Object.GetNamespace() == ClientCANamespace {
+					return true
+			}
 			if e.Object.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
@@ -61,6 +76,10 @@ func getPredicateFunctions() predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
+			if e.ObjectOld.GetName() == ClientCAConfigMap && 
+				e.ObjectOld.GetNamespace() == ClientCANamespace {
+					return true
+			}
 			if e.ObjectOld.GetName() == ca.TrustedCaConfigMapName {
 				return true
 			}
@@ -81,6 +100,7 @@ var _ reconcile.Reconciler = &ReconcileConfigMap{}
 type ReconcileConfigMap struct {
 	client  client.Client
 	handler ca.Handler
+	clientCAStore *ca.ClientCAStore
 }
 
 // Reconcile will restart the marketplace operator if the Certificate Authority ConfigMap is
@@ -88,6 +108,9 @@ type ReconcileConfigMap struct {
 func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling ConfigMap %s/%s", request.Namespace, request.Name)
 
+	if request.Name == ClientCAConfigMap && request.Namespace == ClientCANamespace {
+		return r.updateClientCA(ctx, request)
+	}
 	// Check if the CA ConfigMap is in the same namespace that Marketplace is deployed in.
 	isConfigMapInOtherNamespace, err := shared.IsObjectInOtherNamespace(request.Namespace)
 	if err != nil {
@@ -113,4 +136,20 @@ func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Re
 func isRunningOnPod() bool {
 	_, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	return !os.IsNotExist(err)
+}
+
+func (r *ReconcileConfigMap) updateClientCA(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	// Get configMap object
+	clientCAConfigMap := &corev1.ConfigMap{}
+	if err := r.client.Get(ctx, request.NamespacedName, clientCAConfigMap); err != nil {
+		// Requested object was not found, could have been deleted after reconcile request.
+		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+		// Return and don't requeue
+		return reconcile.Result{}, client.IgnoreNotFound(err)
+	}
+	if newCA, ok := clientCAConfigMap.Data[ClientCAKey]; ok {
+		r.clientCAStore.Update([]byte(newCA))
+	}
+
+	return reconcile.Result{}, nil
 }
