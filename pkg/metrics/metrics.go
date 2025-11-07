@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -23,7 +24,7 @@ const (
 )
 
 // ServePrometheus enables marketplace to serve prometheus metrics.
-func ServePrometheus(cert, key string) error {
+func ServePrometheus(cert, key string, clientCAStore *certificateauthority.ClientCAStore) error {
 	// Register metrics for the operator with the prometheus.
 	logrus.Info("[metrics] Registering marketplace metrics")
 
@@ -51,6 +52,12 @@ func ServePrometheus(cert, key string) error {
 				TLSConfig: &tls.Config{
 					GetCertificate: tlsGetCertFn,
 				},
+			}
+			if clientCAStore != nil {
+				httpsServer.TLSConfig.ClientCAs = clientCAStore.GetCA()
+				httpsServer.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
+			} else {
+				logrus.Warnf("No client CA configured, continuing without client cert verification")
 			}
 			err := httpsServer.ListenAndServeTLS("", "")
 			if err != nil {
