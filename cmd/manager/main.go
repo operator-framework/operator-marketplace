@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
+	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -24,6 +25,7 @@ import (
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/configmap"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
@@ -112,9 +114,10 @@ func main() {
 		os.Exit(0)
 	}
 
+	clientCAStore := ca.NewClientCAStore(x509.NewCertPool())
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath); err != nil {
+	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore); err != nil {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
@@ -153,10 +156,18 @@ func main() {
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
-					Field: fields.SelectorFromSet(fields.Set{
-						"metadata.namespace": namespace,
-						"metadata.name":      certificateauthority.TrustedCaConfigMapName,
-					}),
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{
+								"metadata.name": ca.TrustedCaConfigMapName,
+							}),
+						},
+						configmap.ClientCANamespace: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{
+								"metadata.name": configmap.ClientCAConfigMap,
+							}),
+						},
+					},
 				},
 			},
 		},
@@ -192,7 +203,7 @@ func main() {
 		}
 
 		logger.Info("setting up controllers")
-		if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
+		if err := controller.AddToManager(mgr, options.ControllerOptions{ClientCAStore: clientCAStore}); err != nil {
 			logger.Fatal(err)
 		}
 
