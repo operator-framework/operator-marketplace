@@ -18,23 +18,24 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	openshiftconfigv1 "github.com/openshift/api/config/v1"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/configmap"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type certKeyPair struct {
@@ -55,7 +56,9 @@ func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *
 		}
 		i.key = key
 		keyPEMBytes := bytes.Buffer{}
-		pem.Encode(&keyPEMBytes, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(i.key)})
+		if err := pem.Encode(&keyPEMBytes, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(i.key)}); err != nil {
+			return err
+		}
 		i.keyPEM = keyPEMBytes.Bytes()
 	}
 
@@ -86,7 +89,9 @@ func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *
 	i.cert = cert
 
 	certPEMBytes := bytes.Buffer{}
-	pem.Encode(&certPEMBytes, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	if err := pem.Encode(&certPEMBytes, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}); err != nil {
+		return err
+	}
 	i.certPEM = certPEMBytes.Bytes()
 
 	return nil
