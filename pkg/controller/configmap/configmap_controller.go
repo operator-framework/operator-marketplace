@@ -24,7 +24,7 @@ const (
 	// kube-system/extension-apiserver-authentication configMap, under the key
 	// client-ca-file.
 	ClientCANamespace = "kube-system"
-	ClientCAConfigMap = "extension-apiserver-authentication"
+	ClientCAConfigMapName = "extension-apiserver-authentication"
 	ClientCAKey = "client-ca-file"
 )
 
@@ -65,7 +65,7 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
-			if e.Object.GetName() == ClientCAConfigMap && 
+			if e.Object.GetName() == ClientCAConfigMapName && 
 				e.Object.GetNamespace() == ClientCANamespace {
 					return true
 			}
@@ -76,7 +76,7 @@ func getPredicateFunctions() predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
-			if e.ObjectOld.GetName() == ClientCAConfigMap && 
+			if e.ObjectOld.GetName() == ClientCAConfigMapName && 
 				e.ObjectOld.GetNamespace() == ClientCANamespace {
 					return true
 			}
@@ -108,7 +108,7 @@ type ReconcileConfigMap struct {
 func (r *ReconcileConfigMap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log.Printf("Reconciling ConfigMap %s/%s", request.Namespace, request.Name)
 
-	if request.Name == ClientCAConfigMap && request.Namespace == ClientCANamespace {
+	if request.Name == ClientCAConfigMapName && request.Namespace == ClientCANamespace {
 		return r.updateClientCA(ctx, request)
 	}
 	// Check if the CA ConfigMap is in the same namespace that Marketplace is deployed in.
