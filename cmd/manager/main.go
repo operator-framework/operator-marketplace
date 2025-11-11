@@ -164,7 +164,7 @@ func main() {
 						},
 						configmap.ClientCANamespace: {
 							FieldSelector: fields.SelectorFromSet(fields.Set{
-								"metadata.name": configmap.ClientCAConfigMap,
+								"metadata.name": configmap.ClientCAConfigMapName,
 							}),
 						},
 					},

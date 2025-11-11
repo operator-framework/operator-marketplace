@@ -98,7 +98,7 @@ func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *
 }
 
 func updateTestCAConfigMap(client crclient.WithWatch, reconciler *configmap.ReconcileConfigMap, caPEM []byte) error {
-	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configmap.ClientCAConfigMap, Namespace: configmap.ClientCANamespace}, Data:map[string]string{configmap.ClientCAKey: string(caPEM)}}
+	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configmap.ClientCAConfigMapName, Namespace: configmap.ClientCANamespace}, Data:map[string]string{configmap.ClientCAKey: string(caPEM)}}
 	if err := client.Create(context.TODO(), cm); err != nil {
 		if errors.IsAlreadyExists(err) {
 			err = client.Update(context.TODO(), cm)
