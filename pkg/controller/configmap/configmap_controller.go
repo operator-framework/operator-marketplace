@@ -12,6 +12,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -139,17 +140,30 @@ func isRunningOnPod() bool {
 }
 
 func (r *ReconcileConfigMap) updateClientCA(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	caData, err := GetClientCAFromConfigMap(ctx, r.client, request.NamespacedName)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if len(caData) == 0 {
+		return reconcile.Result{}, nil
+	}
+	r.clientCAStore.Update(caData)
+	return reconcile.Result{}, nil
+}
+
+// GetClientCAFromConfigMap is used for fetching the clientCA from the provided configMap reference.
+// This is used both for initializing and updating the cached clientCA certPool.
+func GetClientCAFromConfigMap(ctx context.Context, c client.Client, configMapKey types.NamespacedName) ([]byte, error) {
 	// Get configMap object
 	clientCAConfigMap := &corev1.ConfigMap{}
-	if err := r.client.Get(ctx, request.NamespacedName, clientCAConfigMap); err != nil {
+	if err := c.Get(ctx, configMapKey, clientCAConfigMap); err != nil {
 		// Requested object was not found, could have been deleted after reconcile request.
 		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 		// Return and don't requeue
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		return nil, client.IgnoreNotFound(err)
 	}
 	if newCA, ok := clientCAConfigMap.Data[ClientCAKey]; ok {
-		r.clientCAStore.Update([]byte(newCA))
+		return []byte(newCA), nil
 	}
-
-	return reconcile.Result{}, nil
+	return nil, nil
 }

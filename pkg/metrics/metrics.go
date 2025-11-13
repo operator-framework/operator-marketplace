@@ -57,7 +57,11 @@ func ServePrometheus(cert, key string, clientCAStore *certificateauthority.Clien
 				httpsServer.TLSConfig.ClientCAs = clientCAStore.GetCA()
 				httpsServer.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
 			} else {
-				logrus.Warnf("No client CA configured, continuing without client cert verification")
+				// enforce client cert requirement.
+				// Without this check, the client cert auth policy would be optional on startup
+				// if provided with a nil clientCAStore.
+				logrus.Errorf("No client CA configured, continuing without client cert verification")
+				return
 			}
 			err := httpsServer.ListenAndServeTLS("", "")
 			if err != nil {

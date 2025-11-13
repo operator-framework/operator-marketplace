@@ -13,6 +13,7 @@ import (
 	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -114,13 +115,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	clientCAStore := ca.NewClientCAStore(x509.NewCertPool())
-	// set TLS to serve metrics over a secure channel if cert is provided
-	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore); err != nil {
-		logger.Fatalf("failed to serve prometheus metrics: %s", err)
-	}
-
 	namespace, err := apiutils.GetWatchNamespace()
 	if err != nil {
 		logger.Fatalf("failed to get watch namespace: %v", err)
@@ -175,6 +169,26 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	clientCAStore := ca.NewClientCAStore(x509.NewCertPool())
+	// Best effort attempt to fetch client rootCA
+	// Should not fail if this does not immediately succeed, the configmap controller will continue to
+	// watch for the right configmap for updating this certpool as soon as it is created.
+	caData, err := configmap.GetClientCAFromConfigMap(context.TODO(), mgr.GetClient(), types.NamespacedName{Name: configmap.ClientCAConfigMapName, Namespace: configmap.ClientCANamespace})
+	if err == nil && len(caData) > 0 {
+		clientCAStore.Update(caData)
+	} else if err != nil {
+		logger.Warn("failed to initialize client CA certPool for the metrics endpoint: %w", err)
+	} else if len(caData) == 0 {
+		logger.Warn("could not find client CA to initialize client rootCA certpool, the clientCA configMap may not be initialized properly yet")
+	}
+
+	// set TLS to serve metrics over a secure channel if cert is provided
+	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
+	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore); err != nil {
+		logger.Fatalf("failed to serve prometheus metrics: %s", err)
+	}
+
 
 	logger.Info("setting up health checks")
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
