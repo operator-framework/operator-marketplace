@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"net/http"
@@ -9,9 +10,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
+	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -24,6 +26,7 @@ import (
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
 	apiutils "github.com/operator-framework/operator-marketplace/pkg/apis/operators/shared"
 	"github.com/operator-framework/operator-marketplace/pkg/controller"
+	"github.com/operator-framework/operator-marketplace/pkg/controller/configmap"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
@@ -112,12 +115,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// set TLS to serve metrics over a secure channel if cert is provided
-	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath); err != nil {
-		logger.Fatalf("failed to serve prometheus metrics: %s", err)
-	}
-
 	namespace, err := apiutils.GetWatchNamespace()
 	if err != nil {
 		logger.Fatalf("failed to get watch namespace: %v", err)
@@ -153,10 +150,18 @@ func main() {
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
-					Field: fields.SelectorFromSet(fields.Set{
-						"metadata.namespace": namespace,
-						"metadata.name":      certificateauthority.TrustedCaConfigMapName,
-					}),
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{
+								"metadata.name": ca.TrustedCaConfigMapName,
+							}),
+						},
+						configmap.ClientCANamespace: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{
+								"metadata.name": configmap.ClientCAConfigMapName,
+							}),
+						},
+					},
 				},
 			},
 		},
@@ -164,6 +169,26 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	clientCAStore := ca.NewClientCAStore(x509.NewCertPool())
+	// Best effort attempt to fetch client rootCA
+	// Should not fail if this does not immediately succeed, the configmap controller will continue to
+	// watch for the right configmap for updating this certpool as soon as it is created.
+	caData, err := configmap.GetClientCAFromConfigMap(context.TODO(), mgr.GetClient(), types.NamespacedName{Name: configmap.ClientCAConfigMapName, Namespace: configmap.ClientCANamespace})
+	if err == nil && len(caData) > 0 {
+		clientCAStore.Update(caData)
+	} else if err != nil {
+		logger.Warn("failed to initialize client CA certPool for the metrics endpoint: %w", err)
+	} else if len(caData) == 0 {
+		logger.Warn("could not find client CA to initialize client rootCA certpool, the clientCA configMap may not be initialized properly yet")
+	}
+
+	// set TLS to serve metrics over a secure channel if cert is provided
+	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
+	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore); err != nil {
+		logger.Fatalf("failed to serve prometheus metrics: %s", err)
+	}
+
 
 	logger.Info("setting up health checks")
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +217,7 @@ func main() {
 		}
 
 		logger.Info("setting up controllers")
-		if err := controller.AddToManager(mgr, options.ControllerOptions{}); err != nil {
+		if err := controller.AddToManager(mgr, options.ControllerOptions{ClientCAStore: clientCAStore}); err != nil {
 			logger.Fatal(err)
 		}
 
