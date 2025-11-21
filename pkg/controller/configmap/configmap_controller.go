@@ -24,9 +24,9 @@ const (
 	// the rootCA for authenticating client certs is made available at the
 	// kube-system/extension-apiserver-authentication configMap, under the key
 	// client-ca-file.
-	ClientCANamespace = "kube-system"
+	ClientCANamespace     = "kube-system"
 	ClientCAConfigMapName = "extension-apiserver-authentication"
-	ClientCAKey = "client-ca-file"
+	ClientCAKey           = "client-ca-file"
 )
 
 // Add creates a new ConfigMap Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -39,8 +39,8 @@ func Add(mgr manager.Manager, o options.ControllerOptions) error {
 func NewReconciler(mgr manager.Manager, clientCAStore *ca.ClientCAStore) *ReconcileConfigMap {
 	client := mgr.GetClient()
 	return &ReconcileConfigMap{
-		client:  client,
-		handler: ca.NewHandler(client),
+		client:        client,
+		handler:       ca.NewHandler(client),
 		clientCAStore: clientCAStore,
 	}
 }
@@ -66,9 +66,9 @@ func getPredicateFunctions() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the ConfigMap is created we should kick off an event.
-			if e.Object.GetName() == ClientCAConfigMapName && 
+			if e.Object.GetName() == ClientCAConfigMapName &&
 				e.Object.GetNamespace() == ClientCANamespace {
-					return true
+				return true
 			}
 			if e.Object.GetName() == ca.TrustedCaConfigMapName {
 				return true
@@ -77,9 +77,9 @@ func getPredicateFunctions() predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// If the ConfigMap is updated we should kick off an event.
-			if e.ObjectOld.GetName() == ClientCAConfigMapName && 
+			if e.ObjectOld.GetName() == ClientCAConfigMapName &&
 				e.ObjectOld.GetNamespace() == ClientCANamespace {
-					return true
+				return true
 			}
 			if e.ObjectOld.GetName() == ca.TrustedCaConfigMapName {
 				return true
@@ -99,8 +99,8 @@ var _ reconcile.Reconciler = &ReconcileConfigMap{}
 
 // ReconcileConfigMap reconciles a ConfigMap object.
 type ReconcileConfigMap struct {
-	client  client.Client
-	handler ca.Handler
+	client        client.Client
+	handler       ca.Handler
 	clientCAStore *ca.ClientCAStore
 }
 

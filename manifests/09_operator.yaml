@@ -50,7 +50,7 @@ spec:
               drop: ["ALL"]
           image: quay.io/openshift/origin-operator-marketplace:latest
           ports:
-          - containerPort: 60000
+          - containerPort: 8081
             name: metrics
           - containerPort: 8080
             name: healthz

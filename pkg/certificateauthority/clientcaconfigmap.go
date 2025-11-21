@@ -7,7 +7,7 @@ import (
 
 type ClientCAStore struct {
 	clientCA *x509.CertPool
-	mutex sync.RWMutex
+	mutex    sync.RWMutex
 }
 
 func NewClientCAStore(certpool *x509.CertPool) *ClientCAStore {
