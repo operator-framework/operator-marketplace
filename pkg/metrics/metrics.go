@@ -20,7 +20,7 @@ const (
 	metricsPort = 8383
 
 	// metricsTLSPort is the port that marketplace exposes its metrics over https.
-	metricsTLSPort = 8081
+	MetricsTLSPort = 8081
 )
 
 // ServePrometheus enables marketplace to serve prometheus metrics.
@@ -47,7 +47,7 @@ func ServePrometheus(cert, key string, clientCAStore *certificateauthority.Clien
 
 		go func() {
 			httpsServer := &http.Server{
-				Addr:    fmt.Sprintf(":%d", metricsTLSPort),
+				Addr:    fmt.Sprintf(":%d", MetricsTLSPort),
 				Handler: nil,
 				TLSConfig: &tls.Config{
 					GetCertificate: tlsGetCertFn,

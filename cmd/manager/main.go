@@ -53,6 +53,8 @@ const (
 	defaultRetryPeriod                 = 30 * time.Second
 	defaultRenewDeadline               = 60 * time.Second
 	defaultLeaseDuration               = 90 * time.Second
+	defaultPprofPort                   = 6060
+	healthPort                         = 8080
 )
 
 func init() {
@@ -93,7 +95,7 @@ func main() {
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "configures the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "configures the directory where the default CatalogSources are stored")
 	flag.BoolVar(&version, "version", false, "displays marketplace source commit info.")
-	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to serve pprof endpoints on.")
+	flag.StringVar(&pprofAddress, "pprof-address", fmt.Sprintf(":%d", defaultPprofPort), "Address to serve pprof endpoints on.")
 	flag.StringVar(&tlsKeyPath, "tls-key", "", "Path to use for private key (requires tls-cert)")
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "configures the namespace that will contain the leader election lock")
@@ -189,12 +191,11 @@ func main() {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
-
 	logger.Info("setting up health checks")
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	go http.ListenAndServe(":8080", nil)
+	go http.ListenAndServe(fmt.Sprintf(":%d", healthPort), nil)
 
 	ctx, cancel := context.WithCancel(signals.Context())
 	defer cancel()

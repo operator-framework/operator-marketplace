@@ -21,9 +21,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,10 +40,10 @@ import (
 
 type certKeyPair struct {
 	serverName string
-	key *rsa.PrivateKey
-	keyPEM []byte
-	cert *x509.Certificate
-	certPEM []byte
+	key        *rsa.PrivateKey
+	keyPEM     []byte
+	cert       *x509.Certificate
+	certPEM    []byte
 }
 
 func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *rsa.PrivateKey) error {
@@ -62,7 +62,7 @@ func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *
 		i.keyPEM = keyPEMBytes.Bytes()
 	}
 
-	templateCert := &x509.Certificate{NotAfter: metav1.Now().Add(5*time.Minute)}
+	templateCert := &x509.Certificate{NotAfter: metav1.Now().Add(5 * time.Minute)}
 	if len(i.serverName) != 0 {
 		templateCert.DNSNames = []string{i.serverName}
 	}
@@ -98,7 +98,7 @@ func (i *certKeyPair) generateTestCert(parentCert *x509.Certificate, parentKey *
 }
 
 func updateTestCAConfigMap(client crclient.WithWatch, reconciler *configmap.ReconcileConfigMap, caPEM []byte) error {
-	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configmap.ClientCAConfigMapName, Namespace: configmap.ClientCANamespace}, Data:map[string]string{configmap.ClientCAKey: string(caPEM)}}
+	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configmap.ClientCAConfigMapName, Namespace: configmap.ClientCANamespace}, Data: map[string]string{configmap.ClientCAKey: string(caPEM)}}
 	if err := client.Create(context.TODO(), cm); err != nil {
 		if errors.IsAlreadyExists(err) {
 			err = client.Update(context.TODO(), cm)
@@ -113,20 +113,20 @@ func updateTestCAConfigMap(client crclient.WithWatch, reconciler *configmap.Reco
 	return nil
 }
 
-func makeRequest(t *testing.T, certPool *x509.CertPool, clientCert *tls.Certificate, serverName string, expectedCond func (*http.Response, error) bool) {
+func makeRequest(t *testing.T, certPool *x509.CertPool, clientCert *tls.Certificate, serverName string, expectedCond func(*http.Response, error) bool) {
 	httpClient := &http.Client{Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{
-			RootCAs: certPool,
+			RootCAs:    certPool,
 			ServerName: serverName,
 		},
 	}}
 
 	if clientCert != nil {
-		httpClient.Transport.(*http.Transport).TLSClientConfig.Certificates =[]tls.Certificate{*clientCert}
+		httpClient.Transport.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{*clientCert}
 	}
 
-	require.Eventually(t, func() bool{
-		response, err := httpClient.Get("https://:8081/metrics")
+	require.Eventually(t, func() bool {
+		response, err := httpClient.Get(fmt.Sprintf("https://:%d/metrics", metrics.MetricsTLSPort))
 		return expectedCond(response, err)
 	}, 5*time.Second, 1*time.Second)
 }
@@ -138,7 +138,7 @@ func TestConfigMapClientCAAuth(t *testing.T) {
 	require.NoError(t, openshiftconfigv1.AddToScheme(scheme))
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: configmap.ClientCANamespace}}).Build()
-	mgr, err := manager.New(&rest.Config{}, manager.Options{NewClient:  func(config *rest.Config, options crclient.Options) (crclient.Client, error){return client, nil}})
+	mgr, err := manager.New(&rest.Config{}, manager.Options{NewClient: func(config *rest.Config, options crclient.Options) (crclient.Client, error) { return client, nil }})
 	require.NoError(t, err)
 	reconciler := configmap.NewReconciler(mgr, caStore)
 
