@@ -14,7 +14,7 @@ spec:
   priority: -100
   updateStrategy:
     registryPoll:
-      interval: 10m
+      interval: 240m
   grpcPodConfig:
     securityContextConfig: restricted
     nodeSelector:
