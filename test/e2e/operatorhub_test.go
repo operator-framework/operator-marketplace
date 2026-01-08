@@ -30,7 +30,7 @@ var _ = Describe("operatorhub", func() {
 		globalNamespace           = "openshift-marketplace"
 		ctx                       = context.Background()
 		nn                        = types.NamespacedName{Name: operatorhubName}
-		defaultCatalogSourceNames = []string{"redhat-operators", "certified-operators", "community-operators", "redhat-marketplace"}
+		defaultCatalogSourceNames = []string{"redhat-operators", "certified-operators", "community-operators"}
 	)
 
 	// TODO: verify garbage collection of underlying catalogsource resources works as intended
