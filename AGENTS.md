@@ -72,7 +72,6 @@ By default, marketplace-operator enforces all of the CatalogSources found in the
 | redhat-operators |`defaults/01_redhat_operators.cr.yaml`| Red Hat products packaged, shipped, and supported by Red Hat |
 | certified-operators |`defaults/02_certified_operators.yaml`| Products developed by software vendors outside of Red Hat; packaged and shipped in partnership with Red Hat |
 | community-operators |`defaults/03_community_operators.yaml`| Unsupported community software source defined via [github repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod/tree/main/operators) |
-| redhat-marketplace |`defaults/04_redhat_marketplace.yaml`| ⚠ DEPRECATED: Red Hat-certified software previously available to be purchased from [Red Hat Marketplace](https://marketplace.redhat.com/sunset); no longer in use |
 
 ## Contribution Guidance
 
