@@ -32,7 +32,8 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("boostrapping test environment")
-	restConfig, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	var err error
+	restConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
