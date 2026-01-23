@@ -124,16 +124,21 @@ func (r *reporter) updateStatus(previousStatus *configv1.ClusterOperatorStatus) 
 		return nil
 	}
 	log.Infof("[status] Previous and current ClusterOperator Status are different, attempting to update the ClusterOperator Status.")
+
 	// Check if the ClusterOperator version has changed and log the attempt to upgrade if it has
 	previousVersion := operatorhelpers.FindOperandVersion(previousStatus.Versions, "operator")
 	currentVersion := operatorhelpers.FindOperandVersion(r.clusterOperator.Status.Versions, "operator")
-	if currentVersion != nil {
-		if previousVersion == nil {
-
-			log.Infof("[status] Attempting to set ClusterOperator to version %s", currentVersion.Version)
-		} else if previousVersion.Version != currentVersion.Version {
-
-			log.Infof("[status] Attempting to upgrade ClusterOperator version from %s to %s", previousVersion.Version, currentVersion.Version)
+	if currentVersion != nil && (previousVersion == nil || previousVersion.Version != currentVersion.Version) {
+		// No previous version or new version means Progressing = True
+		// It will change back to False on the next monitor cycle
+		if progressingCondition := cohelpers.FindStatusCondition(r.clusterOperator.Status.Conditions, configv1.OperatorProgressing); progressingCondition != nil {
+			progressingCondition.Status = configv1.ConditionTrue
+			progressingCondition.Message = fmt.Sprintf("Progressing to release version: %s", r.version)
+			if previousVersion != nil {
+				log.Infof("[status] Attempting to upgrade ClusterOperator version from %s to %s", previousVersion.Version, currentVersion.Version)
+			} else {
+				log.Infof("[status] Attempting to set ClusterOperator to version %s", currentVersion.Version)
+			}
 		}
 	}
 
