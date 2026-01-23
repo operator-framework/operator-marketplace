@@ -12,6 +12,7 @@ rules:
 - apiGroups:
   - config.openshift.io
   resources:
+  - apiservers
   - clusteroperators
   - operatorhubs
   verbs:

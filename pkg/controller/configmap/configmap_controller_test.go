@@ -33,6 +33,7 @@ import (
 
 	openshiftconfigv1 "github.com/openshift/api/config/v1"
 
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/apiserver"
 	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/configmap"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
@@ -172,7 +173,7 @@ func TestConfigMapClientCAAuth(t *testing.T) {
 
 	// start metrics HTTPS server
 	go func() {
-		if err := metrics.ServePrometheus(certFile, keyFile, caStore); err != nil {
+		if err := metrics.ServePrometheus(certFile, keyFile, caStore, apiserver.NoopQuerier()); err != nil {
 			panic(err)
 		}
 	}()
