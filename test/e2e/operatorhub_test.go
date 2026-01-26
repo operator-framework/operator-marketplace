@@ -30,7 +30,7 @@ var _ = Describe("operatorhub", func() {
 		globalNamespace           = "openshift-marketplace"
 		ctx                       = context.Background()
 		nn                        = types.NamespacedName{Name: operatorhubName}
-		defaultCatalogSourceNames = []string{"redhat-operators", "certified-operators", "community-operators", "redhat-marketplace"}
+		defaultCatalogSourceNames = []string{"redhat-operators", "certified-operators", "community-operators"}
 	)
 
 	// TODO: verify garbage collection of underlying catalogsource resources works as intended
@@ -321,8 +321,8 @@ var _ = Describe("operatorhub", func() {
 		})
 
 		It("should ensure disabling a single catalogsource", func() {
-			By("disabling the redhat-operators source in the operatorhub resource")
 			disabledName := "redhat-operators"
+			By(fmt.Sprintf("disabling the %s source in the operatorhub resource", disabledName))
 			disabledNN := types.NamespacedName{
 				Name:      disabledName,
 				Namespace: globalNamespace,
@@ -378,6 +378,7 @@ var _ = Describe("operatorhub", func() {
 		})
 
 		It("should prefer spec.sources[*].disabled over spec.disableAllSources", func() {
+			enabledName := "community-operators"
 			Eventually(func() error {
 				og := &configv1.OperatorHub{}
 				if err := k8sClient.Get(ctx, nn, og); err != nil {
@@ -387,7 +388,7 @@ var _ = Describe("operatorhub", func() {
 					DisableAllDefaultSources: true,
 					Sources: []configv1.HubSource{
 						{
-							Name:     "community-operators",
+							Name:     enabledName,
 							Disabled: false,
 						},
 					},
@@ -403,7 +404,7 @@ var _ = Describe("operatorhub", func() {
 				if len(css.Items) != 1 {
 					return false
 				}
-				if css.Items[0].Name != "community-operators" {
+				if css.Items[0].Name != enabledName {
 					return false
 				}
 				return true
