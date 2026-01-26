@@ -1,6 +1,6 @@
 module github.com/operator-framework/operator-marketplace
 
-go 1.25.0
+go 1.25.3
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
@@ -11,7 +11,7 @@ require (
 	github.com/openshift/api v0.0.0-20251104141128-d13e8c65d30f
 	github.com/openshift/client-go v0.0.0-20251015124057-db0dee36e235
 	github.com/openshift/library-go v0.0.0-20251104164011-e9c2485b059c
-	github.com/operator-framework/api v0.37.0
+	github.com/operator-framework/api v0.38.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
