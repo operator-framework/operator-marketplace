@@ -204,8 +204,8 @@ github.com/openshift/client-go/operator/applyconfigurations/operator/v1
 github.com/openshift/library-go/pkg/apiserver/jsonpatch
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 github.com/openshift/library-go/pkg/operator/v1helpers
-# github.com/operator-framework/api v0.37.0
-## explicit; go 1.24.6
+# github.com/operator-framework/api v0.38.0
+## explicit; go 1.25.3
 github.com/operator-framework/api/pkg/lib/release
 github.com/operator-framework/api/pkg/lib/version
 github.com/operator-framework/api/pkg/operators
