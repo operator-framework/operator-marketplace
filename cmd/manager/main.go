@@ -21,6 +21,7 @@ import (
 
 	apiconfigv1 "github.com/openshift/api/config/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/apiserver"
 
 	"github.com/operator-framework/operator-marketplace/pkg/apis"
 	configv1 "github.com/operator-framework/operator-marketplace/pkg/apis/config/v1"
@@ -172,6 +173,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	// Setup APIServer TLS configuration for HTTPS servers
+	apiServerTLSQuerier, apiServerFactory, err := apiserver.SetupAPIServerTLSConfig(logger, cfg)
+	if err != nil {
+		logger.Fatalf("error setting up APIServer TLS configuration: %v", err)
+	}
+
 	clientCAStore := ca.NewClientCAStore(x509.NewCertPool())
 	// Best effort attempt to fetch client rootCA
 	// Should not fail if this does not immediately succeed, the configmap controller will continue to
@@ -187,7 +194,7 @@ func main() {
 
 	// set TLS to serve metrics over a secure channel if cert is provided
 	// cert is provided by default by the marketplace-trusted-ca volume mounted as part of the marketplace-operator deployment
-	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore); err != nil {
+	if err := metrics.ServePrometheus(tlsCertPath, tlsKeyPath, clientCAStore, apiServerTLSQuerier); err != nil {
 		logger.Fatalf("failed to serve prometheus metrics: %s", err)
 	}
 
@@ -220,6 +227,11 @@ func main() {
 		logger.Info("setting up controllers")
 		if err := controller.AddToManager(mgr, options.ControllerOptions{ClientCAStore: clientCAStore}); err != nil {
 			logger.Fatal(err)
+		}
+
+		// Start APIServer TLS informer factory if on OpenShift
+		if apiServerFactory != nil {
+			apiServerFactory.Start(ctx.Done())
 		}
 
 		// start reporting the marketplace clusteroperator status reporting before

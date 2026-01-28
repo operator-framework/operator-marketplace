@@ -8,6 +8,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
 	"github.com/operator-framework/operator-marketplace/pkg/filemonitor"
 
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/apiserver"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
@@ -24,7 +25,7 @@ const (
 )
 
 // ServePrometheus enables marketplace to serve prometheus metrics.
-func ServePrometheus(cert, key string, clientCAStore *certificateauthority.ClientCAStore) error {
+func ServePrometheus(cert, key string, clientCAStore *certificateauthority.ClientCAStore, apiServerTLSQuerier apiserver.Querier) error {
 	// Register metrics for the operator with the prometheus.
 	logrus.Info("[metrics] Registering marketplace metrics")
 
@@ -46,22 +47,37 @@ func ServePrometheus(cert, key string, clientCAStore *certificateauthority.Clien
 		}
 
 		go func() {
-			httpsServer := &http.Server{
-				Addr:    fmt.Sprintf(":%d", MetricsTLSPort),
-				Handler: nil,
-				TLSConfig: &tls.Config{
-					GetCertificate: tlsGetCertFn,
-				},
-			}
-			if clientCAStore != nil {
-				httpsServer.TLSConfig.ClientCAs = clientCAStore.GetCA()
-				httpsServer.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
-			} else {
+			if clientCAStore == nil {
 				// enforce client cert requirement.
 				// Without this check, the client cert auth policy would be optional on startup
 				// if provided with a nil clientCAStore.
 				logrus.Errorf("No client CA configured, continuing without client cert verification")
 				return
+			}
+
+			tlsConfig := &tls.Config{
+				GetConfigForClient: func(_ *tls.ClientHelloInfo) (*tls.Config, error) {
+					cfg := &tls.Config{
+						GetCertificate: tlsGetCertFn,
+						ClientCAs:      clientCAStore.GetCA(),
+						ClientAuth:     tls.RequireAndVerifyClientCert,
+					}
+
+					// Overlay cluster-wide TLS security profile settings if available
+					if apiServerTLSQuerier != nil {
+						if err := apiServerTLSQuerier.QueryTLSConfig(cfg); err != nil {
+							logrus.WithError(err).Warn("Failed to query APIServer TLS config, using defaults")
+						}
+					}
+
+					return cfg, nil
+				},
+			}
+
+			httpsServer := &http.Server{
+				Addr:      fmt.Sprintf(":%d", MetricsTLSPort),
+				Handler:   nil,
+				TLSConfig: tlsConfig,
 			}
 			err := httpsServer.ListenAndServeTLS("", "")
 			if err != nil {
