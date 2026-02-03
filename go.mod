@@ -13,7 +13,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20240426153406-52527b886e57
 	github.com/operator-framework/api v0.23.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	k8s.io/api v0.29.4
 	k8s.io/apimachinery v0.29.4
