@@ -137,11 +137,6 @@ func main() {
 	logger.Info("setting up scheme")
 	scheme := setupScheme()
 
-	// Even though we are asking to watch all namespaces, we only handle events
-	// from the operator's namespace. The reason for watching all namespaces is
-	// watch for CatalogSources in targetNamespaces being deleted and recreate
-	// them.
-	//
 	// Note(tflannag): Setting the `MetricsBindAddress` to `0` here disables the
 	// metrics listener from controller-runtime. Previously, this was disabled by
 	// default in <v0.2.0, but it's now enabled by default and the default port
@@ -164,6 +159,14 @@ func main() {
 								"metadata.name": configmap.ClientCAConfigMapName,
 							}),
 						},
+					},
+				},
+				// Restrict CatalogSource watch to the operator's namespace only.
+				// The operator only manages default CatalogSources (redhat-operators,
+				// certified-operators, community-operators) in this namespace.
+				&olmv1alpha1.CatalogSource{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {},
 					},
 				},
 			},
