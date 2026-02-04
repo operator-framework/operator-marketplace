@@ -22,7 +22,5 @@ spec:
     - Ingress
     - Egress
   egress:
-    - ports:
-        - protocol: TCP
-          port: 6443
+    - {}
 
