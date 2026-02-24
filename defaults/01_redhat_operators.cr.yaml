@@ -8,7 +8,7 @@ metadata:
     openshift.io/required-scc: restricted-v2
 spec:
   sourceType: grpc
-  image: registry.redhat.io/redhat/redhat-operator-index:v4.21
+  image: registry.redhat.io/redhat/redhat-operator-index:v4.22
   displayName: "Red Hat Operators"
   publisher: "Red Hat"
   priority: -100
