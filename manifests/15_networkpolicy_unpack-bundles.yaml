@@ -22,7 +22,14 @@ spec:
     - Ingress
     - Egress
   egress:
+    - {}
     - ports:
         - protocol: TCP
-          port: 6443
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 5353
+        - protocol: UDP
+          port: 5353
 
