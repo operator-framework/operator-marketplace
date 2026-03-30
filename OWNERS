@@ -8,6 +8,7 @@ reviewers:
   - grokspawn
   - rashmigottipati
   - tmshort
+  - fgiudici
 # approval == this is a good idea /approve
 approvers:
   - joelanford
