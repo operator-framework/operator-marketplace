@@ -219,7 +219,7 @@ github.com/openshift/library-go/pkg/apiserver/jsonpatch
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 github.com/openshift/library-go/pkg/crypto
 github.com/openshift/library-go/pkg/operator/v1helpers
-# github.com/operator-framework/api v0.41.0
+# github.com/operator-framework/api v0.42.0
 ## explicit; go 1.25.7
 github.com/operator-framework/api/pkg/lib/release
 github.com/operator-framework/api/pkg/lib/version
@@ -488,7 +488,7 @@ k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 k8s.io/api/storagemigration/v1beta1
-# k8s.io/apiextensions-apiserver v0.35.1
+# k8s.io/apiextensions-apiserver v0.35.3
 ## explicit; go 1.25.0
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
@@ -555,7 +555,7 @@ k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.35.1
+# k8s.io/apiserver v0.35.3
 ## explicit; go 1.25.0
 k8s.io/apiserver/pkg/authentication/user
 # k8s.io/client-go v0.35.3

@@ -11,7 +11,7 @@ require (
 	github.com/openshift/api v0.0.0-20260205045418-81371d13d1fc
 	github.com/openshift/client-go v0.0.0-20260108185524-48f4ccfc4e13
 	github.com/openshift/library-go v0.0.0-20260205095356-7bced6e899b6
-	github.com/operator-framework/api v0.41.0
+	github.com/operator-framework/api v0.42.0
 	github.com/operator-framework/operator-lifecycle-manager v0.41.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
@@ -92,8 +92,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.35.1 // indirect
-	k8s.io/apiserver v0.35.1 // indirect
+	k8s.io/apiextensions-apiserver v0.35.3 // indirect
+	k8s.io/apiserver v0.35.3 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
