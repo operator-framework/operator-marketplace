@@ -63,6 +63,7 @@ spec:
           - /var/run/secrets/serving-cert/tls.crt
           - -tls-key
           - /var/run/secrets/serving-cert/tls.key
+          - -default-catalog-version=""
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
