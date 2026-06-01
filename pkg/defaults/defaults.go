@@ -2,11 +2,15 @@ package defaults
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	wrapper "github.com/operator-framework/operator-marketplace/pkg/client"
+
+	semver "github.com/blang/semver/v4"
+	"github.com/containers/image/docker/reference"
 )
 
 var (
@@ -31,6 +35,7 @@ var (
 const (
 	defaultCatsrcAnnotationKey   string = "operatorframework.io/managed-by"
 	defaultCatsrcAnnotationValue string = "marketplace-operator"
+	defaultCatsrcVersionString   string = "0.0.1-snapshot"
 )
 
 // Defaults is the interface that can be used to ensure the default set
@@ -108,16 +113,18 @@ func IsDefaultSource(name string) bool {
 
 // PopulateGlobals populates the global definitions and default config. If Dir
 // is blank, the global definitions and config will be initialized but empty.
-func PopulateGlobals() error {
+// imageTagOverride updates the image tags for the default catalogSources with
+// the given non-empty tag.
+func PopulateGlobals(imageTagOverride string) error {
 	var err error
-	globalCatsrcDefinitions, defaultConfig, err = populateDefsConfig(Dir)
+	globalCatsrcDefinitions, defaultConfig, err = populateDefsConfig(Dir, imageTagOverride)
 	return err
 }
 
 // populateDefsConfig returns populated CatalogSource definitions from files present
 // in the @dir directory and an enabled config. It returns error on the first
 // issue it runs into. The function also guarantees to return an empty map on error.
-func populateDefsConfig(dir string) (map[string]olmv1alpha1.CatalogSource, map[string]bool, error) {
+func populateDefsConfig(dir, imageTagOverride string) (map[string]olmv1alpha1.CatalogSource, map[string]bool, error) {
 	catsrcDefinitions := make(map[string]olmv1alpha1.CatalogSource)
 	config := make(map[string]bool)
 	// Default directory has not been specified
@@ -125,12 +132,12 @@ func populateDefsConfig(dir string) (map[string]olmv1alpha1.CatalogSource, map[s
 		return catsrcDefinitions, config, nil
 	}
 
-	_, err := os.Stat(Dir)
+	_, err := os.Stat(dir)
 	if err != nil {
 		return catsrcDefinitions, config, err
 	}
 
-	fileInfos, err := ioutil.ReadDir(Dir)
+	fileInfos, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return catsrcDefinitions, config, err
 	}
@@ -144,8 +151,73 @@ func populateDefsConfig(dir string) (map[string]olmv1alpha1.CatalogSource, map[s
 			config = make(map[string]bool)
 			return catsrcDefinitions, config, err
 		}
+
+		// Override image tags with ones matching OpenShift <major>.<minor> for
+		// default CatalogSources
+		if err = overrideImageTag(catsrc, imageTagOverride); err != nil {
+			return map[string]olmv1alpha1.CatalogSource{}, map[string]bool{},
+				fmt.Errorf("unable to update image tags for default CatalogSource %s: %w", catsrc.Name, err)
+		}
+
 		catsrcDefinitions[catsrc.Name] = *catsrc
 		config[catsrc.Name] = false
 	}
 	return catsrcDefinitions, config, nil
+}
+
+func GetCatalogSourceImageTagOverride(versionString string) (string, error) {
+	// Return empty if not in OpenShift or version is default/unknown
+	if len(versionString) == 0 || versionString == defaultCatsrcVersionString {
+		return "", nil
+	}
+
+	v, err := semver.Parse(versionString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version string %q: %w", versionString, err)
+	}
+
+	// Only override for valid OpenShift versions (4.x+)
+	if v.Major == 0 {
+		return "", nil
+	}
+
+	return fmt.Sprintf("v%d.%d", v.Major, v.Minor), nil
+}
+
+// overrideImageTag overrides the tag for a given CatalogSource's image with
+// a provided non-empty tag, provided the CatalogSource has a non-empty image field
+// The image tag override only applies to non-digest based images. If called on a
+// CatalogSource with a digest based image, the image remains unchanged.
+func overrideImageTag(catsrc *olmv1alpha1.CatalogSource, imageTagOverride string) error {
+	if len(imageTagOverride) == 0 {
+		return nil
+	}
+	if catsrc == nil {
+		return nil
+	}
+
+	// Do not override image tags for non-image based CatalogSources
+	if len(catsrc.Spec.Image) == 0 {
+		return nil
+	}
+
+	catsrcRef, err := reference.ParseNormalizedNamed(catsrc.Spec.Image)
+	if err != nil {
+		return fmt.Errorf("invalid image %s for CatalogSource %s: %w", catsrc.Spec.Image, catsrc.Name, err)
+	}
+
+	// Skip digest-based images - the default behavior of Canonical references
+	// when converted to string is to ignore tags in favor of digests
+	if _, ok := catsrcRef.(reference.Canonical); ok {
+		return nil
+	}
+
+	// Override reference tag
+	taggedRef, err := reference.WithTag(catsrcRef, imageTagOverride)
+	if err != nil {
+		return fmt.Errorf("unable to update tag on image %s to %s: %w", catsrc.Spec.Image, imageTagOverride, err)
+	}
+
+	catsrc.Spec.Image = taggedRef.String()
+	return nil
 }
