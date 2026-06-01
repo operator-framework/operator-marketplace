@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	ca "github.com/operator-framework/operator-marketplace/pkg/certificateauthority"
@@ -57,11 +56,6 @@ const (
 	defaultLeaseDuration               = 90 * time.Second
 	defaultPprofPort                   = 6060
 	healthPort                         = 8080
-
-	// defaultCatalogVersionModeOCPRelease is the value for -default-catalog-version
-	// that enables dynamic catalog tag resolution based on the cluster's OCP version.
-	// This only affects the default/operator-managed CatalogSources.
-	defaultCatalogVersionModeOCPRelease = "ocp-release"
 )
 
 func init() {
@@ -98,7 +92,6 @@ func main() {
 		pprofAddress                string
 		version                     bool
 		loglvl                      string
-		defaultCatalogVersionMode   string
 	)
 	flag.StringVar(&clusterOperatorName, "clusterOperatorName", "", "configures the name of the OpenShift ClusterOperator that should reflect this operator's status, or the empty string to disable ClusterOperator updates")
 	flag.StringVar(&defaults.Dir, "defaultsDir", "", "configures the directory where the default CatalogSources are stored")
@@ -108,7 +101,6 @@ func main() {
 	flag.StringVar(&tlsCertPath, "tls-cert", "", "Path to use for certificate (requires tls-key)")
 	flag.StringVar(&leaderElectionNamespace, "leader-namespace", "openshift-marketplace", "configures the namespace that will contain the leader election lock")
 	flag.StringVar(&loglvl, "level", "info", "Sets level of logger with default verbosity info level. See https://github.com/sirupsen/logrus for other verbosity levels.")
-	flag.StringVar(&defaultCatalogVersionMode, "default-catalog-version", "", "When set to 'ocp-release', enables automatically updating the image tags of default catalog sources to the OCP version of the cluster they are running on. Other values are ignored.")
 	flag.Parse()
 	logger := logrus.New()
 
@@ -227,18 +219,11 @@ func main() {
 			}
 		}
 
-		var operatorReleaseVersion string
-		if strings.Trim(defaultCatalogVersionMode, "'\"") == defaultCatalogVersionModeOCPRelease {
-			// The RELEASE_VERSION env variable is set to current OpenShift version
-			// by the Cluster Version Operator. If missing or set to the default of
-			// "0.0.1-snapshot", the cluster does not have CVO running, and the image
-			// tag override will be skipped.
-			operatorReleaseVersion = os.Getenv("RELEASE_VERSION")
-		}
+		operatorReleaseVersion := os.Getenv("RELEASE_VERSION")
 		overrideTag, err := defaults.GetCatalogSourceImageTagOverride(operatorReleaseVersion)
 		if err != nil {
 			overrideTag = ""
-			logger.Warnf("failed to parse RELEASE_VERSION %q for image tag override: %v (skipping override)", operatorReleaseVersion, err)
+			logger.Warnf("failed to parse RELEASE_VERSION %q for default CatalogSource image tag override: %v (skipping override)", operatorReleaseVersion, err)
 		}
 
 		if len(overrideTag) > 0 {

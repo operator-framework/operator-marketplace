@@ -33,13 +33,3 @@ A full writeup on Marketplace e2e testing can be found [here](docs/e2e-testing.m
 
 [upstream-community-operators]: deploy/upstream/07_upstream_operatorsource.cr.yaml
 [community-operators]: deploy/examples/community.operatorsource.cr.yaml
-
-## Default Catalogs
-
-Default sources applied to a cluster are present in the (defaults)[defaults/] directory. Each catalogsource present here is tagged with a corresponding OCP version similar to:
-
-```
-registry.redhat.io/redhat/community-operator-index:v4.22
-```
-
-The version of catalog used may be automatically configured based on the current OCP version by setting `-default-catalog-version="ocp-release"`, and setting `RELEASE_VERSION` to the appropriate OCP version on the (operator manifest)[manifests/09_operator.yaml]. `RELEASE_VERSION` is automatically configured by CVO on OCP clusters, and `-default-catalog-version` may be used to selectively enable default catalog image tag resolution based on the availability of specific default catalogs.
