@@ -35,9 +35,9 @@ func TestGetCatalogSourceImageTagOverride(t *testing.T) {
 			wantErr:       false,
 		},
 		{
-			name:          "valid OpenShift 5.0.0",
+			name:          "OpenShift 5.0.0 ignored",
 			versionString: "5.0.0",
-			wantTag:       "v5.0",
+			wantTag:       "",
 			wantErr:       false,
 		},
 		{
@@ -118,11 +118,11 @@ func TestOverrideImageTag(t *testing.T) {
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
-					Image: "registry.io/catalog:v4.20",
+					Image: "registry.io/catalog:v5.0",
 				},
 			},
 			imageTagOverride: "",
-			wantImage:        "registry.io/catalog:v4.20",
+			wantImage:        "registry.io/catalog:v5.0",
 			wantErr:          false,
 		},
 		{
@@ -131,7 +131,7 @@ func TestOverrideImageTag(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec:       olmv1alpha1.CatalogSourceSpec{},
 			},
-			imageTagOverride: "v5.0",
+			imageTagOverride: "v4.23",
 			wantImage:        "",
 			wantErr:          false,
 		},
@@ -140,35 +140,35 @@ func TestOverrideImageTag(t *testing.T) {
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
-					Image: "registry.io/catalog:v4.23",
+					Image: "registry.io/catalog:v5.0",
 				},
 			},
-			imageTagOverride: "v5.0",
-			wantImage:        "registry.io/catalog:v5.0",
+			imageTagOverride: "v4.23",
+			wantImage:        "registry.io/catalog:v4.23",
 			wantErr:          false,
 		},
 		{
-			name: "non-semver tagged image override",
+			name: "non-v5.0 tagged image unchanged",
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
 					Image: "registry.io/catalog:latest",
 				},
 			},
-			imageTagOverride: "v5.0",
-			wantImage:        "registry.io/catalog:v5.0",
+			imageTagOverride: "v4.23",
+			wantImage:        "registry.io/catalog:latest",
 			wantErr:          false,
 		},
 		{
-			name: "untagged image override",
+			name: "untagged image unchanged",
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
 					Image: "registry.io/catalog",
 				},
 			},
-			imageTagOverride: "v5.0",
-			wantImage:        "registry.io/catalog:v5.0",
+			imageTagOverride: "v4.23",
+			wantImage:        "registry.io/catalog",
 			wantErr:          false,
 		},
 		{
@@ -179,7 +179,7 @@ func TestOverrideImageTag(t *testing.T) {
 					Image: "registry.io/catalog@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 				},
 			},
-			imageTagOverride: "v5.0",
+			imageTagOverride: "v4.23",
 			wantImage:        "registry.io/catalog@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 			wantErr:          false,
 		},
@@ -188,11 +188,11 @@ func TestOverrideImageTag(t *testing.T) {
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
-					Image: "registry.io:5000/catalog:v4.23",
+					Image: "registry.io:5000/catalog:v5.0",
 				},
 			},
-			imageTagOverride: "v5.0",
-			wantImage:        "registry.io:5000/catalog:v5.0",
+			imageTagOverride: "v4.23",
+			wantImage:        "registry.io:5000/catalog:v4.23",
 			wantErr:          false,
 		},
 		{
@@ -200,11 +200,11 @@ func TestOverrideImageTag(t *testing.T) {
 			catsrc: &olmv1alpha1.CatalogSource{
 				ObjectMeta: metav1.ObjectMeta{Name: "test"},
 				Spec: olmv1alpha1.CatalogSourceSpec{
-					Image: "registry.io/org/team/catalog:v4.23",
+					Image: "registry.io/org/team/catalog:v5.0",
 				},
 			},
-			imageTagOverride: "v5.0",
-			wantImage:        "registry.io/org/team/catalog:v5.0",
+			imageTagOverride: "v4.23",
+			wantImage:        "registry.io/org/team/catalog:v4.23",
 			wantErr:          false,
 		},
 		{
@@ -215,7 +215,7 @@ func TestOverrideImageTag(t *testing.T) {
 					Image: "not:::valid",
 				},
 			},
-			imageTagOverride: "v5.0",
+			imageTagOverride: "v4.23",
 			wantImage:        "not:::valid",
 			wantErr:          true,
 		},

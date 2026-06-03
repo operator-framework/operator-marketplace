@@ -165,6 +165,13 @@ func populateDefsConfig(dir, imageTagOverride string) (map[string]olmv1alpha1.Ca
 	return catsrcDefinitions, config, nil
 }
 
+// GetCatalogSourceImageTagOverride returns a tag of the form `v<major>.<minor>`
+// where <major> and <minor> are the major and minor version parts of the semver
+// argument provided through versionString, provided the version string has a
+// major version of 4. This is used for determining what image tag to use on
+// a default CatalogSource based on the OCP version of the cluster it is running on,
+// given the 5.0 catalogsources will be shipped to both 4.23 and 5.0 clusters.
+// This may be removed in 5.1+
 func GetCatalogSourceImageTagOverride(versionString string) (string, error) {
 	// Return empty if not in OpenShift or version is default/unknown
 	if len(versionString) == 0 || versionString == defaultCatsrcVersionString {
@@ -176,8 +183,8 @@ func GetCatalogSourceImageTagOverride(versionString string) (string, error) {
 		return "", fmt.Errorf("failed to parse version string %q: %w", versionString, err)
 	}
 
-	// Only override for valid OpenShift versions (4.x+)
-	if v.Major == 0 {
+	// Only override for 4.x OpenShift versions
+	if v.Major != 4 {
 		return "", nil
 	}
 
@@ -185,7 +192,7 @@ func GetCatalogSourceImageTagOverride(versionString string) (string, error) {
 }
 
 // overrideImageTag overrides the tag for a given CatalogSource's image with
-// a provided non-empty tag, provided the CatalogSource has a non-empty image field
+// a tag exactly matching `v5.0`, provided the CatalogSource has a non-empty image field
 // The image tag override only applies to non-digest based images. If called on a
 // CatalogSource with a digest based image, the image remains unchanged.
 func overrideImageTag(catsrc *olmv1alpha1.CatalogSource, imageTagOverride string) error {
@@ -209,6 +216,11 @@ func overrideImageTag(catsrc *olmv1alpha1.CatalogSource, imageTagOverride string
 	// Skip digest-based images - the default behavior of Canonical references
 	// when converted to string is to ignore tags in favor of digests
 	if _, ok := catsrcRef.(reference.Canonical); ok {
+		return nil
+	}
+
+	// Tag substitution should only happen on v5.0 images
+	if taggedRef, ok := catsrcRef.(reference.Tagged); !ok || taggedRef.Tag() != "v5.0" {
 		return nil
 	}
 
