@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/mikefarah/yq/v3 v3.0.0-20201202084205-8846255d1c37
 	github.com/onsi/ginkgo/v2 v2.32.1
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/gomega v1.43.0
 	github.com/openshift/api v0.0.0-20260715165912-72066cc9718b
 	github.com/openshift/client-go v0.0.0-20260715172546-dac61734e0ec
 	github.com/openshift/library-go v0.0.0-20260716164659-7926d144f96a
