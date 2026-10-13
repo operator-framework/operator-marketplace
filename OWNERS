@@ -1,0 +1,24 @@
+# review == this code is good /lgtm
+reviewers:
+  - anik120
+  - ankitathomas
+  - camilamacedo86
+  - fgiudici
+  - grokspawn
+  - kevinrizza
+  - oceanc80
+  - rashmigottipati
+  - tmshort
+# approval == this is a good idea /approve
+approvers:
+  - anik120
+  - camilamacedo86
+  - grokspawn
+  - jianzhangbjz
+  - joelanford
+  - kevinrizza
+  - oceanc80
+  - perdasilva
+  - tmshort
+# Bugzilla component
+component: "OLM"
