@@ -30,6 +30,7 @@ import (
 	"github.com/operator-framework/operator-marketplace/pkg/controller/configmap"
 	"github.com/operator-framework/operator-marketplace/pkg/controller/options"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
+	"github.com/operator-framework/operator-marketplace/pkg/lifecycle"
 	"github.com/operator-framework/operator-marketplace/pkg/metrics"
 	"github.com/operator-framework/operator-marketplace/pkg/signals"
 	"github.com/operator-framework/operator-marketplace/pkg/status"
@@ -187,7 +188,7 @@ func main() {
 	if err == nil && len(caData) > 0 {
 		clientCAStore.Update(caData)
 	} else if err != nil {
-		logger.Warn("failed to initialize client CA certPool for the metrics endpoint: %w", err)
+		logger.Warnf("failed to initialize client CA certPool for the metrics endpoint: %v", err)
 	} else if len(caData) == 0 {
 		logger.Warn("could not find client CA to initialize client rootCA certpool, the clientCA configMap may not be initialized properly yet")
 	}
@@ -199,14 +200,15 @@ func main() {
 	}
 
 	logger.Info("setting up health checks")
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	// mgrState makes the liveness probe fail once the manager has stopped,
+	// so the kubelet restarts the container even if the process does not
+	// exit, and tells main whether the manager failed.
+	var mgrState lifecycle.State
+	http.HandleFunc("/healthz", lifecycle.Healthz(&mgrState))
 	go http.ListenAndServe(fmt.Sprintf(":%d", healthPort), nil)
 
 	ctx, cancel := context.WithCancel(signals.Context())
 	defer cancel()
-
 	run := func(ctx context.Context) {
 		stopCh := ctx.Done()
 		logger.Info("registering components")
@@ -245,18 +247,12 @@ func main() {
 			apiServerFactory.Start(ctx.Done())
 		}
 
-		// start reporting the marketplace clusteroperator status reporting before
-		// starting the manager instance as mgr.Start is blocking
-		logger.Info("starting the marketplace clusteroperator status reporter")
-		statusReportingDoneCh := statusReporter.StartReporting()
-
+		// RunManager starts the clusteroperator status reporter before the
+		// manager (mgr.Start blocks) and waits for the reporter after the
+		// manager stops. On a manager error it cancels the leader-election
+		// context so the lease is released.
 		logger.Info("starting manager")
-		if err := mgr.Start(ctx); err != nil {
-			logger.WithError(err).Error("unable to run manager")
-		}
-
-		// Wait for ClusterOperator status reporting routine to close the statusReportingDoneCh channel.
-		<-statusReportingDoneCh
+		_ = lifecycle.RunManager(ctx, cancel, mgr, statusReporter, &mgrState)
 	}
 
 	client, err := kubernetes.NewForConfig(mgr.GetConfig())
@@ -307,4 +303,10 @@ func main() {
 			},
 		},
 	})
+	// Failed is set before RunManager cancels the leader-election context,
+	// and RunOrDie returns only after that cancel, so the read is ordered.
+	// On a lost lease main returns at once, as before.
+	if mgrState.Failed.Load() {
+		logger.Fatal("manager failed, exiting so the operator is restarted")
+	}
 }
