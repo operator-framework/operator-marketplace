@@ -12,6 +12,7 @@ reviewers:
   - hasbro17
   - ankitathomas
   - timflannagan
+  - prabhapa
 # approval == this is a good idea /approve
 approvers:
   - joelanford
@@ -20,5 +21,6 @@ approvers:
   - kevinrizza
   - timflannagan
   - perdasilva
+  - prabhapa
 # Bugzilla component
 component: "OLM"
