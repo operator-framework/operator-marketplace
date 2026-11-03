@@ -9,6 +9,7 @@ reviewers:
   - rashmigottipati
   - everettraven
   - theishshah
+  - prabhapa
 # approval == this is a good idea /approve
 approvers:
   - joelanford
@@ -18,5 +19,6 @@ approvers:
   - perdasilva
   - oceanc80
   - grokspawn
+  - prabhapa
 # Bugzilla component
 component: "OLM"
