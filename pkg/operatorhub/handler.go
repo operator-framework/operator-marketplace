@@ -2,6 +2,7 @@ package operatorhub
 
 import (
 	"context"
+	"sort"
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-marketplace/pkg/defaults"
@@ -80,6 +81,12 @@ func (h *confighandler) updateStatus(
 		}
 		statuses = append(statuses, status)
 	}
+	// Sort by name so that the status does not change between reconciles of
+	// the same spec. Map iteration order is random, and a reordered list
+	// would update the object and trigger another reconcile.
+	sort.Slice(statuses, func(i, j int) bool {
+		return statuses[i].Name < statuses[j].Name
+	})
 	in.Status = configv1.OperatorHubStatus{Sources: statuses}
 
 	// The first status update will result in another event as there as been a
