@@ -8,6 +8,7 @@ reviewers:
   - grokspawn
   - rashmigottipati
   - tmshort
+  - prabhapa
 # approval == this is a good idea /approve
 approvers:
   - joelanford
@@ -19,5 +20,6 @@ approvers:
   - grokspawn
   - tmshort
   - jianzhangbjz
+  - prabhapa
 # Bugzilla component
 component: "OLM"
