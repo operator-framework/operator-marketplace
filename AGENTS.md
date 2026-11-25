@@ -41,14 +41,14 @@ Found within `pkg/controller`, marketplace-operator contains controllers for the
 
 | Kind | Path | Description |
 |------|------|-------------|
-|CatalogSource|`pkg/controller/catalogsource`|Watches and responds to any changes made to the CatalogSources defined in `defaults/`, or in the folder configured by startup flag `defaultsDir` (usage outlined under Manager section).|
+|CatalogSource|`pkg/controller/catalogsource`|Watches and responds to any changes made to the CatalogSources defined in `defaults/`, or in the folder configured by startup flag `defaultsDir` (usage outlined under Manager section). Also deletes the removed default CatalogSources listed in `pkg/defaults/removed.go` (see Removed Default CatalogSources).|
 |ConfigMap|`pkg/controller/configmap`|Used as a watcher for updates made to the certificate authority inside the ConfigMap `extension-apiserver-authentication`. When the CA on-disk differs from the ConfigMap's, marketplace-operator will restart to pull in the updates.|
 |OperatorHub|`pkg/controller/operatorhub`|Watches the cluster for OperatorHub resources and makes any configured changes to the default CatalogSources, then updates Status of the OperatorHub to show success or failure. For instance, if the user configures the `sources` list with a CatalogSource name that doesn't exist, the OperatorHub object will show an error reflecting this.|
 
 #### Libraries
 * `pkg/certificateauthority` - Handles comparison between the certificate authority found on-disk vs on-cluster, restarting to pick up the changes.
 * `pkg/client` - Wraps the raw kube client provided by operator-sdk to allow mocking in tests.
-* `pkg/defaults` - Reads the default CatalogSources into memory and ensures parity with those on-cluster.
+* `pkg/defaults` - Reads the default CatalogSources into memory and ensures parity with those on-cluster, and deletes the specific CatalogSources dropped from the defaults (listed in `pkg/defaults/removed.go`).
 * `pkg/filemonitor` - Keeps the certs and keys used by the metrics endpoint up-to-date using `fsnotify`.
 * `pkg/metrics` - Serves the prometheus metrics endpoint. Exposed via port 8383 (http) and 8081 (https).
 * `pkg/operatorhub` - Handler to ensure default CatalogSource configuration in OperatorHub resource is reflected on-cluster.
@@ -72,6 +72,13 @@ By default, marketplace-operator enforces all of the CatalogSources found in the
 | redhat-operators |`defaults/01_redhat_operators.cr.yaml`| Red Hat products packaged, shipped, and supported by Red Hat |
 | certified-operators |`defaults/02_certified_operators.yaml`| Products developed by software vendors outside of Red Hat; packaged and shipped in partnership with Red Hat |
 | community-operators |`defaults/03_community_operators.yaml`| Unsupported community software source defined via [github repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod/tree/main/operators) |
+
+#### Removed Default CatalogSources
+CatalogSources that were previously shipped in `defaults/` are listed in `pkg/defaults/removed.go`. marketplace-operator deletes any CatalogSource matching one of these exact namespaced keys, both when it starts and whenever the CatalogSource is created or updated afterwards, regardless of its labels, annotations, or owner references. A CatalogSource with the same name in any other namespace is left untouched.
+
+| Name | Namespace | Description |
+|------|-----------|-------------|
+| redhat-marketplace | `openshift-marketplace` | Removed from `defaults/` by [#698](https://github.com/operator-framework/operator-marketplace/pull/698) |
 
 ## Contribution Guidance
 
